@@ -390,7 +390,7 @@ async def test_partner_cannot_open_or_change_posts(app: App, engine: SimpleNames
         MenuCB(screen="post_content", arg=pid), MenuCB(screen="post_buttons", arg=pid),
         MenuCB(screen="post_targets", arg=pid), MenuCB(screen="post_sched", arg=pid),
         MenuCB(screen="post_opts", arg=pid), MenuCB(screen="post_defaults"),
-        PwCB(a="start"), PwCB(a="mode", v=0), PoCB(a="pause", id=pid), PoCB(a="send_ok", id=pid),
+        PwCB(a="start"), PwCB(a="mode", v=0), PwCB(a="del", v=60), PoCB(a="pause", id=pid), PoCB(a="send_ok", id=pid),
         PoCB(a="del_one", id=pid), PoCB(a="del_all", id=pid), PoCB(a="dup", id=pid), PoCB(a="tg", id=pid, t="own"),
         PoCB(a="mode", id=pid, v=3), PoCB(a="opt", id=pid, v=0), PoCB(a="opt", id=0, v=0), PoCB(a="ad", id=0, v=60),
         PoCB(a="cname", id=pid), PoCB(a="nomedia_ok", id=pid), PoCB(a="ret_ok", id=pid), PoCB(a="upd_ok", id=pid),

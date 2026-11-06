@@ -22,6 +22,8 @@ STRINGS = {
     "po.unit.buttons.1": "{n} button",
     "po.unit.copies": "{n} copies",
     "po.unit.copies.1": "{n} copy",
+    "po.unit.days": "{n} days",
+    "po.unit.days.1": "{n} day",
     # --- targets ---
     "po.tg.all": "🌐 Everyone",
     "po.tg.own": "🏠 Own only",
@@ -44,16 +46,16 @@ STRINGS = {
     "po.targets.title": "🎯 <b>Target</b> · {name}",
     # --- create wizard ---
     "po.w.content": (
-        "📝 <b>New post</b> · 1/4\n\n"
+        "📝 <b>New post</b> · 1/5\n\n"
         "Send the message exactly as it should be published: text, photo, video, GIF, file, audio or voice note, "
         "with its formatting (<b>bold</b>, <i>italic</i>, links, emoji). It can also be forwarded from a channel."
     ),
-    "po.w.buttons": "🔘 <b>Buttons</b> · 2/4\n\nSend the buttons that go under the message.\n\n{help}",
+    "po.w.buttons": "🔘 <b>Buttons</b> · 2/5\n\nSend the buttons that go under the message.\n\n{help}",
     "po.w.no_buttons": "⏭ No buttons",
-    "po.w.targets": "🎯 <b>Who receives it?</b> · 3/4",
+    "po.w.targets": "🎯 <b>Who receives it?</b> · 3/5",
     "po.w.continue": "✅ Continue",
     "po.w.when": (
-        "⏰ <b>When is it sent?</b> · 4/4\n\n"
+        "⏰ <b>When is it sent?</b> · 4/5\n\n"
         "🔁 <b>In rotation</b> (recommended)\n"
         "   └ It takes turns with the other posts at the frequency of each channel (global: {freq}).\n"
         "⏰ <b>On its own schedule</b>\n"
@@ -63,7 +65,12 @@ STRINGS = {
         "✋ <b>Only when sent by hand</b>\n"
         "   └ Only with 🚀 Send now."
     ),
-    "po.w.date": "📆 <b>Just once</b> · 4/4\n\n{ask}",
+    "po.w.date": "📆 <b>Just once</b> · 4/5\n\n{ask}",
+    "po.w.delete": (
+        "🗑 <b>How long does it stay published?</b> · 5/5\n"
+        "   └ After that time it is deleted from the channels automatically."
+    ),
+    "po.w.no_delete": "♾ Don't delete",
     "po.help.buttons": (
         "One button per line: <code>Name - https://link</code>\n"
         "• On the same row: separate them with <code>&amp;&amp;</code>\n"

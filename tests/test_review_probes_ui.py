@@ -33,7 +33,7 @@ async def wizard_targets_step(app: App) -> None:
     await app.click(SUPER_ID, "Nuevo mensaje")
     await app.send(SUPER_ID, "Oferta de cine")
     await app.click(SUPER_ID, "Sin botones")
-    assert "3/4" in app.last_text(SUPER_ID)
+    assert "3/5" in app.last_text(SUPER_ID)
 
 
 # --- HIGH: a campaign ending on 31/12/9999 is accepted and then stops every send of the network ------------------
