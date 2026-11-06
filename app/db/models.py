@@ -130,8 +130,8 @@ class EventKind:
     BOT_RESUMED = "bot_resumed"
 
 
-# Global frequency of a new bot: a post every 4 hours, every day.
-DEFAULT_FREQ: dict[str, Any] = {"mode": "interval", "every": 240, "window": "", "days": "0123456"}
+# Global frequency of a new bot: a post every 4 hours from 08:00 to 22:00 (08, 12, 16 and 20 h), every day.
+DEFAULT_FREQ: dict[str, Any] = {"mode": "interval", "every": 240, "window": "08:00-22:00", "days": "0123456"}
 
 
 # ---------------------------------------------------------------------------

@@ -168,7 +168,7 @@ async def test_chat_detail(app: App) -> None:
     assert ("📌 Estado: ⚠️ Faltan permisos: fijar mensajes · ⏸ Pausado por su dueño hasta que lo reanude"
             in text)
     assert "Solo su dueño puede reanudarla" in text
-    assert "⏰ Frecuencia: 🌐 la global (cada 4 h)" in text and "🕐 Último: —" in text
+    assert "⏰ Frecuencia: 🌐 la global (cada 4 h · 08:00-22:00)" in text and "🕐 Último: —" in text
 
 
 async def test_chat_detail_of_another_network_or_for_partners(app: App) -> None:

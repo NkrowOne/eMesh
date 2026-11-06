@@ -130,7 +130,7 @@ async def test_group_detail(app: App) -> None:
     text = app.last_text(SUPER_ID)
     assert text.startswith("🗂 <b>Cine &lt;HD&gt;</b>")
     assert "📣 Chats: <b>2</b> (👤 1,500)" in text
-    assert "⏰ Frecuencia: 🌐 la global (cada 4 h)" in text
+    assert "⏰ Frecuencia: 🌐 la global (cada 4 h · 08:00-22:00)" in text
     assert "└ Un canal sigue la frecuencia del primero de sus grupos de canales que tenga una propia" in text
     expected = [fmt.dt(s, TZ) for s in freq.upcoming(DEFAULT_FREQ, TZ, before, 2)]
     assert any(f"📅 Próximo turno: {e}" in text for e in expected)

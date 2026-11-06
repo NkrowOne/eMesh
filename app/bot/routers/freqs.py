@@ -70,7 +70,7 @@ class FreqFSM(StatesGroup):
 FREQS_PAGE = 10
 # ``freq_edit`` of a group of chats opened from the dashboard: the same editor, but its back returns to ``freqs``.
 DASH_EDIT = "freq_edit_dash"
-WINDOW_CHOICES = ("", "08:00-23:00", "09:00-22:00")  # quick buttons of the "active hours" input
+WINDOW_CHOICES = ("", "08:00-22:00", "08:00-23:00", "09:00-22:00")  # quick buttons of the "active hours" input
 DAY_PRESETS = (freq_svc.ALL_DAYS, freq_svc.WEEKDAYS, freq_svc.WEEKEND)
 DAY_PRESET_KEYS = ("fq.b.days_all", "fq.b.days_weekdays", "fq.b.days_weekend")
 ROTATIONS = (RotationOrder.SEQUENTIAL, RotationOrder.RANDOM)

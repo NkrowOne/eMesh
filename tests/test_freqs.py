@@ -72,7 +72,7 @@ async def test_dashboard_shows_every_frequency_and_its_chats(app: App) -> None:
     await open_menu(app, SUPER_ID, "freqs")
     text = app.last_text(SUPER_ID)
     assert text.startswith("⏰ <b>Frecuencias</b>\nCada canal recibe un mensaje en cada turno de su frecuencia")
-    assert "🌐 <b>Global</b>: cada 4 h\n   └ 2 chats · ≈ 6 al día · próximo: " in text
+    assert "🌐 <b>Global</b>: cada 4 h · 08:00-22:00\n   └ 2 chats · ≈ 4 al día · próximo: " in text
     assert "🗂 <b>Cine</b>: cada 2 h\n   └ 2 chats · ≈ 12 al día · próximo: " in text
     assert "🗂 <b>Noticias</b>: 🌐 la global\n" in text
     assert "🗂 <b>Estrenos</b>: a las 10:00 y 22:00 · de lunes a viernes\n   └ 1 chat · ≈ 2 al día · próximo: " in text
@@ -82,7 +82,7 @@ async def test_dashboard_shows_every_frequency_and_its_chats(app: App) -> None:
     assert "🛡 Anti-spam: sin máximo diario · sin separación mínima · 🧹 uno a la vez ✖️" in text
     assert "pausada" not in text
     assert button_texts(app) == [
-        "🌐 Global: cada 4 h", "🗂 Cine: cada 2 h", "🗂 Noticias: 🌐 la global",
+        "🌐 Global: cada 4 h · 08:00-22:00", "🗂 Cine: cada 2 h", "🗂 Noticias: 🌐 la global",
         "🗂 Estrenos: a las 10:00 y 22:00 · de lunes a viernes", "✅ En orden", "⚪ Al azar", "🛡 Anti-spam",
         "🔙 Regresar",
     ]
@@ -249,12 +249,12 @@ async def test_super_admin_edits_the_frequencies_of_the_clone_he_manages(app: Ap
     text = app.last_text(SUPER_ID)
     assert "Gestionando <b>@clon_cine_bot</b>" in text
     assert "Grupo del clon" in text and "Principal" not in text
-    assert "🌐 <b>Global</b>: cada 4 h\n   └ 1 chat ·" in text
+    assert "🌐 <b>Global</b>: cada 4 h · 08:00-22:00\n   └ 1 chat ·" in text
 
     before = utcnow()
     await app.press(SUPER_ID, FqCB(a="ev", t=0, v=60).pack())
     rec, main = await load(app, BotRecord, clone), await load(app, BotRecord, MAIN_BOT_ID)
-    assert rec.freq == {"mode": "interval", "every": 60, "window": "", "days": "0123456"}
+    assert rec.freq == {"mode": "interval", "every": 60, "window": "08:00-22:00", "days": "0123456"}
     assert main.freq == DEFAULT_FREQ
     assert rec.rot_next_at in freq.upcoming(rec.freq, "America/Mexico_City", before, 2)
     assert "🗺 Zona horaria: America/Mexico_City" in app.last_text(SUPER_ID)

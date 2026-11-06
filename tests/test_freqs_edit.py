@@ -37,7 +37,7 @@ def wakes(app: App, monkeypatch: pytest.MonkeyPatch) -> list[int]:
 
 EVERY_BUTTONS = ["30 min", "1 h", "2 h", "3 h", "4 h", "6 h", "8 h", "12 h", "24 h"]
 DAY_BUTTONS = ["L", "M", "X", "J", "V", "S", "D", "Todos", "L-V", "S-D"]
-OWN_2H = {"mode": "interval", "every": 120, "window": "", "days": "0123456"}
+OWN_2H = {"mode": "interval", "every": 120, "window": "08:00-22:00", "days": "0123456"}
 
 
 async def bot_rec(app: App, bot_id: int = MAIN_BOT_ID) -> BotRecord:
@@ -56,11 +56,11 @@ async def test_global_frequency_editor_and_quick_interval(app: App, wakes: list[
     text = app.last_text(SUPER_ID)
     assert text.startswith("⏰ <b>Frecuencia</b> · 🌐 Global\n📣 La siguen: <b>1 chat</b>\n")
     assert "└ Los chats que reciben mensajes y no están en ningún grupo de canales" in text
-    assert "🔁 Cada: <b>4 h</b>\n🕐 Horario: todo el día\n🔄 Días: todos los días\n📅 Próximos: " in text
-    assert "≈ <b>6</b> envíos al día por chat\n🗺 Zona horaria: Europe/Madrid" in text
+    assert "🔁 Cada: <b>4 h</b>\n🕐 Horario: 08:00-22:00\n🔄 Días: todos los días\n📅 Próximos: " in text
+    assert "≈ <b>4</b> envíos al día por chat\n🗺 Zona horaria: Europe/Madrid" in text
     expected = ["✅ Cada cierto tiempo", "⚪ A horas fijas",
                 *[("✅ " if b == "4 h" else "⚪ ") + b for b in EVERY_BUTTONS],
-                "✏️ Otro intervalo", "🕐 Horario activo: todo el día",
+                "✏️ Otro intervalo", "🕐 Horario activo: 08:00-22:00",
                 *[f"✅ {d}" for d in DAY_BUTTONS[:8]], "L-V", "S-D", "🔙 Regresar"]
     assert button_texts(app) == expected
     assert button_data(app, "Regresar") == MenuCB(screen="freqs").pack()
@@ -70,9 +70,9 @@ async def test_global_frequency_editor_and_quick_interval(app: App, wakes: list[
     rec = await bot_rec(app)
     assert rec.freq == OWN_2H
     assert rec.rot_next_at in freq.upcoming(rec.freq, TZ, before, 2)
-    assert wakes == [1] and answers(app)[-1] == "✅ Guardado: cada 2 h"
+    assert wakes == [1] and answers(app)[-1] == "✅ Guardado: cada 2 h · 08:00-22:00"
     text = app.last_text(SUPER_ID)
-    assert "🔁 Cada: <b>2 h</b>" in text and "≈ <b>12</b> envíos al día por chat" in text
+    assert "🔁 Cada: <b>2 h</b>" in text and "≈ <b>8</b> envíos al día por chat" in text
     assert f"📅 Próximos: {local(rec.rot_next_at, '%d/%m %I:%M %p')}" in text
     assert "✅ 2 h" in button_texts(app)
 
@@ -97,10 +97,10 @@ async def test_custom_interval(app: App, wakes: list[int]) -> None:
     before = utcnow()
     await app.send(SUPER_ID, "1 h 30 min")
     rec = await bot_rec(app)
-    assert rec.freq == {"mode": "interval", "every": 90, "window": "", "days": "0123456"}
+    assert rec.freq == {"mode": "interval", "every": 90, "window": "08:00-22:00", "days": "0123456"}
     assert rec.rot_next_at in freq.upcoming(rec.freq, TZ, before, 2) and wakes == [1]
     text = app.last_text(SUPER_ID)
-    assert text.startswith("✅ Guardado: cada 1 h 30 min\n\n") and "🔁 Cada: <b>1 h 30 min</b>" in text
+    assert text.startswith("✅ Guardado: cada 1 h 30 min · 08:00-22:00\n\n") and "🔁 Cada: <b>1 h 30 min</b>" in text
     assert "✅ Otro: 1 h 30 min" in button_texts(app)
     assert not any(t.startswith("✅ ") and t[2:] in EVERY_BUTTONS for t in button_texts(app))
 
@@ -116,8 +116,8 @@ async def test_active_hours(app: App, wakes: list[int]) -> None:
     await started(app, SUPER_ID)
     await app.press(SUPER_ID, FqCB(a="win", t=0).pack())
     text = app.last_text(SUPER_ID)
-    assert "🕐 <b>Horario activo</b>" in text and "🕐 Ahora: <b>todo el día</b>" in text
-    assert button_texts(app) == ["✅ Todo el día", "⚪ 08:00-23:00", "⚪ 09:00-22:00", "❌ Cancelar"]
+    assert "🕐 <b>Horario activo</b>" in text and "🕐 Ahora: <b>08:00-22:00</b>" in text
+    assert button_texts(app) == ["⚪ Todo el día", "✅ 08:00-22:00", "⚪ 08:00-23:00", "⚪ 09:00-22:00", "❌ Cancelar"]
     await app.send(SUPER_ID, "de 8 a 8")
     assert app.last_text(SUPER_ID).startswith("⚠️ Escribe el horario así")
     await app.send(SUPER_ID, "de 8 a 23")
@@ -190,7 +190,7 @@ async def test_days_toggles_and_presets(app: App, wakes: list[int]) -> None:
 
     await app.press(SUPER_ID, FqCB(a="day", t=0, v=5).pack())
     assert (await bot_rec(app)).freq["days"] == "012345"
-    assert answers(app)[-1] == "✅ Guardado: cada 4 h · L, M, X, J, V, S"
+    assert answers(app)[-1] == "✅ Guardado: cada 4 h · 08:00-22:00 · L, M, X, J, V, S"
     assert "🔄 Días: L, M, X, J, V, S" in app.last_text(SUPER_ID)
     await app.click(SUPER_ID, "S-D")
     rec = await bot_rec(app)
@@ -215,9 +215,9 @@ async def test_group_frequency_use_global_on_and_off(app: App, wakes: list[int])
     await open_menu(app, SUPER_ID, "group", g)
     await app.click(SUPER_ID, "⏰ Frecuencia")
     text = app.last_text(SUPER_ID)
-    assert text.startswith("⏰ <b>Frecuencia</b> · 🗂 Cine\n🌐 Sigue la frecuencia global: <b>cada 4 h</b>")
-    assert "Para darle una propia, desmarca «Usar la global»" in text and "≈ <b>6</b>" in text
-    assert button_texts(app) == ["✅ Usar la global: cada 4 h", "🔙 Regresar"]
+    assert text.startswith("⏰ <b>Frecuencia</b> · 🗂 Cine\n🌐 Sigue la frecuencia global: <b>cada 4 h · 08:00-22:00</b>")
+    assert "Para darle una propia, desmarca «Usar la global»" in text and "≈ <b>4</b>" in text
+    assert button_texts(app) == ["✅ Usar la global: cada 4 h · 08:00-22:00", "🔙 Regresar"]
     assert button_data(app, "Regresar") == MenuCB(screen="group", arg=g).pack()
 
     before = utcnow()
@@ -227,15 +227,15 @@ async def test_group_frequency_use_global_on_and_off(app: App, wakes: list[int])
     assert "✅ Ahora tiene su propia frecuencia (una copia de la global)." in answers(app)
     text = app.last_text(SUPER_ID)
     assert "📣 La siguen: <b>1 chat</b>\n   └ Un canal sigue la frecuencia del primero de sus grupos" in text
-    assert "⚪ Usar la global: cada 4 h" in button_texts(app) and "✅ 4 h" in button_texts(app)
+    assert "⚪ Usar la global: cada 4 h · 08:00-22:00" in button_texts(app) and "✅ 4 h" in button_texts(app)
 
     await app.click(SUPER_ID, "1 h")
     group = await load(app, ChatGroup, g)
-    assert group.freq == {"mode": "interval", "every": 60, "window": "", "days": "0123456"}
+    assert group.freq == {"mode": "interval", "every": 60, "window": "08:00-22:00", "days": "0123456"}
     assert group.rot_next_at in freq.upcoming(group.freq, TZ, before, 2)
     assert (await bot_rec(app)).freq == DEFAULT_FREQ  # the global one didn't change
     await app.click(SUPER_ID, "Regresar")
-    assert "⏰ Frecuencia: cada 1 h (propia)" in app.last_text(SUPER_ID)
+    assert "⏰ Frecuencia: cada 1 h · 08:00-22:00 (propia)" in app.last_text(SUPER_ID)
 
     await app.click(SUPER_ID, "⏰ Frecuencia")
     await app.click(SUPER_ID, "Usar la global")
@@ -327,7 +327,7 @@ async def test_post_campaign_dates_limit_the_next_sends(app: App) -> None:
     assert fmt.to_local(post.next_send_at, TZ).date() == start
     text = app.last_text(SUPER_ID)
     first = fmt.to_local(post.next_send_at, TZ)
-    assert f"📅 Próximos: {first:%d/%m} 12:00 AM, 12:00 PM\n" in text  # two slots that day, then the campaign ends
+    assert f"📅 Próximos: {first:%d/%m} 08:00 AM, 08:00 PM\n" in text  # two slots that day, then the campaign ends
 
 
 async def test_rows_of_another_network_are_not_found(app: App, wakes: list[int]) -> None:
