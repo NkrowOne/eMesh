@@ -78,8 +78,9 @@ def render(kind: str, lang: str, tz: str, *, chat_title: str, actor: str, data: 
     key = f"ev.{kind}"
     if kind in (EventKind.CHAT_PAUSED, EventKind.CHAT_RESUMED, EventKind.CHAT_REMOVED) and by:
         key = f"ev.{kind}.{by}"
+    missing = ", ".join(t(f"rights.{r}", lang) for r in str(data.get("missing") or "").split(",") if r)
     return t(key, lang, chat=title, actor=actor or t("ev.someone", lang), until=_until_text(data, lang, tz),
-             missing=esc(data.get("missing") or ""), reason=esc(data.get("reason") or ""))
+             missing=esc(missing), reason=esc(data.get("reason") or ""))
 
 
 async def describe(session: AsyncSession, ev: Event, lang: str, tz: str) -> str:
