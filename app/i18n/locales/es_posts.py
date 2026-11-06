@@ -131,6 +131,7 @@ STRINGS = {
     "po.preview.failed": "⚠️ No se ha podido enviar la vista previa. Inténtalo de nuevo.",
     "po.busy": "⏳ Este mensaje se está enviando ahora mismo. Espera a que termine.",
     "po.send.nobody": "⚠️ Ahora mismo ningún chat puede recibirlo. Revisa su 🎯 Destino.",
+    "po.send.paused": "⏸ La distribución está pausada: no se envía nada. Reanúdala en el inicio con ▶️ Reanudar todo.",
     "po.send.confirm": (
         "🚀 <b>{name}</b>\n\nSe enviará ahora a <b>{chats}</b> (👤 {members}).\n"
         "   └ Se respetan los límites del 🛡 anti-spam de la red."

@@ -133,6 +133,7 @@ STRINGS = {
     "po.preview.failed": "⚠️ The preview couldn't be sent. Try again.",
     "po.busy": "⏳ This post is being sent right now. Wait until it finishes.",
     "po.send.nobody": "⚠️ No chat can receive it right now. Check its 🎯 Target.",
+    "po.send.paused": "⏸ The distribution is paused: nothing is sent. Resume it on the home screen with ▶️ Resume all.",
     "po.send.confirm": (
         "🚀 <b>{name}</b>\n\nIt will be sent now to <b>{chats}</b> (👤 {members}).\n"
         "   └ The 🛡 anti-spam limits of the network apply."

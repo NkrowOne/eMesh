@@ -349,6 +349,10 @@ class Publisher:
     def _halted(self, bot_id: int) -> bool:
         return self._stopping or bot_id in self._withdrawing or not self.manager.is_running(bot_id)
 
+    async def _network_paused(self, bot_id: int) -> bool:
+        async with self.sm() as s:
+            return bool((await s.execute(select(BotRecord.paused).where(BotRecord.id == bot_id))).scalar())
+
     def _tz(self, rec: BotRecord | None) -> str:
         return (rec.timezone if rec is not None else None) or self.settings.DEFAULT_TIMEZONE
 
@@ -535,6 +539,9 @@ class Publisher:
             ws = await s.get(BotRecord, post.bot_id)
             if ws is None:
                 return None
+            if ws.paused:  # ⏸ Pausar todo: nothing is sent until the network is resumed
+                log.info("The network of bot %s is paused: post %s not sent", post.bot_id, post_id)
+                return None
             found: list[Chat] = []
             for part in chunks(wanted, 500):
                 found += (await s.execute(
@@ -632,7 +639,7 @@ class Publisher:
                     log.info("Run %s stopped after its current batch: it goes on later", run_id)
                     return
                 except _Cancelled:
-                    log.info("Run %s cancelled: post %s retired or deleted", run_id, post.id)
+                    log.info("Run %s cancelled (post %s retired or deleted, or the network paused)", run_id, post.id)
                     await self._cancel_queued(run_id)
                     await self._finish(bot, run_id, cancelled=True)
                     return
@@ -645,6 +652,8 @@ class Publisher:
                 raise _Cancelled
             if self._halted(job.bot_id):
                 raise _Stopped
+            if await self._network_paused(job.bot_id):  # ⏸ Pausar todo stops a run in progress too
+                raise _Cancelled
             # A file taken from another bot is uploaded once: one chat at a time until Telegram gives its file id.
             size = 1 if isinstance(job.media, InputFile) else BATCH_SIZE
             batch, pending = pending[:size], pending[size:]
@@ -677,7 +686,8 @@ class Publisher:
         if isinstance(job.media, InputFile):
             file_id = next((r.file_id for r in results if r.file_id), None)
             if file_id:
-                await content.remember_media(self.sm, job.post_id, job.bot_id, file_id)
+                await content.remember_media(self.sm, job.post_id, job.bot_id, file_id,
+                                             source=content.media_source(job.media))
                 job.media = file_id
 
     async def _prepare(self, job: _Job, ids: Sequence[int]) -> list[_Target]:
@@ -1019,7 +1029,9 @@ class Publisher:
     async def _delete_message(self, bot: Bot, live: _Live, chat_type: str = ChatType.CHANNEL) -> _Gone:
         if live.message_id is None:
             return _Gone(live, DeliveryStatus.MISSING, "no message id")
-        if live.sent_at is not None and utcnow() - live.sent_at > MAX_DELETE_AGE:
+        # Telegram's limit is 48 h (auto deletes are scheduled a little before it, at MAX_DELETE_AGE, and run a few
+        # seconds after that): only past the real limit is it too late to try.
+        if live.sent_at is not None and utcnow() - live.sent_at >= LIVE_AGE:
             return _Gone(live, DeliveryStatus.EXPIRED, unpinned=await self._unpin(bot, live))
         try:
             await bot.delete_message(live.chat_id, live.message_id)

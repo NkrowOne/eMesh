@@ -331,16 +331,31 @@ async def media_for(bot: Bot, post: Post, manager: BotManager | None) -> str | B
         raw = data.getvalue() if hasattr(data, "getvalue") else bytes(data)  # type: ignore[arg-type]
         if not raw:
             continue
-        return BufferedInputFile(raw, filename=post.media_name or _DEFAULT_FILE_NAMES.get(post.kind, "file"))
+        upload = BufferedInputFile(raw, filename=post.media_name or _DEFAULT_FILE_NAMES.get(post.kind, "file"))
+        upload.source_file_id = file_id  # type: ignore[attr-defined] - see remember_media
+        return upload
     raise MediaError("unavailable")
 
 
-async def remember_media(sm: SessionMaker, post_id: int, bot_id: int, file_id: str) -> None:
-    """Stores the file id ``bot_id`` got for the media of a post (its own short transaction)."""
+def media_source(media: object) -> str | None:
+    """The file id (of another bot) a media returned by :func:`media_for` was downloaded from."""
+    return getattr(media, "source_file_id", None)
+
+
+async def remember_media(sm: SessionMaker, post_id: int, bot_id: int, file_id: str, *,
+                         source: str | None = None) -> None:
+    """Stores the file id ``bot_id`` got for the media of a post (its own short transaction). ``source``: the file
+    id it was uploaded from (:func:`media_source`); when the post's media changed meanwhile (the source isn't in it
+    any more) nothing is stored: that file id is of the old media."""
     async with session_scope(sm) as s:
         post = await s.get(Post, post_id)
-        if post is not None and (post.media or {}).get(str(bot_id)) != file_id:
-            post.media = {**(post.media or {}), str(bot_id): file_id}
+        if post is None:
+            return
+        media = dict(post.media or {})
+        if source is not None and source not in media.values():
+            return
+        if media.get(str(bot_id)) != file_id:
+            post.media = {**media, str(bot_id): file_id}
 
 
 # --------------------------------------------------------------------------- sending
@@ -412,7 +427,7 @@ async def send_post(bot: Bot, chat_id: int, post: Post, manager: BotManager | No
     if isinstance(media, InputFile) and sm is not None and post.id:
         file_id = file_id_of(msg, post.kind)
         if file_id:
-            await remember_media(sm, post.id, bot.id, file_id)
+            await remember_media(sm, post.id, bot.id, file_id, source=media_source(media))
     return msg
 
 

@@ -122,10 +122,15 @@ def next_slot(freq: dict[str, Any] | None, tz: str, after: datetime) -> datetime
     first = after.astimezone(zone(tz)).date() - timedelta(days=1)
     try:
         for i in range(10):
-            for slot in _local_slots(f, first + timedelta(days=i), tz):
-                utc = slot.astimezone(timezone.utc)
-                if utc > after:
-                    return utc
+            # The earliest in real time, not in wall-clock order: on the spring-forward day a time that doesn't
+            # exist ("02:30") maps after the next ones ("03:15").
+            day = [slot.astimezone(timezone.utc) for slot in _local_slots(f, first + timedelta(days=i), tz)]
+            later = [utc for utc in day if utc > after]
+            if later:
+                nxt = min(later)
+                # a window spilling past midnight can overlap the next day's first slots: look one day more
+                ahead = [slot.astimezone(timezone.utc) for slot in _local_slots(f, first + timedelta(days=i + 1), tz)]
+                return min([nxt, *(utc for utc in ahead if utc > after)])
     except OverflowError:
         return None
     return None

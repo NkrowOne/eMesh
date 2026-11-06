@@ -593,6 +593,9 @@ async def on_send(call: CallbackQuery, callback_data: PoCB, ctx: Ctx, session: A
     if publisher.is_busy(post.id):
         await alert(call, ctx.t("po.busy"))
         return
+    if ctx.ws_rec.paused:
+        await alert(call, ctx.t("po.send.paused"))
+        return
     chats, members = await audience.audience_size(session, post)
     if not chats:
         await alert(call, ctx.t("po.send.nobody"))
@@ -611,6 +614,8 @@ async def on_send_confirm(call: CallbackQuery, callback_data: PoCB, ctx: Ctx, se
         return
     if publisher.is_busy(post.id):
         await alert(call, ctx.t("po.busy"))
+    elif ctx.ws_rec.paused:
+        await alert(call, ctx.t("po.send.paused"))
     elif await publisher.send_now(post.id, user_id=ctx.user_id) is None:
         await alert(call, ctx.t("po.busy" if publisher.is_busy(post.id) else "po.send.nobody"))
     else:

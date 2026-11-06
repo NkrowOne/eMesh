@@ -225,14 +225,16 @@ class Scheduler:
             self._swept[bot_id] = time.monotonic()
             await self._guard(self.publisher.resume_bot(bot_id), f"half-done runs of bot {bot_id}")
         await self._guard(self._slot(bot_id, None, now), f"global slot of bot {bot_id}")
+        # A slot may take minutes on a big network: every next step reads the clock again (a stale "now" would
+        # compute next times already past and send the same slot twice).
         async with session_scope(self.sm) as s:
             # A JSON column may hold a JSON null instead of NULL: the groups with their own frequency are picked here.
             groups = [group_id for group_id, own, next_at in (await s.execute(
                 select(ChatGroup.id, ChatGroup.freq, ChatGroup.rot_next_at).where(ChatGroup.bot_id == bot_id)
                 .order_by(ChatGroup.sort, ChatGroup.id))).all() if own or next_at is not None]
         for group_id in groups:
-            await self._guard(self._slot(bot_id, group_id, now), f"slot of group {group_id}")
-        await self._guard(self._posts(bot_id, now), f"scheduled posts of bot {bot_id}")
+            await self._guard(self._slot(bot_id, group_id, utcnow()), f"slot of group {group_id}")
+        await self._guard(self._posts(bot_id, utcnow()), f"scheduled posts of bot {bot_id}")
 
     async def _slot(self, bot_id: int, group_id: int | None, now: datetime) -> None:
         """A due slot of the global frequency (``group_id`` None) or of a group's own one: each chat following it gets

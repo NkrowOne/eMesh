@@ -81,6 +81,7 @@ class BotManager:
         self._started = False  # start() is done: a bot started later resumes its pending publications itself
         self._retiring: set[int] = set()  # bots being stopped: the scheduler starts nothing new for them
         self._invalidating: set[int] = set()
+        self._locks: dict[int, asyncio.Lock] = {}  # start / stop of one bot, one at a time
         self.on_bot_invalid: list[Callable[[int], Any]] = []
 
     # ------------------------------------------------------------------ bots
@@ -239,7 +240,19 @@ class BotManager:
             await self.start_bot(rec)
         return rec
 
+    def _lock(self, bot_id: int) -> asyncio.Lock:
+        lock = self._locks.get(bot_id)
+        if lock is None:
+            lock = self._locks[bot_id] = asyncio.Lock()
+        return lock
+
     async def start_bot(self, rec: BotRecord) -> None:
+        # Waits for a stop of the same bot in progress (e.g. ▶️ Activar while ⏸ still withdraws its posts): starting
+        # it meanwhile would be undone when that stop drops it.
+        async with self._lock(rec.id):
+            await self._start_bot(rec)
+
+    async def _start_bot(self, rec: BotRecord) -> None:
         if rec.id in self.bots:
             return
         token = self.cipher.decrypt(rec.token_enc)
@@ -281,6 +294,10 @@ class BotManager:
         """Stops a running bot. ``withdraw``: it stops for good (paused, disconnected, disabled or deleted) while its
         token still works, so its live deliveries with an auto delete are deleted first: nothing deletes them while
         it isn't running."""
+        async with self._lock(bot_id):
+            await self._stop_bot(bot_id, delete_webhook=delete_webhook, withdraw=withdraw)
+
+    async def _stop_bot(self, bot_id: int, *, delete_webhook: bool, withdraw: bool) -> None:
         self._retiring.add(bot_id)
         try:
             if withdraw and bot_id in self.bots:
@@ -336,6 +353,11 @@ class BotManager:
                 return False
             rec.status = BotStatus.ACTIVE
             rec.status_reason = None
+        if bot_id in self._retiring:
+            # It is still being stopped (its posts are withdrawn, up to a minute): it starts as soon as that ends,
+            # without keeping the caller (a button press) waiting.
+            self._spawn(self.start_bot(rec))
+            return True
         await self.start_bot(rec)
         return bot_id in self.bots
 

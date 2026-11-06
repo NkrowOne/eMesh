@@ -114,8 +114,17 @@ async def test_review_a_group_slot_is_not_sent_twice_after_a_long_global_slot(ap
         group_id = group.id
     await make_post(app)
     cid = await chat_id_of(app, pk)
-    # The job's ``now`` was taken 20 minutes ago (the global slot of a big network kept it busy since then).
-    monkeypatch.setattr("app.services.scheduler.utcnow", lambda: real_now - timedelta(minutes=20))
+    # The tick starts 20 minutes ago and its global slot (a big network) takes those 20 minutes.
+    clock = {"now": real_now - timedelta(minutes=20)}
+    monkeypatch.setattr("app.services.scheduler.utcnow", lambda: clock["now"])
+    slot = app.scheduler._slot  # noqa: SLF001
+
+    async def long_global_slot(bot_id: int, group_id: int | None, now: datetime) -> None:
+        await slot(bot_id, group_id, now)
+        if group_id is None:
+            clock["now"] = real_now
+
+    monkeypatch.setattr(app.scheduler, "_slot", long_global_slot)
     await app.scheduler._sends(MAIN_BOT_ID)  # noqa: SLF001
     assert len(texts_in(app, cid)) == 1
     monkeypatch.setattr("app.services.scheduler.utcnow", utcnow)
