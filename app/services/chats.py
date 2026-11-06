@@ -315,7 +315,8 @@ async def approve(bot: Bot, session: AsyncSession, ws_rec: BotRecord, chat: Chat
     await close_notices(bot, session, chat, "rq.closed.accepted", by_user)
     actor = by_user or chat.owner_user_id
     if chat.is_external:
-        await events.emit(bot, session, ws_rec, EventKind.CHAT_JOINED, chat=chat, actor_id=actor, skip_user=by_user)
+        await events.emit(bot, session, ws_rec, EventKind.CHAT_JOINED, chat=chat, actor_id=actor, skip_user=by_user,
+                          data={"by": "admin"} if by_user else None)
     else:
         await events.emit(bot, session, ws_rec, EventKind.CHAT_ADDED, chat=chat, actor_id=actor, notify=True,
                           skip_user=actor)

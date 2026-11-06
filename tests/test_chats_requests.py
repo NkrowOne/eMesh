@@ -62,7 +62,7 @@ async def test_accept_from_a_notice_closes_every_notice(app: App) -> None:
                for t in dms(app))
     [joined] = await events_of(app, EventKind.CHAT_JOINED)
     assert joined.actor_id == SUPER_ID
-    assert any("se ha unido a la red (@superadmin)" in t for t in dms(app, OWNER2_ID)), "the other admins are told"
+    assert any("se ha unido a la red (aceptado por @superadmin)" in t for t in dms(app, OWNER2_ID)), "the other admins are told"
 
     # The other admin presses their old notice: nothing changes.
     await app.press(OWNER2_ID, button(theirs, "Rechazar")["callback_data"], theirs.result["message_id"])

@@ -76,7 +76,7 @@ def render(kind: str, lang: str, tz: str, *, chat_title: str, actor: str, data: 
     by = str(data.get("by") or "")
     title = esc(chat_title or "?")
     key = f"ev.{kind}"
-    if kind in (EventKind.CHAT_PAUSED, EventKind.CHAT_RESUMED, EventKind.CHAT_REMOVED) and by:
+    if kind in (EventKind.CHAT_PAUSED, EventKind.CHAT_RESUMED, EventKind.CHAT_REMOVED, EventKind.CHAT_JOINED) and by:
         key = f"ev.{kind}.{by}"
     missing = ", ".join(t(f"rights.{r}", lang) for r in str(data.get("missing") or "").split(",") if r)
     return t(key, lang, chat=title, actor=actor or t("ev.someone", lang), until=_until_text(data, lang, tz),

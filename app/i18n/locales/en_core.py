@@ -21,6 +21,7 @@ STRINGS = {
     "ev.chat_added": "<b>{chat}</b> was added to the network ({actor}).",
     "ev.chat_request": "<b>{chat}</b> wants to join the network ({actor}).",
     "ev.chat_joined": "<b>{chat}</b> joined the network ({actor}).",
+    "ev.chat_joined.admin": "<b>{chat}</b> joined the network (accepted by {actor}).",
     "ev.chat_rejected": "<b>{chat}</b>: request rejected ({actor}).",
     "ev.chat_banned": "<b>{chat}</b> was banned: it can't come back to the network ({actor}).",
     "ev.chat_paused": "<b>{chat}</b>: distribution paused.",
