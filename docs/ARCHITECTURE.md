@@ -144,11 +144,13 @@ visitors). Times: frequencies and dates are in the workspace timezone (`ctx.bot_
 ## 4. How the distribution works (all modules must describe it the same way)
 
 * **Sendable chat**: approved, the bot has its rights, not paused by an admin, not paused by its owner (a past
-  `owner_paused_until` counts as not paused). The whole network can be paused (`Bot.paused`, "⏸ Pausar todo").
+  `owner_paused_until` counts as not paused). The whole network can be paused (`Bot.paused`, "⏸ Pausar todo"):
+  no run starts (🚀 Enviar ahora is refused with a hint), a run in progress stops before its next batch, and only
+  the announced auto deletes still happen.
 * **Targets of a post** (`Post.targets`): `all` (🌐 Todos), `own` (🏠 Solo propios), `ext` (🤝 Solo externos),
   `g<id>` (🗂 a group of chats). Several may be combined (union). An empty list targets nobody (show ⚠️).
-* **Frequencies**: the global one (`Bot.freq`, 🌐) and a group's own one (`ChatGroup.freq`, None = the chats follow
-  the global one). A chat follows the frequency of the first of its groups (by `sort`, then id) that has its own
+* **Frequencies**: the global one (`Bot.freq`, 🌐; a new network starts with every 4 h from 08:00 to 22:00) and a
+  group's own one (`ChatGroup.freq`, None = the chats follow the global one). A chat follows the frequency of the first of its groups (by `sort`, then id) that has its own
   frequency, otherwise the global one: that is its **source**. Every slot of a source, each sendable chat following
   it receives **one** post: the next of its **rotation** (the active rotation posts that target it, inside their
   campaign dates, in order of creation — or random when `Bot.rotation == "random"`; never the same twice in a row
@@ -447,7 +449,8 @@ Partners (`partners.py`):
 ### 5.7 Groups of chats & frequencies (groups module)
 `groups` (arg page): «🗂 <b>Grupos de canales</b>\nAgrupa canales y grupos para enviarles mensajes concretos y darles
 su propia frecuencia.» + `1. 🗂 <b>Cine</b> · 📣 5 · ⏰ cada 2 h · 🤝` per group; one button per group,
-`[➕ Nuevo grupo de canales]` (name prompt ≤ 64, then `group_chats`), `[🔙]` → home.
+`[➕ Nuevo grupo de canales]` (name prompt ≤ 64, then `group_chats`; at most 50 groups of chats per network), `[🔙]`
+→ home.
 `group` (arg id):
 ```
 🗂 <b>Cine</b>
