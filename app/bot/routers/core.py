@@ -26,7 +26,7 @@ fallback_router = Router(name="fallback")
 @router.callback_query(MenuCB.filter())
 async def on_menu(call: CallbackQuery, callback_data: MenuCB, ctx: Ctx, session: AsyncSession, state: FSMContext) -> None:
     await state.clear()
-    await open_screen(callback_data.screen, call, ctx, session, arg=callback_data.arg)
+    await open_screen(callback_data.screen, call, ctx, session, arg=callback_data.arg, state=state)
 
 
 @router.callback_query(CloseCB.filter())
@@ -49,7 +49,7 @@ async def on_input_cancel(
 ) -> None:
     await state.clear()
     await toast(call, ctx.t("common.cancelled"))
-    await open_screen(callback_data.screen, call, ctx, session, arg=callback_data.arg)
+    await open_screen(callback_data.screen, call, ctx, session, arg=callback_data.arg, state=state)
 
 
 @fallback_router.callback_query()

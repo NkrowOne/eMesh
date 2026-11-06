@@ -448,7 +448,7 @@ async def test_hub_main_bot_has_no_posts(app: App, engine: SimpleNamespace) -> N
     await started(app, SUPER_ID)
     for data in (MenuCB(screen="posts"), MenuCB(screen="post_new"), PwCB(a="start"), PoCB(a="pause", id=pid)):
         await app.press(SUPER_ID, data.pack())
-        assert app.last_text(SUPER_ID) == "🕸 eMesh"  # the home screen
+        assert app.last_text(SUPER_ID).startswith("🕸 <b>eMesh")  # the home screen of the hub
     assert (await load(app, Post, pid)).status == PostStatus.ACTIVE
 
 

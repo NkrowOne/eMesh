@@ -217,7 +217,9 @@ class DbContextMiddleware(BaseMiddleware):
             if bu is not None and bu.is_banned and role == Role.USER:
                 return None
             lang = bu.lang if bu else normalize_lang(tg_user.language_code if tg_user else None)
-            ws = await self._workspace(session, bot_rec, bu, role)
+            # Only the super admin's own private chat with a main bot can switch to another network: updates of
+            # groups and channels always belong to the bot that receives them.
+            ws = await self._workspace(session, bot_rec, bu, role) if private else bot_rec
             ctx = Ctx(bot_rec=bot_rec, user=user, bu=bu, role=role, lang=lang, settings=self.settings,
                       manager=data.get("manager"), ws=ws)
             # Release the write lock of the user upsert now: handlers may write through other sessions

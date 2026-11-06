@@ -723,9 +723,9 @@ async def _owners(session: AsyncSession, ctx: Ctx) -> list[int]:
 
 @screen("panel_blast")
 async def panel_blast_screen(event: Message | CallbackQuery, ctx: Ctx, session: AsyncSession, arg: int = 0,
-                             state: FSMContext | None = None, **_: object) -> None:
-    """A message copied to the owners of every clone through this bot. Opened with a ``state`` it asks for the
-    message at once; otherwise it explains it first."""
+                             state: FSMContext | None = None, ask: bool = False, **_: object) -> None:
+    """A message copied to the owners of every clone through this bot. With ``ask`` (and a ``state``) it asks for
+    the message at once; otherwise it explains it first."""
     if not _allowed(ctx):
         await alert(event, ctx.t("common.no_permission"))
         return
@@ -733,7 +733,7 @@ async def panel_blast_screen(event: Message | CallbackQuery, ctx: Ctx, session: 
     if not owners:
         await show(event, ctx.t("sa.blast.none"), kb(back_row(ctx.lang, "panel")))
         return
-    if state is None:
+    if state is None or not ask:
         markup = kb([btn(ctx.t("sa.btn.blast_write"), PanelCB(action="blast"), style="primary")],
                     back_row(ctx.lang, "panel"))
         await show(event, ctx.t("sa.blast.intro", n=num(len(owners))), markup)
@@ -744,7 +744,7 @@ async def panel_blast_screen(event: Message | CallbackQuery, ctx: Ctx, session: 
 
 @router.callback_query(PanelCB.filter(F.action == "blast"))
 async def on_blast(call: CallbackQuery, ctx: Ctx, session: AsyncSession, state: FSMContext) -> None:
-    await panel_blast_screen(call, ctx, session, state=state)
+    await panel_blast_screen(call, ctx, session, state=state, ask=True)
 
 
 @router.message(PanelFSM.blast, F.chat.type == "private", ~F.text.startswith("/"))
