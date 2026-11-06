@@ -1,10 +1,11 @@
 """📣 Canales y grupos (admins): the list with filters, a chat's detail and its actions (groups of chats, check,
-pause, remove, ban), the chats paused by their owners, 📥 import and 📢 a message to the partners."""
+pause, resume — a partner's pause too —, remove, ban), ⏸ Pausados, 📥 import and 📢 a message to the partners."""
 from __future__ import annotations
 
 import asyncio
 import logging
 import re
+from datetime import datetime
 from typing import Any
 
 from aiogram import Bot, F, Router
@@ -259,10 +260,13 @@ def detail_markup(ctx: Ctx, chat: Chat, f: int = 0, p: int = 0) -> InlineKeyboar
         if chat.status == ChatStatus.PENDING:
             rows.append([btn(ctx.t("ch.btn.accept"), RqCB(a="ok", pk=chat.id, s=SRC_CHAT), style="success"),
                          btn(ctx.t("ch.btn.reject"), RqCB(a="no", pk=chat.id, s=SRC_CHAT), style="danger")])
-        elif chat.admin_paused:
-            rows.append([btn(ctx.t("ch.btn.resume"), cb("rs"), style="success")])
         else:
-            rows.append([btn(ctx.t("ch.btn.pause"), cb("pz"))])
+            if chat.owner_pause_active():  # the admins rule: a partner's pause can be lifted (asks first)
+                rows.append([btn(ctx.t("ch.btn.resume_owner"), cb("rs"), style="success")])
+            elif chat.admin_paused:
+                rows.append([btn(ctx.t("ch.btn.resume"), cb("rs"), style="success")])
+            if not chat.admin_paused:
+                rows.append([btn(ctx.t("ch.btn.pause"), cb("pz"))])
         rows.append([btn(ctx.t("ch.btn.remove"), cb("rm"), style="danger"),
                      btn(ctx.t("ch.btn.ban"), cb("bn"), style="danger")])
     elif chat.status == ChatStatus.BANNED:
@@ -420,21 +424,48 @@ async def on_pause(call: CallbackQuery, callback_data: ChCB, ctx: Ctx, session: 
     await render_detail(call, ctx, session, chat, callback_data.f, callback_data.p)
 
 
-@router.callback_query(ChCB.filter(F.a == "rs"))
+# ▶️ resume: ``rs`` / ``rsy`` (confirmed) from a chat's detail, ``pr`` / ``pry`` from ⏸ Pausados (p: its page).
+RESUME_ACTIONS = {"rs": (False, False), "rsy": (False, True), "pr": (True, False), "pry": (True, True)}
+
+
+def _owner_until(ctx: Ctx, chat: Chat) -> str:
+    return (ctx.t("ch.paused.until", date=dt(chat.owner_paused_until, ctx.tz)) if chat.owner_paused_until
+            else ctx.t("ch.paused.until_open"))
+
+
+@router.callback_query(ChCB.filter(F.a.in_(set(RESUME_ACTIONS))))
 async def on_resume(call: CallbackQuery, callback_data: ChCB, ctx: Ctx, session: AsyncSession) -> None:
+    """The admins rule over the partners: resuming lifts an admin's pause and the partner's own (that one after a
+    confirmation; the partner is told)."""
     chat = await _admin_chat(call, ctx, session, callback_data.id)
     if chat is None:
         return
-    if not chat.admin_paused:
-        # A pause of the chat's owner is theirs: an admin can only remove the chat.
+    from_list, confirmed = RESUME_ACTIONS[callback_data.a]
+    f, p = callback_data.f, callback_data.p
+
+    async def back() -> None:
+        if from_list:
+            await render_paused(call, ctx, session, p)
+        else:
+            await render_detail(call, ctx, session, chat, f, p)
+
+    if not chat.is_paused():
         await alert(call, ctx.t("ch.toast.not_paused"))
+        await back()
+        return
+    if chat.owner_pause_active() and not confirmed:
+        yes = ChCB(a="pry" if from_list else "rsy", id=chat.id, f=f, p=p)
+        no = MenuCB(screen="paused", arg=p) if from_list else ChCB(a="op", id=chat.id, f=f, p=p)
+        markup = kb([btn(ctx.t("ch.resume.yes"), yes, style="success"), btn(ctx.t("ch.confirm.no"), no)])
+        await show(call, ctx.t("ch.resume.confirm", kind=chatstate.kind_word(chat, ctx.lang),
+                               chat=esc(chat.display_title), until=_owner_until(ctx, chat)), markup)
         return
     bot = await _ws_bot(call, ctx)
     if bot is None:
         return
     await chat_svc.resume_by_admin(bot, session, ctx.ws_rec, chat, ctx.user_id)
     await toast(call, ctx.t("ch.toast.resumed"))
-    await render_detail(call, ctx, session, chat, callback_data.f, callback_data.p)
+    await back()
 
 
 # --------------------------------------------------------------------------- 🗑 remove / 🚫 ban
@@ -499,35 +530,45 @@ async def on_unban(call: CallbackQuery, callback_data: ChCB, ctx: Ctx, session: 
     await render_detail(call, ctx, session, chat, callback_data.f, callback_data.p)
 
 
-# --------------------------------------------------------------------------- ⏸ paused by their owners
-@screen("paused")
-async def paused_screen(event: Message | CallbackQuery, ctx: Ctx, session: AsyncSession, arg: int = 0,
-                        **_: object) -> None:
+# --------------------------------------------------------------------------- ⏸ paused chats
+def _paused_by(ctx: Ctx, chat: Chat, owners: dict[int, User], now: datetime) -> str:
+    """Who paused it: its partner (``🤝 @pepe``), ``👮 un admin`` or both."""
+    if not chat.owner_pause_active(now):
+        return ctx.t("ch.paused.by_admin")
+    owner = chat_svc.owner_html(chat, owners) or ctx.t("common.unknown")
+    return ctx.t("ch.paused.by_both" if chat.admin_paused else "ch.paused.by_owner", owner=owner)
+
+
+async def render_paused(event: Message | CallbackQuery, ctx: Ctx, session: AsyncSession, page: int = 0) -> None:
+    """Every paused chat, by its owner or by an admin (who, until, since), with ▶️ to resume each one."""
     if not ctx.is_admin:
         await show(event, ctx.t("common.no_permission"), kb(back_row(ctx.lang)))
         return
     now = utcnow()
     chats = [c for c in await chat_svc.listed_chats(session, ctx.ws_id)
-             if c.status == ChatStatus.APPROVED and c.owner_pause_active(now)]
-    items, page, pages = paginate(chats, arg, PER_PAGE)
-    owners = await chat_svc.users_by_id(session, {c.owner_user_id for c in items})
-    lines = [ctx.t("ch.paused.title", n=num(len(chats))), ctx.t("ch.paused.hint"), ""]
-    buttons: list[InlineKeyboardButton] = []
+             if c.status == ChatStatus.APPROVED and c.is_paused(now)]
+    items, page, pages = paginate(chats, page, PER_PAGE)
+    owners = await chat_svc.users_by_id(session, {c.owner_user_id for c in items if c.owner_pause_active(now)})
+    lines = [ctx.t("ch.paused.title", n=num(len(chats)))]
+    lines += [ctx.t("ch.paused.hint"), ""] if chats else ["", ctx.t("ch.paused.empty")]
+    rows: list[list[InlineKeyboardButton]] = []
     for i, chat in enumerate(items, start=page * PER_PAGE + 1):
         icon = chat_svc.chat_icon(chat)
-        until = (ctx.t("ch.paused.until", date=dt(chat.owner_paused_until, ctx.tz)) if chat.owner_paused_until
-                 else ctx.t("ch.paused.until_open"))
+        until = ctx.t("ch.paused.until_admin") if chat.admin_paused else _owner_until(ctx, chat)
         lines.append(ctx.t("ch.paused.row", n=i, icon=icon, chat=chat_svc.chat_name(chat, 48),
-                           owner=chat_svc.owner_html(chat, owners) or ctx.t("common.unknown"), until=until,
-                           since=dt(chat.paused_at, ctx.tz)))
-        buttons.append(btn(f"#{i} {icon} {truncate(chat.display_title, 24)}", MenuCB(screen="chat", arg=chat.id)))
-    if not chats:
-        lines.append(ctx.t("ch.paused.empty"))
+                           who=_paused_by(ctx, chat, owners, now), until=until, since=dt(chat.paused_at, ctx.tz)))
+        rows.append([btn(f"#{i} {icon} {truncate(chat.display_title, 24)}", MenuCB(screen="chat", arg=chat.id)),
+                     btn(f"▶️ #{i}", ChCB(a="pr", id=chat.id, p=page), style="success")])
     if pages > 1:
         lines += ["", ctx.t("common.page", page=page + 1, pages=pages)]
-    markup = kb(*grid(buttons, 2), nav_row(page, pages, lambda p: MenuCB(screen="paused", arg=p), ctx.lang),
-                back_row(ctx.lang))
+    markup = kb(*rows, nav_row(page, pages, lambda p: MenuCB(screen="paused", arg=p), ctx.lang), back_row(ctx.lang))
     await show(event, "\n".join(lines), markup)
+
+
+@screen("paused")
+async def paused_screen(event: Message | CallbackQuery, ctx: Ctx, session: AsyncSession, arg: int = 0,
+                        **_: object) -> None:
+    await render_paused(event, ctx, session, arg)
 
 
 # --------------------------------------------------------------------------- 📥 import

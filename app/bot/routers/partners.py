@@ -1,6 +1,6 @@
 """🤝 Partners (owners of external chats): how to join the network, 📣 Mis canales and the panel of each chat
-(pause, resume their own pause, categories = open groups, leave the network). A partner only touches their own
-external chats; admins can look at a chat's panel."""
+(pause within the admins' rules, resume their own pause, categories = open groups, leave the network). A partner
+only touches their own external chats; admins can look at a chat's panel."""
 from __future__ import annotations
 
 import logging
@@ -29,7 +29,8 @@ log = logging.getLogger(__name__)
 router = Router(name="partners")
 
 PER_PAGE = 10
-# ⏸ durations a partner can choose: value -> (label, length; None = until they resume it)
+# ⏸ durations a partner can choose, when the admins' rules allow them (chat_svc.pause_allowed): value -> (label,
+# length; None = until they resume it)
 PAUSES: dict[int, tuple[str, timedelta | None]] = {
     1: ("pa.pause.1h", timedelta(hours=1)),
     2: ("pa.pause.6h", timedelta(hours=6)),
@@ -96,7 +97,8 @@ async def join_screen(event: Message | CallbackQuery, ctx: Ctx, session: AsyncSe
              ctx.t("pa.join.approval" if ws.join_approval else "pa.join.auto")]
     if ws.min_members:
         lines.append(ctx.t("pa.join.min", n=num(ws.min_members)))
-    lines += ["", ctx.t("pa.join.pause")]
+    if ws.partners_can_pause:
+        lines += ["", ctx.t("pa.join.pause")]
     await show(event, "\n".join(lines), kb(_add_buttons(ctx), my_row, back_row(ctx.lang)))
 
 
@@ -143,6 +145,8 @@ async def _panel_text(ctx: Ctx, session: AsyncSession, chat: Chat) -> str:
              ctx.t("pa.d.status", status=chat_svc.status_text(chat, ctx.lang, ctx.tz, partner=True))]
     if chat.status == ChatStatus.APPROVED and chat.admin_paused:
         lines.append(ctx.t("pa.d.admin_hint"))
+    if chat.status == ChatStatus.APPROVED and not chat.owner_pause_active() and not ctx.ws_rec.partners_can_pause:
+        lines.append(ctx.t("pa.pause.not_allowed"))  # in place of the ⏸ Pausar button
     week = await stats.chat_received(session, chat.id, days=7)
     lines.append(ctx.t("pa.d.received", total=num(chat.posts_total), week=num(week)))
     lines.append(ctx.t("pa.d.last", date=dt(chat.last_post_at, ctx.tz)))
@@ -164,7 +168,7 @@ async def _panel_markup(ctx: Ctx, session: AsyncSession, chat: Chat, page: int) 
         if chat.status == ChatStatus.APPROVED:
             if chat.owner_pause_active():
                 rows.append([btn(ctx.t("pa.btn.resume"), PaCB(a="rs", id=chat.id, p=page), style="success")])
-            else:
+            elif ctx.ws_rec.partners_can_pause:
                 rows.append([btn(ctx.t("pa.btn.pause"), PaCB(a="pm", id=chat.id, p=page))])
         if await _has_categories(session, ctx.ws_id):
             rows.append([btn(ctx.t("pa.btn.categories"), PaCB(a="ct", id=chat.id, p=page))])
@@ -211,16 +215,25 @@ async def _approved_chat(call: CallbackQuery, ctx: Ctx, session: AsyncSession, c
     return chat
 
 
+async def _render_pause_menu(call: CallbackQuery, ctx: Ctx, chat: Chat, page: int) -> None:
+    """The durations the admins' rules allow (at least 1 h when partners may pause)."""
+    rows = [[btn(ctx.t(PAUSES[v][0]), PaCB(a="pz", id=chat.id, v=v, p=page)) for v in row
+             if chat_svc.pause_allowed(ctx.ws_rec, PAUSES[v][1])] for row in PAUSE_ROWS]
+    rows.append([btn(ctx.t("common.back"), PaCB(a="op", id=chat.id, p=page))])
+    await show(call, ctx.t("pa.pause.title", chat=esc(chat.display_title), kind=chatstate.kind_word(chat, ctx.lang)),
+               kb(*rows))
+
+
 @router.callback_query(PaCB.filter(F.a == "pm"))
 async def on_pause_menu(call: CallbackQuery, callback_data: PaCB, ctx: Ctx, session: AsyncSession) -> None:
     chat = await _approved_chat(call, ctx, session, callback_data)
     if chat is None:
         return
-    rows = [[btn(ctx.t(PAUSES[v][0]), PaCB(a="pz", id=chat.id, v=v, p=callback_data.p)) for v in row]
-            for row in PAUSE_ROWS]
-    rows.append([btn(ctx.t("common.back"), PaCB(a="op", id=chat.id, p=callback_data.p))])
-    await show(call, ctx.t("pa.pause.title", chat=esc(chat.display_title), kind=chatstate.kind_word(chat, ctx.lang)),
-               kb(*rows))
+    if not ctx.ws_rec.partners_can_pause:
+        await alert(call, ctx.t("pa.pause.not_allowed"))
+        await render_panel(call, ctx, session, chat, callback_data.p)
+        return
+    await _render_pause_menu(call, ctx, chat, callback_data.p)
 
 
 @router.callback_query(PaCB.filter(F.a == "pz"))
@@ -238,7 +251,15 @@ async def on_pause(call: CallbackQuery, callback_data: PaCB, ctx: Ctx, session: 
         return
     length = choice[1]
     until = utcnow() + length if length is not None else None
-    await chat_svc.pause_by_owner(bot, session, ctx.ws_rec, chat, ctx.user_id, until)
+    if not await chat_svc.pause_by_owner(bot, session, ctx.ws_rec, chat, ctx.user_id, until):
+        # The admins' rules don't allow it: a forged button, or a menu shown before they changed.
+        if ctx.ws_rec.partners_can_pause:
+            await alert(call, ctx.t("pa.pause.too_long"))
+            await _render_pause_menu(call, ctx, chat, callback_data.p)
+        else:
+            await alert(call, ctx.t("pa.pause.not_allowed"))
+            await render_panel(call, ctx, session, chat, callback_data.p)
+        return
     await toast(call, ctx.t("pa.toast.paused"))
     await render_panel(call, ctx, session, chat, callback_data.p)
 

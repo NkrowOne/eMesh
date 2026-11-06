@@ -18,8 +18,7 @@ STRINGS = {
     "ce.dm.joined": "🤝 <b>You're in the network!</b>\n\nYour {kind} <b>{chat}</b> joined the network of @{bot} and "
                     "will start receiving its posts.",
     "ce.dm.categories": "🗂 Categories: {names}",
-    "ce.dm.pause_hint": "⏸ You can pause them whenever you want (1 h, 1 day, a week… or until you resume them) from "
-                        "<b>📣 My channels</b>.",
+    "ce.dm.pause_hint": "⏸ You can pause them whenever you want from <b>📣 My channels</b>.",
     "ce.btn.my_chats": "📣 My channels",
     # --- requests: admin notices, decisions, rights (routers/requests.py) ---
     "rq.notice.title": "📨 <b>Request to join the network</b>",
@@ -111,8 +110,7 @@ STRINGS = {
     "ch.d.origin_ext": "🏷 Origin: 🤝 External · {owner}",
     "ch.d.status": "📌 Status: {status}",
     "ch.d.reason": "📝 Reason: {reason}",
-    "ch.d.owner_pause_hint": "   └ Only its owner can resume it. If you don't want to wait, you can remove it from the "
-                             "network.",
+    "ch.d.owner_pause_hint": "   └ If you resume it, its owner's pause is lifted and they're told.",
     "ch.d.groups": "🗂 Groups of channels: {names}",
     "ch.d.freq_group": "⏰ Frequency: {freq} (🗂 {group})",
     "ch.d.freq_global": "⏰ Frequency: 🌐 the global one ({freq})",
@@ -122,6 +120,7 @@ STRINGS = {
     "ch.btn.check": "🔄 Check",
     "ch.btn.pause": "⏸ Pause",
     "ch.btn.resume": "▶️ Resume",
+    "ch.btn.resume_owner": "▶️ Resume (lifts the partner's pause)",
     "ch.btn.accept": "✅ Accept",
     "ch.btn.reject": "❌ Reject",
     "ch.btn.remove": "🗑 Remove from the network",
@@ -149,7 +148,9 @@ STRINGS = {
     # --- pause, remove, ban ---
     "ch.toast.paused": "⏸ Paused",
     "ch.toast.resumed": "▶️ Resumed",
-    "ch.toast.not_paused": "ℹ️ It isn't paused by an admin. Its owner's pause can only be lifted by its owner.",
+    "ch.toast.not_paused": "ℹ️ It isn't paused.",
+    "ch.resume.confirm": "▶️ Resume the {kind} <b>{chat}</b>?\n\nIts owner paused it {until}. They will be told.",
+    "ch.resume.yes": "▶️ Yes, resume",
     "ch.toast.wrong_status": "ℹ️ Not possible with its current status: {status}",
     "ch.remove.confirm": "🗑 Remove the {kind} <b>{chat}</b> from the network?\n\nThe network's posts still up in it "
                          "will be deleted and the bot will leave the {kind}. It can come back if someone adds the bot "
@@ -166,14 +167,17 @@ STRINGS = {
     "ch.dm.banned": "🚫 Your {kind} <b>{chat}</b> was banned from this network: the bot left and can't come back.",
     "ch.dm.paused": "⏸ The administration paused the distribution in your {kind} <b>{chat}</b>.",
     "ch.dm.resumed": "▶️ The administration resumed the distribution in your {kind} <b>{chat}</b>.",
-    # --- ⏸ paused by their owners ---
-    "ch.paused.title": "⏸ <b>Paused by their owners</b> ({n})",
-    "ch.paused.hint": "Their owners paused the distribution and only they can resume it. From each one's page you can "
-                      "remove it from the network.",
-    "ch.paused.row": "{n}. {icon} {chat}\n   └🤝 {owner} · {until} · since {since}",
+    # --- ⏸ paused chats (by their owners or by an admin) ---
+    "ch.paused.title": "⏸ <b>Paused</b> ({n})",
+    "ch.paused.hint": "Tap ▶️ to resume one. If its owner paused it, their pause is lifted and they're told.",
+    "ch.paused.row": "{n}. {icon} {chat}\n   └{who} · {until} · since {since}",
+    "ch.paused.by_owner": "🤝 {owner}",
+    "ch.paused.by_admin": "👮 an admin",
+    "ch.paused.by_both": "👮 an admin and 🤝 {owner}",
     "ch.paused.until": "until {date}",
     "ch.paused.until_open": "until they resume it",
-    "ch.paused.empty": "✅ No chats are paused by their owners.",
+    "ch.paused.until_admin": "no end date",
+    "ch.paused.empty": "✅ No chats are paused.",
     # --- 📥 import ---
     "ch.import.prompt": "📥 <b>Import channels</b>\n\nIf the bot already is an administrator in channels or groups "
                         "(for example, you came from another bot), send their @usernames or IDs, one per line.",
@@ -251,6 +255,8 @@ STRINGS = {
     "pa.pause.3d": "⏸ 3 days",
     "pa.pause.7d": "⏸ 7 days",
     "pa.pause.open": "⏸ Until I resume it",
+    "pa.pause.not_allowed": "⏸ The administration doesn't allow pausing in this network.",
+    "pa.pause.too_long": "⏸ The administration doesn't allow pauses that long.",
     "pa.toast.paused": "⏸ Paused. The administration was told.",
     "pa.toast.resumed": "▶️ Resumed. The administration was told.",
     "pa.toast.admin_pause": "⏸ The administration paused it: only they can resume it.",

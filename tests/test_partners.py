@@ -110,6 +110,7 @@ async def test_my_chat_panel(app: App) -> None:
 ])
 async def test_partner_pauses_and_resumes(app: App, value: int, label: str, length: timedelta | None) -> None:
     await start(app, SUPER_ID, USER_ID)
+    await set_bot(app, pause_max_hours=0)  # no limit: every duration is offered (the rules: test_chats_rules.py)
     chat = await partner_chat(app)
     await pa(app, USER_ID, "op", chat.id)
     await app.click(USER_ID, "Pausar")

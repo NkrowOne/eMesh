@@ -18,8 +18,7 @@ STRINGS = {
     "ce.dm.joined": "🤝 <b>¡Ya formas parte de la red!</b>\n\nTu {kind} <b>{chat}</b> se ha unido a la red de @{bot} y "
                     "empezará a recibir sus mensajes.",
     "ce.dm.categories": "🗂 Categorías: {names}",
-    "ce.dm.pause_hint": "⏸ Puedes pausarlos cuando quieras (1 h, 1 día, una semana… o hasta que los reanudes) desde "
-                        "<b>📣 Mis canales</b>.",
+    "ce.dm.pause_hint": "⏸ Puedes pausarlos cuando quieras desde <b>📣 Mis canales</b>.",
     "ce.btn.my_chats": "📣 Mis canales",
     # --- requests: admin notices, decisions, rights (routers/requests.py) ---
     "rq.notice.title": "📨 <b>Solicitud para unirse a la red</b>",
@@ -112,7 +111,7 @@ STRINGS = {
     "ch.d.origin_ext": "🏷 Origen: 🤝 Externo · {owner}",
     "ch.d.status": "📌 Estado: {status}",
     "ch.d.reason": "📝 Motivo: {reason}",
-    "ch.d.owner_pause_hint": "   └ Solo su dueño puede reanudarla. Si no quieres esperar, puedes quitarlo de la red.",
+    "ch.d.owner_pause_hint": "   └ Si lo reanudas, se anula su pausa y se le avisa.",
     "ch.d.groups": "🗂 Grupos de canales: {names}",
     "ch.d.freq_group": "⏰ Frecuencia: {freq} (🗂 {group})",
     "ch.d.freq_global": "⏰ Frecuencia: 🌐 la global ({freq})",
@@ -122,6 +121,7 @@ STRINGS = {
     "ch.btn.check": "🔄 Comprobar",
     "ch.btn.pause": "⏸ Pausar",
     "ch.btn.resume": "▶️ Reanudar",
+    "ch.btn.resume_owner": "▶️ Reanudar (anula la pausa del socio)",
     "ch.btn.accept": "✅ Aceptar",
     "ch.btn.reject": "❌ Rechazar",
     "ch.btn.remove": "🗑 Quitar de la red",
@@ -149,7 +149,9 @@ STRINGS = {
     # --- pause, remove, ban ---
     "ch.toast.paused": "⏸ Pausado",
     "ch.toast.resumed": "▶️ Reanudado",
-    "ch.toast.not_paused": "ℹ️ No está pausado por un admin. La pausa de su dueño solo la puede quitar su dueño.",
+    "ch.toast.not_paused": "ℹ️ No está pausado.",
+    "ch.resume.confirm": "▶️ ¿Reanudar el {kind} <b>{chat}</b>?\n\nEl dueño lo ha pausado {until}. Se le avisará.",
+    "ch.resume.yes": "▶️ Sí, reanudar",
     "ch.toast.wrong_status": "ℹ️ No es posible con su estado actual: {status}",
     "ch.remove.confirm": "🗑 ¿Quitar el {kind} <b>{chat}</b> de la red?\n\nSe borrarán los mensajes de la red que sigan "
                          "publicados en él y el bot saldrá del {kind}. Podrá volver si alguien añade el bot de nuevo.",
@@ -166,14 +168,17 @@ STRINGS = {
     "ch.dm.banned": "🚫 Tu {kind} <b>{chat}</b> se ha bloqueado en esta red: el bot ha salido y no podrá volver.",
     "ch.dm.paused": "⏸ La administración ha pausado la distribución en tu {kind} <b>{chat}</b>.",
     "ch.dm.resumed": "▶️ La administración ha reanudado la distribución en tu {kind} <b>{chat}</b>.",
-    # --- ⏸ paused by their owners ---
-    "ch.paused.title": "⏸ <b>Pausados por su dueño</b> ({n})",
-    "ch.paused.hint": "Sus dueños han pausado la distribución y solo ellos pueden reanudarla. Desde la ficha de cada "
-                      "uno puedes quitarlo de la red.",
-    "ch.paused.row": "{n}. {icon} {chat}\n   └🤝 {owner} · {until} · desde {since}",
+    # --- ⏸ paused chats (by their owners or by an admin) ---
+    "ch.paused.title": "⏸ <b>Pausados</b> ({n})",
+    "ch.paused.hint": "Toca ▶️ para reanudar uno. Si lo pausó su dueño, se anula su pausa y se le avisa.",
+    "ch.paused.row": "{n}. {icon} {chat}\n   └{who} · {until} · desde {since}",
+    "ch.paused.by_owner": "🤝 {owner}",
+    "ch.paused.by_admin": "👮 un admin",
+    "ch.paused.by_both": "👮 un admin y 🤝 {owner}",
     "ch.paused.until": "hasta {date}",
     "ch.paused.until_open": "hasta que lo reanude",
-    "ch.paused.empty": "✅ No hay chats pausados por su dueño.",
+    "ch.paused.until_admin": "sin fecha de fin",
+    "ch.paused.empty": "✅ No hay chats pausados.",
     # --- 📥 import ---
     "ch.import.prompt": "📥 <b>Importar canales</b>\n\nSi el bot ya es administrador en canales o grupos (por ejemplo, "
                         "venías de otro bot), envía sus @usuarios o IDs, uno por línea.",
@@ -251,6 +256,8 @@ STRINGS = {
     "pa.pause.3d": "⏸ 3 días",
     "pa.pause.7d": "⏸ 7 días",
     "pa.pause.open": "⏸ Hasta que la reanude",
+    "pa.pause.not_allowed": "⏸ La administración no permite pausar en esta red.",
+    "pa.pause.too_long": "⏸ La administración no permite pausas tan largas.",
     "pa.toast.paused": "⏸ Pausado. Se ha avisado a la administración.",
     "pa.toast.resumed": "▶️ Reanudado. Se ha avisado a la administración.",
     "pa.toast.admin_pause": "⏸ Lo ha pausado la administración: solo ella puede reanudarlo.",

@@ -167,8 +167,9 @@ async def test_chat_detail(app: App) -> None:
     assert "🏷 Origen: 🤝 Externo · @pepe" in text
     assert ("📌 Estado: ⚠️ Faltan permisos: fijar mensajes · ⏸ Pausado por su dueño hasta que lo reanude"
             in text)
-    assert "Solo su dueño puede reanudarla" in text
+    assert "   └ Si lo reanudas, se anula su pausa y se le avisa." in text
     assert "⏰ Frecuencia: 🌐 la global (cada 4 h · 08:00-22:00)" in text and "🕐 Último: —" in text
+    assert labels(app.last_panel(SUPER_ID))[2:4] == ["▶️ Reanudar (anula la pausa del socio)", "⏸ Pausar"]
 
 
 async def test_chat_detail_of_another_network_or_for_partners(app: App) -> None:
@@ -183,7 +184,7 @@ async def test_chat_detail_of_another_network_or_for_partners(app: App) -> None:
     mine = await db_chat(app, GROUP, "Grupo de Pepe", type="group", origin=ChatOrigin.EXTERNAL, owner=USER_ID)
     await app.press(USER_ID, f"m:chat:{mine}")
     assert "📌 Estado: ✅ Recibe los mensajes de la red" in app.last_text(USER_ID), "partners get their own panel"
-    for action in ("op", "pz", "rm", "rmy", "bny", "gr", "up"):
+    for action in ("op", "pz", "rs", "rsy", "pr", "pry", "rm", "rmy", "bny", "gr", "up"):
         await press(app, USER_ID, action, mine)
         assert is_alert(app, "No tienes permiso"), action
     assert (await get_chat(app, GROUP)).status == ChatStatus.APPROVED
@@ -283,17 +284,22 @@ async def test_admin_pause_and_resume(app: App) -> None:
     assert "▶️ La administración ha reanudado la distribución en tu canal <b>Cine HD</b>." in dms(app)
 
 
-async def test_admins_cant_resume_an_owner_pause(app: App) -> None:
+async def test_resuming_an_owner_pause_asks_first(app: App) -> None:
+    """The admins rule over the partners: an admin may lift a partner's pause, after a confirmation (the whole flow:
+    tests/test_chats_rules.py)."""
     await start(app, SUPER_ID, USER_ID)
     chat = await partner_chat(app)
     async with app.db() as s:
         row = await s.get(Chat, chat.id)
         row.owner_paused, row.paused_at = True, utcnow()
     await press(app, SUPER_ID, "rs", chat.id)
-    assert is_alert(app, "No está pausado por un admin")
-    assert (await get_chat(app)).owner_paused
-    await press(app, SUPER_ID, "op", chat.id)
-    assert "▶️ Reanudar" not in labels(app.last_panel(SUPER_ID)), "only an admin pause shows ▶️ to the admins"
+    assert "El dueño lo ha pausado hasta que lo reanude. Se le avisará." in app.last_text(SUPER_ID)
+    assert (await get_chat(app)).owner_paused and not await events_of(app, EventKind.CHAT_RESUMED)
+    await press(app, SUPER_ID, "rsy", chat.id)
+    assert not (await get_chat(app)).owner_paused
+    assert "▶️ La administración ha reanudado la distribución en tu canal <b>Cine HD</b>." in dms(app)
+    await press(app, SUPER_ID, "rs", chat.id)
+    assert is_alert(app, "ℹ️ No está pausado.")
 
 
 # --------------------------------------------------------------------------- 🗑 remove / 🚫 ban
@@ -364,8 +370,9 @@ async def test_remove_a_pending_request_closes_its_notices(app: App, monkeypatch
     assert edit.params["reply_markup"]["inline_keyboard"][0][0]["text"] == "🗑 Quitada de la red · @superadmin"
 
 
-# --------------------------------------------------------------------------- ⏸ paused by their owners
+# --------------------------------------------------------------------------- ⏸ paused chats
 async def test_paused_screen(app: App) -> None:
+    """Every pause is listed, by its owner or by an admin (more: tests/test_chats_rules.py)."""
     await start(app, SUPER_ID, USER_ID)
     since = utcnow() - timedelta(hours=1)
     until = utcnow() + timedelta(days=1)
@@ -373,16 +380,26 @@ async def test_paused_screen(app: App) -> None:
                        owner_paused_until=until, paused_at=since)
     await db_chat(app, GROUP, "Pausa vencida", origin=ChatOrigin.EXTERNAL, owner=USER_ID, owner_paused=True,
                   owner_paused_until=utcnow() - timedelta(minutes=1))
-    await db_chat(app, -1003, "Pausa de un admin", admin_paused=True)
+    admin = await db_chat(app, -1003, "Pausa de un admin", admin_paused=True, paused_at=since)
     await app.press(SUPER_ID, "m:paused:0")
     text = app.last_text(SUPER_ID)
     from app.ui.fmt import dt
 
-    assert "⏸ <b>Pausados por su dueño</b> (1)" in text
+    assert "⏸ <b>Pausados</b> (2)" in text
     assert (f"1. 📣 Cine HD\n   └🤝 @pepe · hasta {dt(until, 'Europe/Madrid')} · desde "
             f"{dt(since, 'Europe/Madrid')}") in text
-    assert "Pausa vencida" not in text and "Pausa de un admin" not in text
-    assert button(app.last_panel(SUPER_ID), "#1")["callback_data"] == MenuCB(screen="chat", arg=pk).pack()
+    assert f"2. 📣 Pausa de un admin\n   └👮 un admin · sin fecha de fin · desde {dt(since, 'Europe/Madrid')}" in text
+    assert "Pausa vencida" not in text
+    panel = app.last_panel(SUPER_ID)
+    assert button(panel, "#1")["callback_data"] == MenuCB(screen="chat", arg=pk).pack()
+    assert button(panel, "▶️ #1")["callback_data"] == ChCB(a="pr", id=pk).pack()
+    assert button(panel, "▶️ #2")["callback_data"] == ChCB(a="pr", id=admin).pack()
+
+    async with app.db() as s:  # nothing paused any more
+        for chat in (await s.execute(select(Chat))).scalars():
+            chat.owner_paused, chat.admin_paused = False, False
+    await app.press(SUPER_ID, "m:paused:0")
+    assert app.last_text(SUPER_ID) == "⏸ <b>Pausados</b> (0)\n\n✅ No hay chats pausados."
 
 
 # --------------------------------------------------------------------------- 📥 import
