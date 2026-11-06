@@ -25,7 +25,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.bot.context import Ctx
 from app.db.base import utcnow
-from app.db.models import ChatGroup, Post, PostStatus, SchedMode
+from app.db.models import DEFAULT_DELETE_AFTER, ChatGroup, Post, PostStatus, SchedMode
 from app.db.session import session_scope
 from app.services import audience, content, freq, limits
 from app.services import publisher as pubsvc
@@ -91,6 +91,7 @@ class PostsFSM(StatesGroup):
     new_targets = State()
     new_when = State()
     new_date = State()
+    new_delete = State()
     content = State()
     text = State()
     name = State()
@@ -118,8 +119,10 @@ MODES = (SchedMode.ROTATION, SchedMode.OWN, SchedMode.ONCE, SchedMode.MANUAL)
 OPTIONS = ("pin", "silent", "protect", "link_preview", "caption_above", "spoiler", "delete_previous")
 DEFAULT_OPTIONS = ("pin", "silent", "protect", "link_preview", "delete_previous")  # Bot.post_defaults (+ delete_after)
 OPTION_DEFAULTS: dict[str, Any] = {"pin": False, "silent": False, "protect": False, "link_preview": False,
-                                   "caption_above": False, "spoiler": False, "delete_previous": True, "delete_after": 0}
+                                   "caption_above": False, "spoiler": False, "delete_previous": True,
+                                   "delete_after": DEFAULT_DELETE_AFTER}
 AUTO_DELETE = (0, 60, 180, 360, 720, 1440, 2880)  # minutes (0 = never)
+DAY = 1440  # minutes: auto delete choices of whole days read «1 día», «2 días»
 MIN_DELETE_AFTER = 15
 MAX_DELETE_AFTER = 2880  # Telegram doesn't let bots delete messages older than 48 h
 COPY_FIELDS = ("kind", "text", "media_name", "mode", "send_at", "starts_on", "ends_on", *OPTIONS, "delete_after")
@@ -252,6 +255,15 @@ def delete_after_text(ctx: Ctx, minutes: int) -> str:
     return ctx.t("po.ad.after", t=freq.every_text(minutes, ctx.lang)) if minutes else ctx.t("po.ad.never")
 
 
+def auto_delete_label(ctx: Ctx, minutes: int) -> str:
+    """A choice of the auto delete: ``Nunca``, ``6 h``, ``1 día``, ``2 días``, ``1 h 30 min``."""
+    if not minutes:
+        return ctx.t("po.ad.b.never")
+    if minutes % DAY == 0:
+        return units(ctx, minutes // DAY, "days")
+    return freq.every_text(minutes, ctx.lang)
+
+
 def units(ctx: Ctx, n: int, name: str) -> str:
     """``12 chats`` / ``1 chat`` (i18n ``po.unit.<name>`` and its singular ``po.unit.<name>.1``)."""
     return ctx.t(f"po.unit.{name}.1" if n == 1 else f"po.unit.{name}", n=fmt.num(n))
@@ -367,10 +379,12 @@ def clean_minutes(value: Any) -> int:
 
 
 def defaults_of(ws_rec: BotRecord) -> dict[str, Any]:
-    """The default options of new posts (``Bot.post_defaults``, missing keys take the model defaults)."""
+    """The default options of new posts (``Bot.post_defaults``, missing keys take the model defaults: deleted after
+    one day)."""
     stored = ws_rec.post_defaults if isinstance(ws_rec.post_defaults, dict) else {}
     values: dict[str, Any] = {name: bool(stored.get(name, OPTION_DEFAULTS[name])) for name in DEFAULT_OPTIONS}
-    values["delete_after"] = clean_minutes(stored.get("delete_after"))
+    minutes = stored.get("delete_after")
+    values["delete_after"] = clean_minutes(DEFAULT_DELETE_AFTER if minutes is None else minutes)
     return values
 
 
@@ -810,7 +824,24 @@ WIZARD_PREVIOUS: dict[str, State] = {
     PostsFSM.new_targets.state: PostsFSM.new_buttons,
     PostsFSM.new_when.state: PostsFSM.new_targets,
     PostsFSM.new_date.state: PostsFSM.new_when,
+    PostsFSM.new_delete.state: PostsFSM.new_when,
 }
+# Steps answered with buttons only: a text sent there asks to use them.
+WIZARD_BUTTON_STEPS: dict[str, State] = {
+    step.state: step for step in (PostsFSM.new_targets, PostsFSM.new_when, PostsFSM.new_delete)
+}
+
+
+def lifetime_rows(ctx: Ctx, current: int) -> list[list[InlineKeyboardButton]]:
+    """Step 5: ``[1 h][3 h][6 h]`` ``[12 h][1 día][2 días]`` ``[♾ No borrar]``, ``current`` (the network's default)
+    pre-selected; a default written with ✏️ Otro (``36 h``) gets its own choice next to ♾."""
+    def choice(minutes: int, label: str) -> InlineKeyboardButton:
+        return btn(choice_label(label, minutes == current), PwCB(a="del", v=minutes))
+
+    rows = grid([choice(m, auto_delete_label(ctx, m)) for m in AUTO_DELETE if m], 3)
+    custom = [choice(current, auto_delete_label(ctx, current))] if current not in AUTO_DELETE else []
+    rows.append([*custom, choice(0, ctx.t("po.w.no_delete"))])
+    return rows
 
 
 async def wizard_prompt(event: Event, ctx: Ctx, session: AsyncSession, step: State, data: dict[str, Any],
@@ -830,6 +861,9 @@ async def wizard_prompt(event: Event, ctx: Ctx, session: AsyncSession, step: Sta
         text = ctx.t("po.w.when", freq=freq.describe(ctx.ws_rec.freq, ctx.lang))
         rows = [[btn(ctx.t("po.mode.rotation_rec" if mode == SchedMode.ROTATION else f"po.mode.{mode}"),
                      PwCB(a="mode", v=i))] for i, mode in enumerate(MODES)]
+    elif step == PostsFSM.new_delete:
+        text = ctx.t("po.w.delete")
+        rows = lifetime_rows(ctx, defaults_of(ctx.ws_rec)["delete_after"])
     else:
         text = ctx.t("po.w.date", ask=ctx.t("po.date.ask", tz=fmt.esc(ctx.bot_tz)))
     back = None if step == PostsFSM.new_content else PwCB(a="back")
@@ -966,67 +1000,96 @@ async def on_wizard_targets_done(call: CallbackQuery, ctx: Ctx, session: AsyncSe
     await wizard_goto(call, ctx, session, state, PostsFSM.new_when)
 
 
-@router.message(StateFilter(PostsFSM.new_targets, PostsFSM.new_when), PRIVATE, NOT_COMMAND)
+@router.message(StateFilter(*WIZARD_BUTTON_STEPS.values()), PRIVATE, NOT_COMMAND)
 async def on_wizard_use_buttons(message: Message, ctx: Ctx, session: AsyncSession, state: FSMContext,
                                 raw_state: str | None) -> None:
     if not await wizard_admin(message, ctx, session, state):
         return
-    step = PostsFSM.new_targets if raw_state == PostsFSM.new_targets.state else PostsFSM.new_when
+    step = WIZARD_BUTTON_STEPS.get(raw_state or "", PostsFSM.new_when)
     await wizard_retry(message, ctx, session, state, step, ctx.t("po.err.use_buttons"))
 
 
 @router.callback_query(PwCB.filter(F.a == "mode"))
 async def on_wizard_mode(call: CallbackQuery, callback_data: PwCB, ctx: Ctx, session: AsyncSession,
-                         state: FSMContext, scheduler: Scheduler) -> None:
+                         state: FSMContext) -> None:
     if await wizard_data(call, ctx, session, state, PostsFSM.new_when) is None:
         return
     if not 0 <= callback_data.v < len(MODES):
         await expired(call, ctx)
         return
     mode = MODES[callback_data.v]
-    if mode == SchedMode.ONCE:
+    if mode == SchedMode.ONCE:  # its date first (still step 4)
         await wizard_goto(call, ctx, session, state, PostsFSM.new_date)
         return
-    await finish_wizard(call, ctx, session, state, scheduler, mode, None)
+    await state.update_data(mode=mode, send_at=None)
+    await wizard_goto(call, ctx, session, state, PostsFSM.new_delete)
 
 
 @router.message(PostsFSM.new_date, PRIVATE, NOT_COMMAND)
-async def on_wizard_date(message: Message, ctx: Ctx, session: AsyncSession, state: FSMContext,
-                         scheduler: Scheduler) -> None:
+async def on_wizard_date(message: Message, ctx: Ctx, session: AsyncSession, state: FSMContext) -> None:
     if not await wizard_admin(message, ctx, session, state):
         return
     when, error = parse_when(ctx, message)
     if when is None:
         await wizard_retry(message, ctx, session, state, PostsFSM.new_date, error or "")
         return
-    await finish_wizard(message, ctx, session, state, scheduler, SchedMode.ONCE, when)
+    await state.update_data(mode=SchedMode.ONCE, send_at=when.isoformat())  # FSM data is JSON
+    await wizard_goto(message, ctx, session, state, PostsFSM.new_delete)
 
 
-async def finish_wizard(event: Event, ctx: Ctx, session: AsyncSession, state: FSMContext, scheduler: Scheduler,
-                        mode: str, send_at: datetime | None) -> None:
+@router.callback_query(PwCB.filter(F.a == "del"))
+async def on_wizard_delete_after(call: CallbackQuery, callback_data: PwCB, ctx: Ctx, session: AsyncSession,
+                                 state: FSMContext, scheduler: Scheduler) -> None:
+    """Step 5, the last one: how long the post stays published. The post is created now."""
+    if await wizard_data(call, ctx, session, state, PostsFSM.new_delete) is None:
+        return
+    minutes = callback_data.v
+    if minutes not in AUTO_DELETE and minutes != defaults_of(ctx.ws_rec)["delete_after"]:  # not one of the choices
+        await expired(call, ctx)
+        return
+    await finish_wizard(call, ctx, session, state, scheduler, minutes)
+
+
+def stored_datetime(value: Any) -> datetime | None:
+    """A date and time kept in the FSM data (ISO text)."""
+    try:
+        return datetime.fromisoformat(value) if isinstance(value, str) else None
+    except ValueError:
+        return None
+
+
+async def finish_wizard(call: CallbackQuery, ctx: Ctx, session: AsyncSession, state: FSMContext,
+                        scheduler: Scheduler, delete_after: int) -> None:
     """Creates the post: the default options of the network first, then the answers of the wizard."""
     data = await state.get_data()
-    if data.get("ws") != ctx.ws_id or str(data.get("kind")) not in content.KINDS:
+    mode = str(data.get("mode") or "")
+    if data.get("ws") != ctx.ws_id or str(data.get("kind")) not in content.KINDS or mode not in MODES:
         await state.clear()
-        await expired(event, ctx)
+        await expired(call, ctx)
         return
     targets = clean_targets(data.get("targets"), set(await groups_by_id(session, ctx)))
     if not targets:  # its groups of chats were deleted meanwhile: never widen the audience by itself
         await state.update_data(targets=[])
         await state.set_state(PostsFSM.new_targets)
-        await wizard_prompt(event, ctx, session, PostsFSM.new_targets, {**data, "targets": []},
+        await wizard_prompt(call, ctx, session, PostsFSM.new_targets, {**data, "targets": []},
                             ctx.t("po.tg.need_one"))
+        return
+    send_at = stored_datetime(data.get("send_at")) if mode == SchedMode.ONCE else None
+    if mode == SchedMode.ONCE and (send_at is None or send_at <= utcnow()):  # its date passed meanwhile
+        await state.set_state(PostsFSM.new_date)
+        await wizard_prompt(call, ctx, session, PostsFSM.new_date, data, ctx.t("freq.err.past"))
         return
     await state.clear()
     if not await limits.can_add_post(session, ctx.settings, ctx.ws_rec):
-        await alert(event, await limit_text(ctx, session))
-        await render_posts(event, ctx, session)
+        await alert(call, await limit_text(ctx, session))
+        await render_posts(call, ctx, session)
         return
     post = Post(bot_id=ctx.ws_id, status=PostStatus.ACTIVE, created_by=ctx.user_id, mode=mode, send_at=send_at)
     found = content.Content(str(data["kind"]), data.get("text"), data.get("file_id"), data.get("file_name"))
     content.apply(post, found, ctx.bot_id)  # the media belongs to the bot that received it
     post.name = content.default_name(post, ctx.lang)[:NAME_MAX]
     apply_defaults(post, ctx.ws_rec)
+    post.delete_after = delete_after
     post.buttons = content.clean_rows(data.get("buttons"))
     post.targets = targets
     if mode == SchedMode.OWN:
@@ -1034,13 +1097,13 @@ async def finish_wizard(event: Event, ctx: Ctx, session: AsyncSession, state: FS
     session.add(post)
     await session.flush()
     refresh(post, ctx, scheduler)
-    log.info("Post %s created by %s in bot %s (%s)", post.id, ctx.user_id, ctx.ws_id, mode)
+    log.info("Post %s created by %s in bot %s (%s, deleted after %s min)", post.id, ctx.user_id, ctx.ws_id, mode,
+             delete_after)
     if mode == SchedMode.OWN:
-        if isinstance(event, CallbackQuery):
-            await toast(event, ctx.t("po.saved"))
-        await open_screen("freq_edit", event, ctx, session, arg=-post.id)
+        await toast(call, ctx.t("po.saved"))
+        await open_screen("freq_edit", call, ctx, session, arg=-post.id)
         return
-    await render_post(event, ctx, session, post, notice=ctx.t("po.saved"))
+    await render_post(call, ctx, session, post, notice=ctx.t("po.saved"))
 
 
 # ---------------------------------------------------------------------------------------------
@@ -1393,10 +1456,6 @@ async def on_campaign_input(message: Message, ctx: Ctx, session: AsyncSession, s
 # ---------------------------------------------------------------------------------------------
 # ⚙️ Opciones (id 0: the default options of new posts)
 # ---------------------------------------------------------------------------------------------
-def auto_delete_label(ctx: Ctx, minutes: int) -> str:
-    return ctx.t("po.ad.b.never") if not minutes else freq.every_text(minutes, ctx.lang)
-
-
 async def render_options(event: Event, ctx: Ctx, post: Post | None, *, notice: str | None = None) -> None:
     values = option_values(ctx, post)
     names = option_names(post.kind if post is not None else None)

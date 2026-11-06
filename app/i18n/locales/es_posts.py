@@ -22,6 +22,8 @@ STRINGS = {
     "po.unit.buttons.1": "{n} botón",
     "po.unit.copies": "{n} copias",
     "po.unit.copies.1": "{n} copia",
+    "po.unit.days": "{n} días",
+    "po.unit.days.1": "{n} día",
     # --- targets ---
     "po.tg.all": "🌐 Todos",
     "po.tg.own": "🏠 Solo propios",
@@ -42,16 +44,16 @@ STRINGS = {
     "po.targets.title": "🎯 <b>Destino</b> · {name}",
     # --- create wizard ---
     "po.w.content": (
-        "📝 <b>Nuevo mensaje</b> · 1/4\n\n"
+        "📝 <b>Nuevo mensaje</b> · 1/5\n\n"
         "Envía el mensaje tal como quieres que se publique: texto, foto, vídeo, GIF, archivo, audio o nota de voz, "
         "con su formato (<b>negrita</b>, <i>cursiva</i>, enlaces, emojis). También puedes reenviarlo desde un canal."
     ),
-    "po.w.buttons": "🔘 <b>Botones</b> · 2/4\n\nEnvía los botones que irán debajo del mensaje.\n\n{help}",
+    "po.w.buttons": "🔘 <b>Botones</b> · 2/5\n\nEnvía los botones que irán debajo del mensaje.\n\n{help}",
     "po.w.no_buttons": "⏭ Sin botones",
-    "po.w.targets": "🎯 <b>¿A quién se envía?</b> · 3/4",
+    "po.w.targets": "🎯 <b>¿A quién se envía?</b> · 3/5",
     "po.w.continue": "✅ Continuar",
     "po.w.when": (
-        "⏰ <b>¿Cuándo se envía?</b> · 4/4\n\n"
+        "⏰ <b>¿Cuándo se envía?</b> · 4/5\n\n"
         "🔁 <b>En rotación</b> (recomendado)\n"
         "   └ Se turna con los demás mensajes según la frecuencia de cada canal (global: {freq}).\n"
         "⏰ <b>Con su propio horario</b>\n"
@@ -61,7 +63,12 @@ STRINGS = {
         "✋ <b>Solo cuando lo envíes</b>\n"
         "   └ Únicamente con 🚀 Enviar ahora."
     ),
-    "po.w.date": "📆 <b>Una sola vez</b> · 4/4\n\n{ask}",
+    "po.w.date": "📆 <b>Una sola vez</b> · 4/5\n\n{ask}",
+    "po.w.delete": (
+        "🗑 <b>¿Cuánto tiempo sigue publicado?</b> · 5/5\n"
+        "   └ Pasado ese tiempo se borra solo de los canales."
+    ),
+    "po.w.no_delete": "♾ No borrar",
     "po.help.buttons": (
         "Un botón por línea: <code>Nombre - https://enlace</code>\n"
         "• En la misma fila: sepáralos con <code>&amp;&amp;</code>\n"

@@ -99,7 +99,7 @@ async def test_network_end_to_end(app: App) -> None:  # noqa: PLR0915 - one stor
         group = await s.get(ChatGroup, group.id)
         assert group is not None and group.freq and group.freq["every"] == 120 and group.rot_next_at is not None
 
-    # 5. A post with colored buttons for everyone, in rotation (the 4-step wizard).
+    # 5. A post with colored buttons for everyone, in rotation, deleted after one day (the 5-step wizard).
     await app.send(SUPER_ID, "/start")
     await app.click(SUPER_ID, "Mensajes")
     await app.click(SUPER_ID, "Nuevo mensaje")
@@ -107,9 +107,10 @@ async def test_network_end_to_end(app: App) -> None:  # noqa: PLR0915 - one stor
     await app.send(SUPER_ID, "Ver ahora - https://example.com/cine 🟢\nCódigo - copiar: CINE10 🔵")
     await app.click(SUPER_ID, "Continuar")  # 🌐 Todos is selected by default
     await app.click(SUPER_ID, "En rotación")
+    await app.click(SUPER_ID, "1 día")  # how long it stays published
     async with app.db() as s:
         post = (await s.execute(select(Post).where(Post.bot_id == MAIN_BOT_ID))).scalar_one()
-    assert post.text == "<b>Estreno</b> hoy" and post.targets == ["all"]
+    assert post.text == "<b>Estreno</b> hoy" and post.targets == ["all"] and post.delete_after == 1440
     assert post.buttons[0][0]["style"] == "success" and post.buttons[1][0]["copy"] == "CINE10"
 
     # 6. The global slot: the partner's channel (global frequency) gets it with the colored buttons; the owner's
@@ -166,6 +167,7 @@ async def test_network_end_to_end(app: App) -> None:  # noqa: PLR0915 - one stor
     await app.click(SUPER_ID, "Sin botones")
     await app.click(SUPER_ID, "Continuar")
     await app.click(SUPER_ID, "Solo cuando lo envíe yo")
+    await app.click(SUPER_ID, "1 día")
     async with app.db() as s:
         clone_post = (await s.execute(select(Post).where(Post.bot_id == CLONE_ID))).scalar_one()
     assert clone_post.media == {str(MAIN_BOT_ID): "mainphoto1"}
