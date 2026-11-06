@@ -1,6 +1,8 @@
 """User / role queries shared by all modules."""
 from __future__ import annotations
 
+import re
+
 from sqlalchemy import func, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
@@ -31,7 +33,7 @@ async def find_bot_user(session: AsyncSession, bot_id: int, query: str) -> BotUs
     query = query.strip()
     if query.startswith("@"):
         query = query[1:]
-    if query.lstrip("-").isdigit():
+    if re.fullmatch(r"-?[0-9]{1,18}", query):  # ASCII digits ("²" is a digit for str.isdigit), within a BIGINT
         return await session.get(BotUser, (bot_id, int(query)))
     if not query:
         return None

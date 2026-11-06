@@ -34,6 +34,7 @@ STRINGS = {
     "po.tgl.own": "Own",
     "po.tgl.ext": "External",
     "po.tg.none": "⚠️ nobody",
+    "po.tg.more": " +{n} more",
     "po.tg.hint": "Choose one or more targets: they add up.",
     "po.tg.count": "👥 It will reach: <b>{chats}</b> · 👤 {members}",
     "po.tg.count_hint": (

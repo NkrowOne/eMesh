@@ -26,6 +26,8 @@ if TYPE_CHECKING:
 MIN_EVERY = 10  # minutes
 MAX_EVERY = 1440
 MAX_TIMES = 24
+MIN_YEAR, MAX_YEAR = 2000, 2100  # of a typed date: far ones ("31/12/9999" = no end) overflow the date math
+MAX_EVERY_TEXT = 40  # characters of a typed interval: nobody writes a longer one
 EVERY_CHOICES = (30, 60, 120, 180, 240, 360, 480, 720, 1440)  # quick buttons of the editor
 ALL_DAYS = "0123456"
 WEEKDAYS = "01234"
@@ -182,16 +184,25 @@ def day_start(day: date, tz: str) -> datetime:
     return datetime(day.year, day.month, day.day, tzinfo=zone(tz)).astimezone(timezone.utc)
 
 
+def day_end(day: date, tz: str) -> datetime:
+    """The end of ``day`` in ``tz`` (00:00 of the next day), as aware UTC. Never overflows: the end of 31/12/9999 is
+    the largest datetime."""
+    try:
+        return day_start(day + timedelta(days=1), tz)
+    except OverflowError:
+        return datetime.max.replace(tzinfo=timezone.utc)
+
+
 def in_dates(post: Post, tz: str, now: datetime) -> bool:
     """``now`` is inside the campaign dates of the post (from 00:00 of starts_on to 23:59 of ends_on)."""
     if post.starts_on and now < day_start(post.starts_on, tz):
         return False
-    return not (post.ends_on and now >= day_start(post.ends_on + timedelta(days=1), tz))
+    return not (post.ends_on and now >= day_end(post.ends_on, tz))
 
 
 def ended(post: Post, tz: str, now: datetime) -> bool:
     """The campaign of the post is over (its end date passed)."""
-    return bool(post.ends_on) and now >= day_start(post.ends_on + timedelta(days=1), tz)  # type: ignore[operator]
+    return post.ends_on is not None and now >= day_end(post.ends_on, tz)
 
 
 def refresh_post(post: Post, tz: str, now: datetime) -> datetime | None:
@@ -205,7 +216,7 @@ def refresh_post(post: Post, tz: str, now: datetime) -> datetime | None:
             if post.starts_on:
                 after = max(after, day_start(post.starts_on, tz) - timedelta(seconds=1))
             nxt = next_slot(post.freq, tz, after)
-            if nxt is not None and post.ends_on and nxt >= day_start(post.ends_on + timedelta(days=1), tz):
+            if nxt is not None and post.ends_on and nxt >= day_end(post.ends_on, tz):
                 nxt = None
     post.next_send_at = nxt
     return nxt
@@ -234,22 +245,27 @@ def parse_every(text: str) -> int:
     a bigger one minutes ("90" = 90 min). Raises ValueError("freq.err.every" | "freq.err.every_range")."""
     raw = (text or "").strip().lower().replace(",", ".")
     raw = re.sub(r"^(cada|every)\s+", "", raw)
+    if len(raw) > MAX_EVERY_TEXT:
+        raise ValueError("freq.err.every")
     minutes: float
-    if re.fullmatch(r"\d+(?:\.\d+)?", raw):
-        value = float(raw)
-        minutes = value * 60 if value <= 24 else value
-    elif m := re.fullmatch(r"(\d{1,2}):(\d{2})", raw):
-        minutes = int(m.group(1)) * 60 + int(m.group(2))
-    else:
-        compact = re.sub(r"\s+", "", raw)
-        m = re.fullmatch(r"(\d+(?:\.\d+)?)h(\d+)(?:m|min)?", compact)
-        if m:
-            minutes = float(m.group(1)) * 60 + int(m.group(2))
+    try:
+        if re.fullmatch(r"\d+(?:\.\d+)?", raw):
+            value = float(raw)
+            minutes = value * 60 if value <= 24 else value
+        elif m := re.fullmatch(r"(\d{1,2}):(\d{2})", raw):
+            minutes = int(m.group(1)) * 60 + int(m.group(2))
         else:
-            m = _EVERY_RE.fullmatch(raw.replace(" y ", " ").replace(" and ", " "))
-            if not m or not (m.group("h") or m.group("m")):
-                raise ValueError("freq.err.every")
-            minutes = float(m.group("h") or 0) * 60 + int(m.group("m") or 0)
+            compact = re.sub(r"\s+", "", raw)
+            m = re.fullmatch(r"(\d+(?:\.\d+)?)h(\d+)(?:m|min)?", compact)
+            if m:
+                minutes = float(m.group(1)) * 60 + int(m.group(2))
+            else:
+                m = _EVERY_RE.fullmatch(raw.replace(" y ", " ").replace(" and ", " "))
+                if not m or not (m.group("h") or m.group("m")):
+                    raise ValueError("freq.err.every")
+                minutes = float(m.group("h") or 0) * 60 + int(m.group("m") or 0)
+    except OverflowError as exc:  # a number too big for a float
+        raise ValueError("freq.err.every_range") from exc
     if not MIN_EVERY <= minutes <= MAX_EVERY or minutes != int(minutes):
         raise ValueError("freq.err.every_range")
     return int(minutes)
@@ -286,8 +302,8 @@ def parse_window(text: str) -> str:
 
 
 def parse_date(text: str, tz: str, now: datetime) -> date:
-    """"dd/mm/YYYY" or "dd/mm" (this year, or the next one when it already passed). Raises
-    ValueError("freq.err.date")."""
+    """"dd/mm/YYYY" or "dd/mm" (this year, or the next one when it already passed), years ``MIN_YEAR`` to
+    ``MAX_YEAR``. Raises ValueError("freq.err.date")."""
     m = _DATETIME_RE.match((text or "").strip())
     if not m or m.group(4):
         raise ValueError("freq.err.date")
@@ -305,12 +321,14 @@ def parse_date(text: str, tz: str, now: datetime) -> date:
             out = date(year + 1, month, day)
         except ValueError as exc:
             raise ValueError("freq.err.date") from exc
+    if not MIN_YEAR <= out.year <= MAX_YEAR:
+        raise ValueError("freq.err.date")
     return out
 
 
 def parse_datetime(text: str, tz: str, now: datetime) -> datetime:
-    """"dd/mm/YYYY HH:MM", "dd/mm HH:MM" or just "HH:MM" (today, or tomorrow when it already passed) in ``tz`` ->
-    aware UTC. Raises ValueError("freq.err.datetime" | "freq.err.past")."""
+    """"dd/mm/YYYY HH:MM", "dd/mm HH:MM" (the date as in ``parse_date``) or just "HH:MM" (today, or tomorrow when it
+    already passed) in ``tz`` -> aware UTC. Raises ValueError("freq.err.datetime" | "freq.err.past")."""
     raw = (text or "").strip()
     z = zone(tz)
     local_now = now.astimezone(z)
@@ -324,10 +342,7 @@ def parse_datetime(text: str, tz: str, now: datetime) -> datetime:
         m = _DATETIME_RE.match(raw)
         if not m or not m.group(4):
             raise ValueError("freq.err.datetime")
-        day = parse_date(raw[: m.start(4)].strip(), tz, now) if not m.group(3) else None
-        if day is None:
-            year = int(m.group(3))
-            day = date(year + 2000 if year < 100 else year, int(m.group(2)), int(m.group(1)))
+        day = parse_date(raw[: m.start(4)].strip(), tz, now)
         hh, mm = _parse_hm(m.group(4))
     except ValueError as exc:
         if str(exc) in ("freq.err.datetime", "freq.err.past"):

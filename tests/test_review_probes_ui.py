@@ -1,7 +1,7 @@
 """Review probes (UI routers): each test shows a defect found in review and fails until it is fixed."""
 from __future__ import annotations
 
-from datetime import timedelta
+from datetime import date, timedelta
 from unittest.mock import AsyncMock
 
 import pytest
@@ -9,7 +9,7 @@ from sqlalchemy import select
 
 from app.db.base import utcnow
 from app.db.models import Bot as BotRecord
-from app.db.models import ChatGroup, ChatStatus, Run
+from app.db.models import ChatGroup, ChatStatus, Post, Run
 from app.services.scheduler import Scheduler
 from app.ui.common import visible_len
 from tests.conftest import MAIN_BOT_ID, SUPER_ID, App
@@ -61,7 +61,11 @@ async def test_far_future_campaign_end_keeps_the_post_screens_working(app: App) 
     await open_menu(app, SUPER_ID, "post_sched", pid)
     await app.click(SUPER_ID, "Hasta")
     await app.send(SUPER_ID, "31/12/9999")
-    assert "hasta el 31/12/9999" in app.last_text(SUPER_ID)  # accepted and stored
+    assert "Escribe la fecha así" in app.last_text(SUPER_ID)  # refused now (years 2000-2100): asked again
+    async with app.db() as s:  # but stored before that check
+        (await s.get(Post, pid)).ends_on = date(9999, 12, 31)
+    await open_menu(app, SUPER_ID, "post_sched", pid)
+    assert "hasta el 31/12/9999" in app.last_text(SUPER_ID)
     await open_menu(app, SUPER_ID, "freq_edit", -pid)  # freqs.upcoming: ends_on + 1 day
     assert "⏰ <b>Frecuencia</b>" in app.last_text(SUPER_ID), app.last_text(SUPER_ID)[:200]
 

@@ -106,6 +106,12 @@ class PostsFSM(StatesGroup):
 PAGE = 10
 NAME_MAX = 64
 TEXT_SHOW_MAX = 300  # the text of a post shown in its content screen
+# Groups of chats in the targets of a post: at most this many names (cut) in the list and in the detail, then «+N»
+# (a list of 10 posts must fit in one message), and at most this many buttons in the picker (a keyboard holds 100).
+TARGET_NAME_MAX = 30
+LIST_GROUPS = 2
+DETAIL_GROUPS = 10
+PICKER_GROUPS = 60  # above groups.MAX_GROUPS: a network may have more groups from before that limit
 STATUS_ICON = {PostStatus.ACTIVE: "▶️", PostStatus.PAUSED: "⏸", PostStatus.DONE: "✅"}
 MODE_ICON = {SchedMode.ROTATION: "🔁", SchedMode.OWN: "⏰", SchedMode.ONCE: "📆", SchedMode.MANUAL: "✋"}
 MODES = (SchedMode.ROTATION, SchedMode.OWN, SchedMode.ONCE, SchedMode.MANUAL)
@@ -270,13 +276,17 @@ async def groups_by_id(session: AsyncSession, ctx: Ctx) -> dict[int, ChatGroup]:
     return {g.id: g for g in await audience.bot_groups(session, ctx.ws_id)}
 
 
-def targets_text(ctx: Ctx, tokens: list[str] | None, groups: dict[int, ChatGroup], *, icons: bool = True) -> str:
-    """``🌐 Todos`` / ``🏠 Propios, 🗂 Cine`` (empty when it targets nobody)."""
+def targets_text(ctx: Ctx, tokens: list[str] | None, groups: dict[int, ChatGroup], *, icons: bool = True,
+                 max_groups: int = DETAIL_GROUPS) -> str:
+    """``🌐 Todos`` / ``🏠 Propios, 🗂 Cine`` / ``🗂 Cine, 🗂 Series +3 más``: the names of at most ``max_groups``
+    groups of chats, cut when long (empty when it targets nobody)."""
     virtual, group_ids = audience.split_targets(tokens)
     prefix = "po.tgs." if icons else "po.tgl."
     parts = [ctx.t(prefix + token) for token in audience.VIRTUAL if token in virtual]
-    parts += [("🗂 " if icons else "") + fmt.esc(groups[g].name) for g in sorted(group_ids) if g in groups]
-    return ", ".join(parts)
+    names = [groups[g].name for g in sorted(group_ids) if g in groups]
+    parts += [("🗂 " if icons else "") + fmt.esc(fmt.truncate(name, TARGET_NAME_MAX)) for name in names[:max_groups]]
+    more = len(names) - max_groups
+    return ", ".join(parts) + (ctx.t("po.tg.more", n=more) if more > 0 else "")
 
 
 # ---------------------------------------------------------------------------------------------
@@ -324,10 +334,13 @@ async def target_rows(ctx: Ctx, session: AsyncSession, tokens: list[str],
          for token in (audience.OWN, audience.EXT)],
     ]
     counts = await audience.group_counts(session, ctx.ws_id)
+    shown = await audience.bot_groups(session, ctx.ws_id)
+    if len(shown) > PICKER_GROUPS:  # the chosen ones always show (they can be unchosen)
+        shown = sorted(shown, key=lambda g: g.id not in group_ids)[:PICKER_GROUPS]
     groups = [
         btn(fmt.truncate(choice_label(ctx.t("po.tg.group", name=g.name, n=counts.get(g.id, 0)), g.id in group_ids), 64),
             make_cb(audience.group_token(g.id)))
-        for g in await audience.bot_groups(session, ctx.ws_id)
+        for g in shown
     ]
     return rows + grid(groups, 2)
 
@@ -413,8 +426,9 @@ def parse_minutes(text: str) -> int:
         m = _UNITS_RE.fullmatch(re.sub(r"\s+|\by\b|\band\b", "", raw))
         if not m or not (m.group("h") or m.group("m")):
             raise ValueError("po.err.duration")
-        minutes = float(m.group("h") or 0) * 60 + int(m.group("m") or 0)
-    if minutes != int(minutes) or not MIN_DELETE_AFTER <= minutes <= MAX_DELETE_AFTER:
+        minutes = float(m.group("h") or 0) * 60 + float(m.group("m") or 0)
+    # A huge number is inf (float() doesn't overflow): out of range, before int() is tried.
+    if not MIN_DELETE_AFTER <= minutes <= MAX_DELETE_AFTER or minutes != int(minutes):
         raise ValueError("po.err.duration_range")
     return int(minutes)
 
@@ -425,7 +439,7 @@ def parse_when(ctx: Ctx, message: Message) -> tuple[datetime | None, str | None]
         return None, ctx.t("po.err.text_only")
     try:
         return freq.parse_datetime(message.text, ctx.bot_tz, utcnow()), None
-    except ValueError as exc:
+    except (ValueError, OverflowError) as exc:  # OverflowError: a date at the end of the calendar
         key = str(exc) if str(exc) in ("freq.err.datetime", "freq.err.past") else "freq.err.datetime"
         return None, ctx.t(key)
 
@@ -449,7 +463,8 @@ async def render_posts(event: Event, ctx: Ctx, session: AsyncSession, page: int 
         lines.append(ctx.t(
             "po.list.item", n=n, status=STATUS_ICON.get(post.status, "▶️"), mode=MODE_ICON.get(post.mode, "🔁"),
             name=fmt.esc(post.name), kind=kind_icon(post.kind),
-            targets=targets_text(ctx, post.targets, groups, icons=False) or ctx.t("po.tg.none"), extra=extra))
+            targets=targets_text(ctx, post.targets, groups, icons=False, max_groups=LIST_GROUPS) or ctx.t("po.tg.none"),
+            extra=extra))
     parts = [ctx.t("po.list.title") + "\n" + ctx.t("po.list.legend"),
              "\n".join(lines) if lines else ctx.t("po.list.empty")]
     if pages > 1:
