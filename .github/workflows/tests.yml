@@ -1,0 +1,40 @@
+name: tests
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+jobs:
+  tests:
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        db: [sqlite, postgres]
+    services:
+      postgres:
+        image: postgres:16
+        env:
+          POSTGRES_USER: eb
+          POSTGRES_PASSWORD: eb
+          POSTGRES_DB: emesh_test
+        ports: ["5432:5432"]
+        options: >-
+          --health-cmd "pg_isready -U eb -d emesh_test" --health-interval 5s --health-timeout 5s --health-retries 10
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.13"
+          cache: pip
+      - run: pip install -r requirements-dev.txt
+      - name: Migrations (PostgreSQL)
+        if: matrix.db == 'postgres'
+        env:
+          BOT_TOKEN: "1:x"
+          DATABASE_URL: postgresql+asyncpg://eb:eb@localhost:5432/emesh_test
+        run: alembic upgrade head && alembic check && alembic downgrade base
+      - name: Tests
+        env:
+          TEST_DATABASE_URL: ${{ matrix.db == 'postgres' && 'postgresql+asyncpg://eb:eb@localhost:5432/emesh_test' || '' }}
+        run: pytest -q
