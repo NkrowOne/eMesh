@@ -10,7 +10,7 @@ from __future__ import annotations
 import asyncio
 import logging
 import weakref
-from datetime import datetime
+from datetime import datetime, timedelta
 from typing import TYPE_CHECKING
 
 from aiogram import Bot
@@ -305,7 +305,8 @@ async def _welcome(bot: Bot, session: AsyncSession, ws_rec: BotRecord, chat: Cha
     names = group_names(await open_groups_of(session, ws_rec.id, chat.id))
     if names:
         lines.append(t("ce.dm.categories", lang, names=names))
-    lines.append(t("ce.dm.pause_hint", lang))
+    if ws_rec.partners_can_pause:
+        lines.append(t("ce.dm.pause_hint", lang))
     markup = kb([btn(t("ce.btn.my_chats", lang), MenuCB(screen="my_chats"))])
     await dm_owner(bot, session, chat, "\n\n".join(lines), markup)
 
@@ -438,15 +439,32 @@ async def remove(bot: Bot, session: AsyncSession, ws_rec: BotRecord, chat: Chat,
 
 
 # --------------------------------------------------------------------------- pauses
+def pause_allowed(ws_rec: BotRecord, length: timedelta | None) -> bool:
+    """The admins' rules let a partner pause their chat for ``length`` (None: until they resume it): partners may
+    pause (``Bot.partners_can_pause``) for at most ``Bot.pause_max_hours`` (0: no limit, the only case that allows a
+    pause without an end)."""
+    if not ws_rec.partners_can_pause:
+        return False
+    if not ws_rec.pause_max_hours:
+        return True
+    return length is not None and length <= timedelta(hours=ws_rec.pause_max_hours)
+
+
 async def pause_by_owner(bot: Bot, session: AsyncSession, ws_rec: BotRecord, chat: Chat, user_id: int,
-                         until: datetime | None) -> None:
-    """⏸ The partner pauses the distribution in their chat until ``until`` (None: until they resume it). The admins
-    are alerted; only the owner resumes it (or it ends by itself)."""
+                         until: datetime | None) -> bool:
+    """⏸ The partner pauses the distribution in their chat until ``until`` (None: until they resume it). Refused
+    (False, nothing changes) when the admins' rules don't allow it (:func:`pause_allowed`). The admins are alerted;
+    the partner resumes it whenever they want, an admin at any time, or it ends by itself."""
+    now = utcnow()
+    if not pause_allowed(ws_rec, until - now if until is not None else None):
+        return False
+    if not chat.is_paused(now):
+        chat.paused_at = now
     chat.owner_paused = True
     chat.owner_paused_until = until
-    chat.paused_at = utcnow()
     await events.emit(bot, session, ws_rec, EventKind.CHAT_PAUSED, chat=chat, actor_id=user_id,
                       data={"by": "owner", "until": until.isoformat() if until else None}, skip_user=user_id)
+    return True
 
 
 async def resume_by_owner(bot: Bot, session: AsyncSession, ws_rec: BotRecord, chat: Chat, user_id: int) -> None:
@@ -469,9 +487,12 @@ async def pause_by_admin(bot: Bot, session: AsyncSession, ws_rec: BotRecord, cha
 
 
 async def resume_by_admin(bot: Bot, session: AsyncSession, ws_rec: BotRecord, chat: Chat, user_id: int) -> None:
+    """▶️ An admin resumes the distribution in a chat. The admins rule over the partners: it lifts an admin's pause
+    and its partner's pause too. One event (alerting the other admins); the partner is told."""
     chat.admin_paused = False
-    if not chat.owner_pause_active():
-        chat.paused_at = None
+    chat.owner_paused = False
+    chat.owner_paused_until = None
+    chat.paused_at = None
     await events.emit(bot, session, ws_rec, EventKind.CHAT_RESUMED, chat=chat, actor_id=user_id,
                       data={"by": "admin"}, skip_user=user_id)
     await _tell_partner(bot, session, ws_rec, chat, "ch.dm.resumed")
