@@ -28,7 +28,7 @@ HUB_HIDDEN = frozenset({
     "posts", "post", "post_content", "post_buttons", "post_targets", "post_sched", "post_opts", "post_defaults",
     "chats", "chat", "requests", "paused", "import", "my_chats", "my_chat", "join", "partners_msg",
     "groups", "group", "group_chats", "freqs", "freq_edit", "freq_edit_dash", "antispam", "stats", "activity",
-    "externals",
+    "externals", "setup",
 })
 
 

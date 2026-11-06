@@ -383,7 +383,7 @@ async def test_withdraw_when_a_clone_is_disabled(app: App) -> None:
     await app.add_clone(CLONE_ID, "clon_cine_bot", OWNER2_ID)
     pks = await make_chats(app, 2, bot_id=CLONE_ID)
     auto = await make_post(app, bot_id=CLONE_ID, name="Auto", text="Auto", delete_after=120)
-    kept = await make_post(app, bot_id=CLONE_ID, name="Fijo", text="Fijo")
+    kept = await make_post(app, bot_id=CLONE_ID, name="Fijo", text="Fijo", delete_after=0)
     run_auto = await run_post(app, auto, pks)
     run_kept = await run_post(app, kept, pks)
     await app.manager.disable_bot(CLONE_ID, "owner")

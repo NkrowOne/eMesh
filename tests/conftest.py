@@ -216,10 +216,17 @@ class App:
             self.fake.add_chat(chat_id, title, type=type, members=members, username=username, creator=user_id)
         await self.feed(self.my_chat_member_update(chat_id, user_id, rights=rights, bot_id=bot_id), bot_id)
 
-    async def add_clone(self, bot_id: int, username: str, owner_id: int) -> None:
-        """Registers and starts a clone owned by ``owner_id`` (as if connected with a token)."""
+    async def add_clone(self, bot_id: int, username: str, owner_id: int, *, setup_done: bool = True) -> None:
+        """Registers and starts a clone owned by ``owner_id`` (as if connected with a token). ``setup_done``: its
+        owner already went through the setup wizard (tests of the wizard pass False)."""
+        from app.db.models import Bot as BotRecord
+
         token = self.fake.add_bot(bot_id, username, first_name=username)
         await self.manager.add_bot(token, owner_id)
+        async with self.db() as s:
+            rec = await s.get(BotRecord, bot_id)
+            assert rec is not None
+            rec.setup_done = setup_done
 
     # ------------------------------------------------------------- shortcuts
     async def send(self, user_id: int, text: str, bot_id: int = MAIN_BOT_ID, **kw: Any) -> None:

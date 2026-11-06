@@ -130,6 +130,11 @@ class EventKind:
     BOT_RESUMED = "bot_resumed"
 
 
+# A new post is deleted from the chats one day after it is sent (the wizard asks; 0 = never).
+DEFAULT_DELETE_AFTER = 1440
+# Partners may pause the distribution in their chats for one day at most, unless the admins choose otherwise.
+DEFAULT_PAUSE_MAX_HOURS = 24
+
 # Global frequency of a new bot: a post every 4 hours from 08:00 to 22:00 (08, 12, 16 and 20 h), every day.
 DEFAULT_FREQ: dict[str, Any] = {"mode": "interval", "every": 240, "window": "08:00-22:00", "days": "0123456"}
 
@@ -155,6 +160,8 @@ class Bot(Base):
     timezone: Mapped[str] = mapped_column(String(64), default="Europe/Madrid")
     # The owner chose the timezone (asked on the first /start of a new clone: Telegram doesn't tell it).
     timezone_set: Mapped[bool] = mapped_column(Boolean, default=False, server_default=sa_false())
+    # 🧭 The owner went through the setup wizard of a new bot (bots that existed before it: done).
+    setup_done: Mapped[bool] = mapped_column(Boolean, default=False, server_default=sa_true())
 
     # --- distribution ---
     paused: Mapped[bool] = mapped_column(Boolean, default=False, server_default=sa_false())  # ⏸ everything
@@ -171,6 +178,11 @@ class Bot(Base):
 
     # --- external chats (partners) ---
     join_open: Mapped[bool] = mapped_column(Boolean, default=False, server_default=sa_false())
+    # ⏸ The admins rule over the partners' pauses: whether partners may pause their chats and for how long at most
+    # (hours; 0 = until they resume it). Admins can always resume a partner's pause.
+    partners_can_pause: Mapped[bool] = mapped_column(Boolean, default=True, server_default=sa_true())
+    pause_max_hours: Mapped[int] = mapped_column(Integer, default=DEFAULT_PAUSE_MAX_HOURS,
+                                                 server_default=str(DEFAULT_PAUSE_MAX_HOURS))
     join_approval: Mapped[bool] = mapped_column(Boolean, default=True, server_default=sa_true())
     min_members: Mapped[int] = mapped_column(Integer, default=0, server_default="0")
     join_text: Mapped[str | None] = mapped_column(Text, nullable=True)  # custom text of the join screen (HTML)
@@ -363,7 +375,7 @@ class Post(Base):
     link_preview: Mapped[bool] = mapped_column(Boolean, default=False)
     caption_above: Mapped[bool] = mapped_column(Boolean, default=False)  # show_caption_above_media
     spoiler: Mapped[bool] = mapped_column(Boolean, default=False)  # has_spoiler (photo, video, GIF)
-    delete_after: Mapped[int] = mapped_column(Integer, default=0)  # minutes; 0 = never deleted
+    delete_after: Mapped[int] = mapped_column(Integer, default=DEFAULT_DELETE_AFTER)  # minutes; 0 = never deleted
     delete_previous: Mapped[bool] = mapped_column(Boolean, default=True)  # delete its previous copy in the chat
 
     status: Mapped[str] = mapped_column(String(16), default=PostStatus.ACTIVE)

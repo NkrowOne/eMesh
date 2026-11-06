@@ -164,16 +164,23 @@ visitors). Times: frequencies and dates are in the workspace timezone (`ctx.bot_
   chat per day (bot timezone), at least `min_gap` minutes between two posts in a chat, `one_at_a_time` (the previous
   post of the network in that chat is deleted before sending a new one). Chats left out are counted as skipped.
 * **Options of a post**: 📌 `pin` (silently), 🔕 `silent`, 🛡 `protect` (no forwarding/saving), 🔗 `link_preview`
-  (text posts), 🔼 `caption_above` and 🫣 `spoiler` (photo/video/GIF), 🗑 `delete_after` minutes (0 = never; max
-  2880 = 48 h because Telegram doesn't let bots delete older messages), ♻️ `delete_previous` (its own previous copy
+  (text posts), 🔼 `caption_above` and 🫣 `spoiler` (photo/video/GIF), 🗑 `delete_after` minutes (default
+  `DEFAULT_DELETE_AFTER` = 1 day; 0 = never; max 2880 = 48 h because Telegram doesn't let bots delete older
+  messages), ♻️ `delete_previous` (its own previous copy
   in that chat is deleted when it is sent again). New posts take `Bot.post_defaults`.
 * **Partners**: when the bot accepts external chats (`Bot.join_open`), anyone can add it to their channel or group.
   With `join_approval` the chat waits for an admin (`pending` + a request to the admins), otherwise it is approved
   at once. External chats join every 🤝 open group (`ChatGroup.open`) and can leave / join open groups from their
-  panel. A partner can pause the distribution in their chat (1 h, 6 h, 24 h, 3 days, 7 days or until resumed) and
-  resume it; each change is an event that alerts the owner and admins (`events.emit`), shows in 📜 Actividad, in the
-  chat list (⏸) and in the home screen ("⏸ Pausados por su dueño: N"). Admins can't resume a partner's pause (they
-  see it, and can remove the chat); partners can't resume an admin's pause.
+  panel.
+* **The admins rule over the partners.** A partner can pause the distribution in their chat only when the admins
+  allow it (`Bot.partners_can_pause`, default yes) and for at most `Bot.pause_max_hours` (default
+  `DEFAULT_PAUSE_MAX_HOURS` = 24 h, one day; 0 = until they resume it): the pause menu only offers the allowed
+  durations among 1 h, 6 h, 24 h, 3 días, 7 días and «hasta que la reanude» (a forged callback for another one is
+  refused). The partner resumes their own pause whenever they want. Every change is an event that alerts the owner
+  and admins (`events.emit`) and the admins **always** see every pause: the status line of the home, ⏸ Pausados (who
+  paused, since, until), the chat list (⏸), 📜 Actividad. **Admins can resume a partner's pause at any time**
+  (`chats.resume_by_admin` lifts both kinds of pause; the partner is told), while partners can't resume an admin's
+  pause. A rule changed later applies to new pauses.
 
 ---------------------------------------------------------------------------------------------------
 ## 5. Screens and flows
@@ -228,7 +235,28 @@ Commands (start module): `/start`, `/cancel` (clear state + home), `/id`, `/help
 `/deladmin @user` (owner).
 
 New clone: its owner gets the `timezone` screen (onboarding, no back button) on the first `/start` when
-`bots.timezone_set` is False, then home (port of eButtons `timezone.py` + `app/data/timezones.py`).
+`bots.timezone_set` is False (port of eButtons `timezone.py` + `app/data/timezones.py`), then the **setup wizard**
+(`setup`, below) while `bots.setup_done` is False, then home. Only the bot's owner in the bot itself gets them (not
+a super admin managing it); main bots are marked done at startup.
+Admin home extras: one status line always (when the network has chats): «📊 Estado: ✅ 10 reciben · ⏸ 2 pausados ·
+⚠️ 1 sin permisos · ⏳ 1 pendiente» (from `stats.summary`), and `[⏸ Pausados (N)]` always shown to admins when the
+network accepts external chats or has any (even with 0).
+
+### 5.1b Setup wizard of a new bot (start module) — `setup` (arg = step)
+Step by step, one question per screen, the current value pre-selected (✅), `[🔙 Regresar]` to the previous step
+(the first one has `[⏭ Saltar el asistente]`: the defaults stay). Each answer is saved at once. Owner only.
+1. «🤝 <b>¿Aceptas canales de otras personas?</b>» `[✅ Sí, con mi aprobación (recomendado)]`, `[⚡ Sí, entran
+   solos]`, `[🔒 No, solo los míos]` → `join_open` / `join_approval`.
+2. Only when they are accepted: «⏸ <b>¿Pueden pausar la distribución en sus canales?</b>» (└ «Tú siempre ves quién
+   pausa y puedes reanudarlo.») `[Hasta 1 día (recomendado)]`, `[Hasta 3 días]`, `[Hasta 7 días]`,
+   `[Sin límite]`, `[🚫 No pueden pausar]` → `partners_can_pause` / `pause_max_hours`.
+3. «⏰ <b>¿Cada cuánto recibe un mensaje cada canal?</b>» `[Cada 2 h][Cada 4 h][Cada 6 h][Cada 12 h]` and
+   `[1 al día (12:00)]` (interval from 08:00 to 22:00, or times `12:00`) → `Bot.freq` + `freq.refresh_bot`.
+4. «🗑 <b>¿Cuánto tiempo siguen publicados los mensajes?</b>» `[1 h][6 h][12 h][1 día][2 días]`,
+   `[♾ No se borran]` → `Bot.post_defaults["delete_after"]` (a new dict).
+5. «✅ <b>Todo listo</b>» + a summary of the answers + `[➕ Añadir canal ↗][➕ Añadir grupo ↗]`,
+   `[📝 Crear el primer mensaje]` (`post_new`), `[🏠 Ir al inicio]`. `setup_done` becomes True.
+It can be run again from ⚙️ Ajustes › `[🧭 Asistente de configuración]` (owner).
 
 ### 5.2 Guide (start) — `guide` (arg = page)
 Admins: 5 short pages (1 Cómo funciona: red, canales, mensajes, grupos de canales, frecuencias; 2 Canales propios y
@@ -257,7 +285,9 @@ owner-only (admins see them read only).
   `[✅ Aprobación manual]` (`join_approval`; └ "Las solicitudes llegan a los admins…" / "Entran solos…"),
   `[🔢 Mínimo de miembros: 500]` (input, 0 = none), `[💬 Texto de bienvenida]` (input HTML via `message.html_text`,
   max 1000 visible chars, `[↩️ Texto predeterminado]`), the invite deep link `https://t.me/<ws username>?start=join`
-  shown in the text, `[🗂 Grupos abiertos]` (screen `groups`), `[🔙]` → `settings`.
+  shown in the text, `[🗂 Grupos abiertos]` (screen `groups`), `[✅ Los socios pueden pausar]` (`partners_can_pause`) and, when they
+  can, `⏸ Pausa máxima` choices `[1 día][3 días][7 días][Sin límite]` (`pause_max_hours`, └ «Tú siempre puedes
+  reanudar una pausa.»), `[🔙]` → `settings`.
 * `admins`: as eButtons («👮 Administradores», `#1 ⚜️ @owner (id)`, `#2 🔰 @x (id)`, hint `/admin @usuario`),
   `[🗑 #2 @x]` per admin (owner). The user must have started the bot.
 * `support` (owner): current contact + `[✏️ Cambiar contacto]` (`@user`, `t.me/user`) + `[↩️ Usar mi cuenta]`.
@@ -302,9 +332,12 @@ first, done last. Buttons: one per post (`#1 Promo Cine`, 2 per row), `[➕ Nuev
 3. «🎯 <b>¿A quién se envía?</b> · 3/4»: toggles `[🌐 Todos]` (selected by default), `[🏠 Solo propios]`,
    `[🤝 Solo externos]`, one per group of chats `[🗂 Cine (5)]`, live count «👥 Lo recibirán: 23 chats · 👤 45,320»
    (`audience.targets_size`), `[✅ Continuar]` (needs a target).
-4. «⏰ <b>¿Cuándo se envía?</b> · 4/4»: `[🔁 En rotación (recomendado)]` (└ «Se turna con los demás mensajes según
+4. «⏰ <b>¿Cuándo se envía?</b> · 4/5»: `[🔁 En rotación (recomendado)]` (└ «Se turna con los demás mensajes según
    la frecuencia de cada canal (global: cada 4 h).»), `[⏰ Con su propio horario]`, `[📆 Una sola vez]` (asks the
    date: `freq.parse_datetime`), `[✋ Solo cuando lo envíe yo]`.
+5. «🗑 <b>¿Cuánto tiempo sigue publicado?</b> · 5/5» (└ «Pasado ese tiempo se borra solo de los canales.»):
+   `[1 h][3 h][6 h][12 h][1 día][2 días]`, `[♾ No borrar]`, the default of the network pre-selected
+   (`Bot.post_defaults["delete_after"]`, else `DEFAULT_DELETE_AFTER`, 1 día). Steps 1-3 say «· 1/5» … «· 3/5».
 Then: create the `Post` (`apply` content with `ctx.bot_id`, `name = default_name`, `ws.post_defaults`, `targets`,
 `mode`; own mode starts with a copy of the global frequency), `freq.refresh_post`, `scheduler.wake()`, show «✅
 Mensaje guardado» + the `post` detail; own mode opens `freq_edit` (arg -id) right away.
@@ -424,8 +457,10 @@ service message the bot's own pin creates is deleted (groups: `from_user` is the
 is one of the bot's live deliveries); **discovery**: a `channel_post` or group `message` from a chat with no row →
 `services.chats.register_existing` (at most once per hour per chat, in memory), so a bot that was already admin in
 chats (connected with a token) finds them.
-`requests` (arg page): pending chats with `[✅][❌]` per row. `paused` (arg page): chats paused by their owner
-(owner, until, since). `import`: «📥 <b>Importar canales</b>\n\nSi el bot ya es administrador en canales o grupos
+`requests` (arg page): pending chats with `[✅][❌]` per row. `paused` (arg page): **every** paused chat, by its
+owner or by an admin: name, who paused it, since, until, and `[▶️ #n]` per row to resume it (`resume_by_admin`).
+In `chat`, a chat paused by its partner shows `[▶️ Reanudar (anula la pausa del socio)]` (confirm: «El dueño lo ha
+pausado hasta …. Se le avisará.»). `import`: «📥 <b>Importar canales</b>\n\nSi el bot ya es administrador en canales o grupos
 (por ejemplo, venías de otro bot), envía sus @usuarios o IDs, uno por línea.» → `register_existing` each →
 summary (añadidos / ya estaban / el bot no es admin / no encontrados). `partners_msg` («📢 Avisar a los dueños»):
 prompt the message → confirm «Se enviará a <b>N</b> personas.» → background `blast.copy_to_users` → report DM.
@@ -442,7 +477,9 @@ Partners (`partners.py`):
   🕐 Último: 07/11/2026 10:00 AM
   🗂 Categorías: Cine, Series        (open groups it is in)
   ```
-  `[⏸ Pausar]` → `[⏸ 1 h][⏸ 6 h][⏸ 24 h]`, `[⏸ 3 días][⏸ 7 días]`, `[⏸ Hasta que la reanude]`, `[🔙]`;
+  `[⏸ Pausar]` → the allowed durations among `[⏸ 1 h][⏸ 6 h][⏸ 24 h]`, `[⏸ 3 días][⏸ 7 días]`,
+  `[⏸ Hasta que la reanude]` (section 4: the admins' rules), `[🔙]`; no pause button when partners can't pause
+  («⏸ La administración no permite pausar en esta red.»);
   `[▶️ Reanudar]` (own pause only); `[🗂 Categorías]` (open groups: join / leave); `[🚪 Salir de la red]`
   (confirm: `publisher.drop_chat`, the bot leaves, status `left`, event `chat_removed` by owner); `[🔙]` → `my_chats`.
   Pausing: `owner_paused=True`, `owner_paused_until`, `paused_at`, event `chat_paused` (by owner, until) →
@@ -618,7 +655,8 @@ default), `[💬 Escribir al dueño]` (prompt → DM via the main bot), `[📜 A
   `remove(bot, session, ws_rec, chat, by_user, *, publisher, ban=False, by_owner=False)`,
   `register_existing(bot, session, ws_rec, ref, *, added_by=None) -> str` (`added` | `existing` | `not_admin` |
   `not_found` | `pending` | `limit`), `pause_by_owner(bot, session, ws_rec, chat, user_id, until)`,
-  `resume_by_owner(...)`, `pause_by_admin(bot, session, ws_rec, chat, user_id)`, `resume_by_admin(...)`.
+  `resume_by_owner(...)`, `pause_by_admin(bot, session, ws_rec, chat, user_id)`, `resume_by_admin(...)` (lifts an
+  admin's pause and a partner's pause: the admins rule; DMs the partner when it lifted theirs).
 * Screens are the interface between UI modules (section 5): link to them by name with the documented args.
 
 ---------------------------------------------------------------------------------------------------
@@ -635,7 +673,7 @@ enforces it). Literal braces: `{{` `}}`. A duplicated key anywhere raises at sta
 | posts | `app/bot/routers/posts.py`, `post_buttons.py`, tests `tests/test_posts*.py` | `po`, `pw`, `pb` | `po.`, `pb.` |
 | chats | `app/bot/routers/chat_events.py`, `requests.py`, `chats.py`, `partners.py`, `app/services/chats.py`, tests `tests/test_chats*.py`, `tests/test_partners*.py` | `ch`, `rq`, `pa` | `ch.`, `rq.`, `pa.`, `ce.` |
 | groups | `app/bot/routers/groups.py`, `freqs.py`, tests `tests/test_groups*.py`, `tests/test_freqs*.py` | `gr`, `fq` | `gr.`, `fq.` |
-| start | `app/bot/routers/start.py`, `settings.py`, `timezone.py`, `stats.py`, `app/data/timezones.py`, tests `tests/test_start*.py`, `tests/test_settings*.py`, `tests/test_stats*.py` | `st`, `ss`, `tz`, `lg`, `ad`, `sx` | `home.`, `guide.`, `set.`, `tz.`, `lang.`, `adm.`, `stats.` |
+| start | `app/bot/routers/start.py`, `settings.py`, `timezone.py`, `stats.py`, `setup.py`, `app/data/timezones.py`, tests `tests/test_start*.py`, `tests/test_settings*.py`, `tests/test_stats*.py`, `tests/test_setup*.py` | `st`, `ss`, `tz`, `lg`, `ad`, `sx`, `su` | `home.`, `guide.`, `set.`, `tz.`, `lang.`, `adm.`, `stats.`, `setup.` |
 | clones | `app/bot/routers/clone.py`, `panel.py`, `app/services/clones.py`, tests `tests/test_clone*.py`, `tests/test_panel*.py` | `cl`, `sa` | `cl.`, `sa.` |
 Everyone: `app/i18n/locales/{es,en}_<module>.py` for their module name. Core files (section 2) belong to the
 integrator: report needed changes.

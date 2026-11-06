@@ -180,7 +180,7 @@ class BotManager:
                 rec = await s.get(BotRecord, me.id)
                 if rec is None:
                     rec = BotRecord(id=me.id, owner_id=owner, token_enc="", timezone=self.settings.DEFAULT_TIMEZONE,
-                                    timezone_set=True)
+                                    timezone_set=True, setup_done=True)
                     s.add(rec)
                 rec.is_main = True
                 rec.owner_id = owner
