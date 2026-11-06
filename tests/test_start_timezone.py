@@ -250,8 +250,30 @@ async def test_new_clone_asks_its_owner_for_the_timezone_first(app: App) -> None
     assert rec.timezone == "Atlantic/Canary" and rec.timezone_set
     assert rec.rot_next_at is not None and rec.rot_next_at > utcnow()
     text = app.last_text(OWNER2_ID)
-    assert text.startswith("✅ Zona horaria de la red: <b>Atlantic/Canary</b>. ¡Todo listo para empezar!\n\n"
-                           "🕸 <b>Tu red de distribución</b>")  # then the home
+    assert text.startswith("✅ Zona horaria de la red: <b>Atlantic/Canary</b>.\n\n"
+                           "🕸 <b>Tu red de distribución</b>")  # then the home (this clone's wizard was done)
+    await app.send(OWNER2_ID, "/start", bot_id=CLONE_ID)
+    assert app.last_text(OWNER2_ID).startswith("🕸 <b>Tu red de distribución</b>")
+
+
+async def test_onboarding_continues_with_the_setup_wizard(app: App) -> None:
+    await add_clone(app, timezone_set=False, setup_done=False)  # a brand new clone
+    await app.send(OWNER2_ID, "/start", bot_id=CLONE_ID)
+    assert "Antes de empezar" in app.last_text(OWNER2_ID)  # the timezone comes first
+    await app.click(OWNER2_ID, "Asia", bot_id=CLONE_ID)
+    await pick_country(app, OWNER2_ID, "Japón", bot_id=CLONE_ID)
+    rec = await get_bot(app, CLONE_ID)
+    assert rec.timezone == "Asia/Tokyo" and rec.timezone_set and not rec.setup_done
+    text = app.last_text(OWNER2_ID)
+    assert text.startswith("✅ Zona horaria de la red: <b>Asia/Tokyo</b>.\n\n🧭 <b>Asistente de configuración</b>\n")
+    assert "🤝 <b>¿Aceptas canales de otras personas?</b>" in text
+    assert has_button(app, OWNER2_ID, "Saltar el asistente")
+    # Until the wizard is finished or skipped, /start opens it again; then the home.
+    await app.send(OWNER2_ID, "/start", bot_id=CLONE_ID)
+    assert app.last_text(OWNER2_ID).startswith("🧭 <b>Asistente de configuración</b>")
+    await app.click(OWNER2_ID, "Saltar el asistente", bot_id=CLONE_ID)
+    assert (await get_bot(app, CLONE_ID)).setup_done
+    assert app.last_text(OWNER2_ID).startswith("🕸 <b>Tu red de distribución</b>")
     await app.send(OWNER2_ID, "/start", bot_id=CLONE_ID)
     assert app.last_text(OWNER2_ID).startswith("🕸 <b>Tu red de distribución</b>")
 

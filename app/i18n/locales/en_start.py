@@ -16,6 +16,15 @@ STRINGS = {
     "home.owner_paused": "⏸ Paused by their owner: <b>{n}</b>",
     "home.pending": "⏳ Pending requests: <b>{n}</b>",
     "home.no_rights": "⚠️ Missing rights: <b>{n}</b>",
+    "home.status": "📊 Status: {parts}",
+    "home.st.ok": "✅ {n} receiving",
+    "home.st.ok.1": "✅ {n} receiving",
+    "home.st.paused": "⏸ {n} paused",
+    "home.st.paused.1": "⏸ {n} paused",
+    "home.st.no_rights": "⚠️ {n} missing rights",
+    "home.st.no_rights.1": "⚠️ {n} missing rights",
+    "home.st.pending": "⏳ {n} pending",
+    "home.st.pending.1": "⏳ {n} pending",
     "home.paused": "⏸ <b>The distribution is paused.</b> Nothing is sent until you resume it.",
     "home.btn.posts": "📝 Posts",
     "home.btn.chats": "📣 Channels",
@@ -44,6 +53,10 @@ STRINGS = {
         "🤝 <b>Join the network of @{bot}</b>\n\n"
         "Add this bot to your channel or group and it will receive the network's posts.\n"
         "⏸ You can pause them whenever you want from 📣 My channels."
+    ),
+    "home.join.default_no_pause": (
+        "🤝 <b>Join the network of @{bot}</b>\n\n"
+        "Add this bot to your channel or group and it will receive the network's posts."
     ),
     "home.join.min": "👤 Minimum to join: <b>{n}</b> members.",
     "home.join.approval": "⏳ Every channel is reviewed by the team before it is accepted.",
@@ -94,8 +107,10 @@ STRINGS = {
         "<b>Pauses</b>\n"
         "• ⏸ <b>Pause all</b>, on the home screen, stops the whole network.\n"
         "• Each channel can be paused from its page.\n"
-        "• The owner of an external channel can pause it whenever they want: the admins are alerted and it shows "
-        "in ⏸ Paused and in 📜 Activity. Only its owner can resume it."
+        "• The owner of an external channel can pause it within the network's rules (⚙️ Settings › 🤝 External "
+        "channels): by default, up to 1 day. The admins are alerted and it shows on the home screen, in ⏸ Paused "
+        "and in 📜 Activity.\n"
+        "• The admins can resume any pause; a partner whose pause is lifted is told."
     ),
     "guide.admin.3": (
         "📝 <b>Posts</b>\n\n"
@@ -131,8 +146,9 @@ STRINGS = {
         "• 🔔 <b>My notifications</b>: network alerts, daily summary and a report of every send. Each admin chooses "
         "their own.\n"
         "• 🗺 <b>Timezone</b>: frequencies and dates are calculated with it.\n"
-        "• 🤝 <b>External channels</b>: accept them or not, manual approval, minimum members, welcome text and the "
-        "invite link.\n"
+        "• 🤝 <b>External channels</b>: accept them or not, manual approval, minimum members, welcome text, the "
+        "partners' pauses and the invite link.\n"
+        "• 🧭 <b>Setup wizard</b>: goes through the main settings of the network step by step.\n"
         "• 📊 <b>Statistics</b> and 📜 <b>Activity</b>: sends, reach and what happens in the channels.\n\n"
         "🤖 <b>Clones</b>: every bot of the platform is an independent network. Anyone can create theirs with "
         "🤖 <b>Create my bot</b> in the main bot and manage it in 🤖 <b>My bots</b>."
@@ -153,8 +169,8 @@ STRINGS = {
     "guide.partner.2": (
         "⏸ <b>Pause, categories and leaving</b>\n\n"
         "In 📣 <b>My channels</b> you have the page of each of your channels:\n"
-        "• ⏸ <b>Pause</b>: stop receiving posts for 1 h, 6 h, 24 h, 3 days, 7 days or until you resume it with "
-        "▶️ <b>Resume</b>.\n"
+        "• ⏸ <b>Pause</b>: stop receiving posts for a while, within the network's rules (for example, up to 1 "
+        "day). Resume whenever you want with ▶️ <b>Resume</b>; the network's team can resume it too.\n"
         "• 🗂 <b>Categories</b>: join or leave the open categories of the network.\n"
         "• 🚪 <b>Leave the network</b>: the bot leaves your channel and stops posting there.\n\n"
         "If the bot is missing rights or a pause ends, you are notified here."
@@ -173,8 +189,8 @@ STRINGS = {
         "Tap <b>✨ Create my bot</b> and choose:\n"
         "• ✨ <b>Create bot</b>: Telegram creates it for you in a couple of taps (when available).\n"
         "• 🔑 <b>Use token</b>: create the bot in @BotFather with /newbot and paste the token it gives you here.\n\n"
-        "Then open your bot and tap /start: choose the timezone, add the bot to your channels and create your first "
-        "post. Inside, 📖 <b>Guide</b> explains everything.\n\n"
+        "Then open your bot and tap /start: choose the timezone, answer a few quick questions, add the bot to your "
+        "channels and create your first post. Inside, 📖 <b>Guide</b> explains everything.\n\n"
         "🤖 In <b>My bots</b> you can pause, resume or disconnect your bots."
     ),
     # --- Settings ----------------------------------------------------------------------------------
@@ -196,6 +212,9 @@ STRINGS = {
     "set.btn.admins": "👮 Admins",
     "set.btn.externals": "🤝 External channels",
     "set.btn.support": "🛟 Support",
+    "set.btn.setup": "🧭 Setup wizard",
+    "set.days": "{n} days",
+    "set.days.1": "{n} day",
     # --- My notifications --------------------------------------------------------------------------
     "set.nt.title": "🔔 <b>My notifications</b>",
     "set.nt.notify": "🔔 Network alerts: {v}",
@@ -211,8 +230,8 @@ STRINGS = {
     # --- External channels -------------------------------------------------------------------------
     "set.ext.title": "🤝 <b>External channels</b>",
     "set.ext.intro": (
-        "Other people can add the bot to their channels and groups to receive the network's posts, and pause them "
-        "whenever they want."
+        "Other people can add the bot to their channels and groups to receive the network's posts. You set the "
+        "rules."
     ),
     "set.ext.open": "🤝 Accept external channels: {v}",
     "set.ext.hint.closed": "   └ The network is private now: only the admins add channels.",
@@ -229,11 +248,17 @@ STRINGS = {
     "set.ext.hint.groups": "   └ External channels join them on their own and can leave them from their page.",
     "set.ext.link": "🔗 Invite link: {link}",
     "set.ext.hint.link": "   └ Share it with channel owners: it explains how to join.",
+    "set.ext.pause": "⏸ Partners can pause: {v}",
+    "set.ext.hint.no_pause": "   └ Only the admins can pause their channels.",
+    "set.ext.pmax": "⏸ Longest pause: <b>{v}</b>",
+    "set.ext.hint.pmax": "   └ You can always resume a pause.",
+    "set.ext.pmax.none": "No limit",
     "set.ext.btn.open": "🤝 Accept external channels",
     "set.ext.btn.approval": "✋ Manual approval",
     "set.ext.btn.min": "🔢 Minimum members: {n}",
     "set.ext.btn.text": "💬 Welcome text",
     "set.ext.btn.groups": "🗂 Open channel groups",
+    "set.ext.btn.pause": "⏸ Partners can pause",
     "set.ext.min.prompt": (
         "🔢 <b>Minimum members</b>\n\n"
         "Current: <b>{n}</b>\n"
@@ -327,7 +352,7 @@ STRINGS = {
     ),
     "tz.write.invalid": "⚠️ That timezone is not valid. Use the format <code>Continent/City</code>.",
     "tz.saved.admin": "✅ Network timezone: <b>{zone}</b>. The next sends have been recalculated.",
-    "tz.saved.first": "✅ Network timezone: <b>{zone}</b>. All set to start!",
+    "tz.saved.first": "✅ Network timezone: <b>{zone}</b>.",
     "tz.saved.user": "✅ Your timezone is now <b>{zone}</b>.",
     # --- Statistics and activity -------------------------------------------------------------------
     "stats.title": "📊 <b>Statistics</b> · {period}",

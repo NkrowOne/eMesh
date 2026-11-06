@@ -1,7 +1,8 @@
 """🏠 Home, 📖 guide and the basic commands: /start (+ deep links), /cancel, /id, /help, /admin and /deladmin.
 
 The home has three views: the network of the admins (with its summary and ⏸ Pausar todo), the partners and visitors
-(how to join, their chats, support) and the main bot in hub mode (what eMesh is, create your bot).
+(how to join, their chats, support) and the main bot in hub mode (what eMesh is, create your bot). The owner of a new
+clone goes first through the timezone and the 🧭 setup wizard.
 """
 from __future__ import annotations
 
@@ -15,7 +16,7 @@ from aiogram.filters import Command, CommandObject, CommandStart
 from aiogram.filters.callback_data import CallbackData
 from aiogram.fsm.context import FSMContext
 from aiogram.types import CallbackQuery, InlineKeyboardButton, InlineKeyboardMarkup, Message
-from sqlalchemy import func, select
+from sqlalchemy import and_, func, or_, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.bot.context import Ctx
@@ -31,6 +32,7 @@ from app.bot.routers.settings import (
     user_label,
     with_notice,
 )
+from app.bot.routers.setup import needs_setup
 from app.bot.routers.timezone import needs_timezone
 from app.db.base import utcnow
 from app.db.models import Bot as BotRecord
@@ -81,6 +83,9 @@ async def home_screen(
     if needs_timezone(ctx):  # a new clone: its owner chooses the timezone first
         await open_screen("timezone", event, ctx, session)
         return
+    if needs_setup(ctx):  # then the setup wizard, until it is finished or skipped
+        await open_screen("setup", event, ctx, session, arg=1, notice=notice)
+        return
     if ctx.is_hub:
         text, markup = await _hub_home(ctx, session)
     elif ctx.is_admin:
@@ -98,16 +103,35 @@ def _next_turn(ws: BotRecord, tz: str, now: datetime) -> datetime | None:
     return freq.next_slot(ws.freq, tz, now)
 
 
+async def _paused_chats(session: AsyncSession, bot_id: int, now: datetime) -> int:
+    """Approved chats paused right now, by their owner or by an admin (a chat paused by both counts once)."""
+    owner_pause = and_(Chat.owner_paused, or_(Chat.owner_paused_until.is_(None), Chat.owner_paused_until > now))
+    q = select(func.count()).select_from(Chat).where(
+        Chat.bot_id == bot_id, Chat.status == ChatStatus.APPROVED, or_(Chat.admin_paused, owner_pause))
+    return int((await session.execute(q)).scalar() or 0)
+
+
+def _status_line(ctx: Ctx, sendable: int, paused: int, no_rights: int, pending: int) -> str:
+    """«📊 Estado: ✅ 10 reciben · ⏸ 2 pausados · ⚠️ 1 sin permisos · ⏳ 1 pendiente»."""
+    parts = [ctx.t(f"{key}.1" if n == 1 else key, n=num(n)) for key, n in (
+        ("home.st.ok", sendable), ("home.st.paused", paused), ("home.st.no_rights", no_rights),
+        ("home.st.pending", pending))]
+    return ctx.t("home.status", parts=" · ".join(parts))
+
+
 async def _admin_home(ctx: Ctx, session: AsyncSession) -> tuple[str, InlineKeyboardMarkup]:
     ws = ctx.ws_rec
     now = utcnow()
     s = await stats.summary(session, ws.id, now=now)
+    paused = await _paused_chats(session, ws.id, now)
     lines = [ctx.t("home.admin.title"), ""]
     if s.chats:
         lines += [ctx.t("home.chats", n=num(s.chats), members=num(s.members)),
                   ctx.t("home.chats.split", own=num(s.own), ext=num(s.external))]
     else:
         lines.append(ctx.t("home.chats.none"))
+    if s.chats or s.pending:  # admins always see how many chats receive posts and why the others don't
+        lines.append(_status_line(ctx, s.sendable, paused, s.no_rights, s.pending))
     lines.append(ctx.t("home.posts", n=num(s.posts_active)))
     if not s.posts_active:
         lines.append(ctx.t("home.posts.none"))
@@ -128,7 +152,9 @@ async def _admin_home(ctx: Ctx, session: AsyncSession) -> tuple[str, InlineKeybo
         [btn(ctx.t("home.btn.stats"), MenuCB(screen="stats")),
          btn(ctx.t("home.btn.activity"), MenuCB(screen="activity"))],
         [btn(ctx.t("home.btn.requests", n=s.pending), MenuCB(screen="requests")) if s.pending else None,
-         btn(ctx.t("home.btn.paused", n=s.owner_paused), MenuCB(screen="paused")) if s.owner_paused else None],
+         # ⏸ Pausados even with 0 when partners can join: the admins always see every pause.
+         btn(ctx.t("home.btn.paused", n=paused), MenuCB(screen="paused"))
+         if ws.join_open or s.external or paused else None],
     ]
     if ws.username:
         rows.append([btn(ctx.t("home.btn.add_channel"), url=add_to_channel_url(ws.username)),
