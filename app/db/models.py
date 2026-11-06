@@ -264,9 +264,10 @@ class Chat(Base):
     rights_ok: Mapped[bool] = mapped_column(Boolean, default=False)
     missing_rights: Mapped[str] = mapped_column(String(256), default="")
 
-    # ⏸ Pauses: by an admin of the bot (only an admin resumes it) and by the chat's owner (partners; only they
-    # resume it, an admin just sees it). owner_paused_until None = until resumed; a past date = already over
-    # (the scheduler clears it and tells the admins).
+    # ⏸ Pauses: by an admin of the bot (only an admin resumes it) and by the chat's owner (partners, within the
+    # bot's rules: Bot.partners_can_pause / pause_max_hours; they resume it, and an admin can resume it too: the
+    # admins rule). owner_paused_until None = until resumed; a past date = already over (the scheduler clears it and
+    # tells the admins).
     admin_paused: Mapped[bool] = mapped_column(Boolean, default=False, server_default=sa_false())
     owner_paused: Mapped[bool] = mapped_column(Boolean, default=False, server_default=sa_false())
     owner_paused_until: Mapped[datetime | None] = mapped_column(UTCDateTime, nullable=True)
