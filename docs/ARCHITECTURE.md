@@ -386,7 +386,7 @@ the input replaces them. Max `content.MAX_BUTTONS`, `MAX_PER_ROW`.
 `[🔙]` → `post`. Every change → `freq.refresh_post` + `scheduler.wake()`.
 `post_opts` (arg id): toggles `📌 Fijar`, `🔕 Sin sonido`, `🛡 Proteger contenido`, `🔗 Vista previa de enlaces`
 (text), `🔼 Texto encima de la media` and `🫣 Spoiler` (photo/video/GIF), `♻️ Borrar su envío anterior`; auto delete
-choice `[Nunca][1 h][3 h][6 h][12 h][24 h][48 h]` + `[✏️ Otro]` (input, 15 min - 48 h, `freq.parse_every`-like).
+choice `[Nunca][1 h][3 h][6 h][12 h][1 día][2 días]` + `[✏️ Otro]` (input, 15 min - 48 h, `freq.parse_every`-like).
 `post_defaults` (arg 0): the same options as defaults of new posts (`Bot.post_defaults`), `[🔙]` → `posts`.
 
 ### 5.6 Chats, requests and partners (chats module)
