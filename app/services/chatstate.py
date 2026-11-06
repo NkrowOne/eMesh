@@ -11,9 +11,9 @@ from dataclasses import dataclass, field
 from typing import TYPE_CHECKING
 
 from aiogram import Bot
+from sqlalchemy import update
 
-from app.db.base import utcnow
-from app.db.models import ChatStatus, EventKind
+from app.db.models import Chat, ChatStatus, EventKind
 from app.i18n import t
 from app.services import events
 from app.services.chatinfo import inspect_chat
@@ -25,7 +25,6 @@ if TYPE_CHECKING:
     from sqlalchemy.ext.asyncio import AsyncSession
 
     from app.db.models import Bot as BotRecord
-    from app.db.models import Chat
 
 log = logging.getLogger(__name__)
 
@@ -53,13 +52,23 @@ async def _tell_partner(bot: Bot | None, session: AsyncSession, ws_rec: BotRecor
 
 
 async def mark_left(bot: Bot | None, session: AsyncSession, ws_rec: BotRecord, chat: Chat) -> bool:
-    """The bot is no longer in the chat (removed, chat deleted). It stops receiving posts; its groups are kept in
-    case it comes back. Returns False when it already was."""
-    if chat.status == ChatStatus.LEFT:
-        return False
+    """The bot is no longer in the chat (removed, chat deleted). It stops receiving posts and the admin notices of
+    its request are closed; its groups are kept in case it comes back. Returns False when the chat wasn't in the
+    network (approved or pending) anymore.
+
+    A conditional UPDATE: ``chat`` may have been read before slow Telegram calls, and a decision committed meanwhile
+    (removed, banned, rejected) must win. The row in memory is read again: it says what the database says."""
+    from app.services.chats import close_notices  # here: the chats module imports this one
+
     was_live = chat.status == ChatStatus.APPROVED
-    chat.status = ChatStatus.LEFT
-    chat.updated_at = utcnow()
+    res = await session.execute(
+        update(Chat).where(Chat.id == chat.id, Chat.status.in_([ChatStatus.APPROVED, ChatStatus.PENDING]))
+        .values(status=ChatStatus.LEFT).execution_options(synchronize_session=False))
+    await session.refresh(chat, ["status", "updated_at"])
+    if not res.rowcount:
+        return False
+    if bot is not None:
+        await close_notices(bot, session, chat, "rq.closed.left")
     if was_live:
         await events.emit(bot, session, ws_rec, EventKind.CHAT_LEFT, chat=chat)
         await _tell_partner(bot, session, ws_rec, chat, "cs.left")

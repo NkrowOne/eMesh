@@ -213,7 +213,6 @@ async def on_recheck(call: CallbackQuery, callback_data: RqCB, ctx: Ctx, session
         was_ok = chat.rights_ok
         res = await chatstate.refresh(bot, session, ctx.ws_rec, chat)
         if res.gone:
-            await chat_svc.close_notices(bot, session, chat, "rq.closed.left")
             await session.commit()
             await show(call, ctx.t("rq.check.gone", kind=kind, chat=name), back)
             return

@@ -54,6 +54,8 @@ router = Router(name="chats")
 
 PER_PAGE = 10
 MAX_GROUP_BUTTONS = 90
+# Groups of chats named in a row of the list (cut to ROW_GROUP_WIDTH characters) and in a chat's detail; "+N" the rest.
+ROW_GROUPS, ROW_GROUP_WIDTH, DETAIL_GROUPS = 2, 24, 10
 IMPORT_MAX = 30
 FILTER_ALL, FILTER_OWN, FILTER_EXT, FILTER_PAUSED, FILTER_RIGHTS = range(5)
 FILTERS = (
@@ -142,7 +144,7 @@ def _row_details(ctx: Ctx, chat: Chat, owners: dict[int, User], names: list[str]
     else:
         parts.append("🏠")
     if names:
-        parts.append("🗂 " + ", ".join(esc(n) for n in names))
+        parts.append("🗂 " + chat_svc.names_text(names, ROW_GROUPS, ROW_GROUP_WIDTH))
     if chat.owner_pause_active():
         parts.append(ctx.t("ch.list.until", date=dt(chat.owner_paused_until, ctx.tz)) if chat.owner_paused_until
                      else ctx.t("ch.list.until_resumed"))
@@ -234,8 +236,8 @@ async def detail_text(ctx: Ctx, session: AsyncSession, chat: Chat) -> str:
         lines.append(ctx.t("ch.d.owner_pause_hint"))
     groups = await audience.bot_groups(session, ctx.ws_id)
     member = await audience.chat_group_ids(session, chat.id)
-    names = [esc(g.name) for g in groups if g.id in member]
-    lines.append(ctx.t("ch.d.groups", names=", ".join(names) or "—"))
+    names = [g.name for g in groups if g.id in member]
+    lines.append(ctx.t("ch.d.groups", names=chat_svc.names_text(names, DETAIL_GROUPS) or "—"))
     source = audience.source_of(member, {g.id: g for g in groups})
     if source is not None:
         lines.append(ctx.t("ch.d.freq_group", freq=freq_svc.describe(source.freq, ctx.lang), group=esc(source.name)))
@@ -393,9 +395,7 @@ async def on_check(call: CallbackQuery, callback_data: ChCB, ctx: Ctx, session: 
         await session.refresh(chat)
         was_ok = chat.rights_ok
         res = await chatstate.refresh(bot, session, ctx.ws_rec, chat)
-        if res.gone:
-            await chat_svc.close_notices(bot, session, chat, "rq.closed.left")
-        elif chat.status == ChatStatus.PENDING and chat.rights_ok and not was_ok:
+        if not res.gone and chat.status == ChatStatus.PENDING and chat.rights_ok and not was_ok:
             await chat_svc.admit(bot, session, ctx.ws_rec, chat)  # it was waiting for these rights
         await session.commit()
     await toast(call, ctx.t("ch.toast.checked"))

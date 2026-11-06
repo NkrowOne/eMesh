@@ -17,9 +17,9 @@ from aiogram import Bot, F, Router
 from aiogram.enums import ChatMemberStatus
 from aiogram.exceptions import TelegramAPIError
 from aiogram.types import Chat as TgChat
-from aiogram.types import ChatMember, ChatMemberUpdated, InlineKeyboardMarkup, Message
+from aiogram.types import ChatMember, ChatMemberUpdated, InlineKeyboardMarkup, Message, Update
 from aiogram.types import User as TgUser
-from sqlalchemy import select, update
+from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.bot.context import Ctx
@@ -83,19 +83,23 @@ async def _description(bot: Bot, chat_id: int) -> str | None:
 
 
 # --------------------------------------------------------------------------- my_chat_member
-# An update older than the last one applied to the chat (both queued while the bot was down) is dropped.
-_member_dates: dict[tuple[int, int], datetime] = {}
+# An update older than the last one applied to the chat is dropped: both queued while the bot was down, or handled
+# at the same time (updates run concurrently). Older: an earlier date or, within the same second, a lower update id
+# (Telegram numbers each bot's updates in order, but starts again at random after a week without any: the date goes
+# first).
+_member_dates: dict[tuple[int, int], tuple[datetime, int]] = {}
 MEMBER_DATES_MAX = 100_000
 
 
 @router.my_chat_member(F.chat.type.in_(chat_svc.CHAT_TYPES))
-async def on_my_chat_member(event: ChatMemberUpdated, bot: Bot, ctx: Ctx, session: AsyncSession,
-                            settings: Settings) -> None:
+async def on_my_chat_member(event: ChatMemberUpdated, event_update: Update, bot: Bot, ctx: Ctx,
+                            session: AsyncSession, settings: Settings) -> None:
     key = (bot.id, event.chat.id)
+    order = (event.date, event_update.update_id)
     async with chat_svc.chat_lock(*key):
         last = _member_dates.get(key)
-        if last is not None and event.date < last:
-            log.info("my_chat_member of %s from %s ignored: %s was already applied", event.chat.id, event.date, last)
+        if last is not None and order <= last:
+            log.info("my_chat_member %s of %s ignored: %s was already applied", order[1], event.chat.id, last[1])
             return
         if _hub(ctx, settings):
             if _present(event.new_chat_member):
@@ -107,7 +111,7 @@ async def on_my_chat_member(event: ChatMemberUpdated, bot: Bot, ctx: Ctx, sessio
         await session.commit()
         if len(_member_dates) >= MEMBER_DATES_MAX:
             _member_dates.clear()
-        _member_dates[key] = event.date
+        _member_dates[key] = order
 
 
 async def _hub_refuse(event: ChatMemberUpdated, bot: Bot, ctx: Ctx, session: AsyncSession) -> None:
@@ -206,18 +210,8 @@ async def _on_removed(event: ChatMemberUpdated, bot: Bot, ctx: Ctx, session: Asy
         return
     if event.from_user is not None and event.from_user.id == bot.id:
         return  # the bot left by itself: whatever made it leave (rejected, removed, banned) set the status
-    # A conditional UPDATE, never a flush of the row read above: an admin's decision committed meanwhile
-    # (removed, banned, rejected) must win.
-    res = await session.execute(
-        update(Chat).where(Chat.id == chat.id, Chat.status.in_(list(chat_svc.ACTIVE)))
-        .values(status=ChatStatus.LEFT, rights_ok=False)
-        .execution_options(synchronize_session=False)
-    )
-    if not res.rowcount:
-        return
-    await chat_svc.close_notices(bot, session, chat, "rq.closed.left")
-    await chatstate.mark_left(bot, session, ctx.bot_rec, chat)
-    chat.rights_ok = False
+    if await chatstate.mark_left(bot, session, ctx.bot_rec, chat):  # an admin's decision meanwhile wins
+        chat.rights_ok = False
 
 
 # --------------------------------------------------------------------------- pinned service messages
