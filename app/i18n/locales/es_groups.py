@@ -9,6 +9,8 @@ STRINGS = {
     "gr.legend": "📣 chats · ⏰ frecuencia propia · 🌐 sigue la global · 🤝 abierto a externos",
     "gr.b.group": "🗂 {name}",
     "gr.b.new": "➕ Nuevo grupo de canales",
+    "gr.limit": "🔒 Esta red ya tiene el máximo de grupos de canales ({max}). Elimina alguno que ya no uses "
+                "para crear otro.",
     "gr.new.prompt": "🗂 <b>Nuevo grupo de canales</b>\n\nEscribe su nombre (máximo {max} caracteres), por ejemplo "
                      "<i>Cine</i> o <i>Noticias</i>.\n💡 Después se eligen sus chats y, si se quiere, su propia "
                      "frecuencia.",

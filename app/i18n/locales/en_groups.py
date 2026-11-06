@@ -9,6 +9,8 @@ STRINGS = {
     "gr.legend": "📣 chats · ⏰ own frequency · 🌐 follows the global one · 🤝 open to external chats",
     "gr.b.group": "🗂 {name}",
     "gr.b.new": "➕ New channel group",
+    "gr.limit": "🔒 This network already has the maximum number of channel groups ({max}). Delete one you no "
+                "longer use to create another.",
     "gr.new.prompt": "🗂 <b>New channel group</b>\n\nType its name (up to {max} characters), for example "
                      "<i>Movies</i> or <i>News</i>.\n💡 Its chats and, if wanted, its own frequency are chosen next.",
     "gr.rename.prompt": "✏️ <b>Name of the channel group</b>\n\n🗂 Now: <b>{name}</b>\n\nType the new name (up to "

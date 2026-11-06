@@ -34,6 +34,7 @@ STRINGS = {
     "po.tgl.own": "Propios",
     "po.tgl.ext": "Externos",
     "po.tg.none": "⚠️ nadie",
+    "po.tg.more": " +{n} más",
     "po.tg.hint": "Elige uno o varios destinos: se suman.",
     "po.tg.count": "👥 Lo recibirán: <b>{chats}</b> · 👤 {members}",
     "po.tg.count_hint": "   └ Solo cuentan los chats que reciben mensajes ahora (aprobados, con permisos y sin pausa).",

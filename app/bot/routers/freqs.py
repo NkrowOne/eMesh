@@ -6,6 +6,7 @@ stored next slot (``Bot.rot_next_at``, ``ChatGroup.rot_next_at``, ``Post.next_se
 """
 from __future__ import annotations
 
+import re
 from collections.abc import Callable
 from dataclasses import dataclass
 from datetime import datetime, timedelta
@@ -77,6 +78,7 @@ ROTATIONS = (RotationOrder.SEQUENTIAL, RotationOrder.RANDOM)
 MAX_CHOICES = (0, 2, 4, 6, 8, 12)  # 🛡 posts per chat and day (0 = no limit)
 GAP_CHOICES = (0, 15, 30, 60, 120)  # 🛡 minutes between two posts in a chat (0 = none)
 MAX_PER_DAY = 100
+_NUMBER_RE = re.compile(r"[0-9]{1,6}")  # not str.isdigit(): it takes "²" or "①", which int() refuses
 _NO_VALUE = {"0", "-", "no", "none", "ninguna", "ninguno", "sin", "sin límite", "sin limite"}
 
 
@@ -207,7 +209,7 @@ def upcoming(target: Target, f: dict[str, Any], tz: str, now: datetime) -> list[
         after = max(after, freq_svc.day_start(post.starts_on, tz) - timedelta(seconds=1))
     slots = freq_svc.upcoming(f, tz, after, 3)
     if post is not None and post.ends_on:
-        end = freq_svc.day_start(post.ends_on + timedelta(days=1), tz)
+        end = freq_svc.day_end(post.ends_on, tz)
         slots = [s for s in slots if s < end]
     return slots
 
@@ -704,7 +706,7 @@ async def on_max_input(message: Message, ctx: Ctx, state: FSMContext) -> None:
         await state.clear()
         return
     raw = (message.text or "").strip().lower()
-    n = 0 if raw in _NO_VALUE else (int(raw) if raw.isdigit() else -1)
+    n = 0 if raw in _NO_VALUE else (int(raw) if _NUMBER_RE.fullmatch(raw) else -1)
     if not 0 <= n <= MAX_PER_DAY:
         await ask_max(message, ctx, state, ctx.t("fq.as.err.max", max=MAX_PER_DAY))
         return

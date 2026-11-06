@@ -113,10 +113,13 @@ async def group_chat_pks(session: AsyncSession, group_id: int) -> set[int]:
 
 
 async def group_counts(session: AsyncSession, bot_id: int) -> dict[int, int]:
-    """``{group id: number of chats}`` (any status)."""
+    """``{group id: number of chats}`` of the network: approved and pending ones (a chat that left or was banned
+    stays in its groups, but isn't counted)."""
     q = (select(GroupChat.group_id, func.count())
          .join(ChatGroup, ChatGroup.id == GroupChat.group_id)
-         .where(ChatGroup.bot_id == bot_id).group_by(GroupChat.group_id))
+         .join(Chat, Chat.id == GroupChat.chat_pk)
+         .where(ChatGroup.bot_id == bot_id, Chat.status.in_([ChatStatus.APPROVED, ChatStatus.PENDING]))
+         .group_by(GroupChat.group_id))
     return {g: int(n) for g, n in (await session.execute(q)).all()}
 
 

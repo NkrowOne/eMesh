@@ -46,6 +46,7 @@ class GroupsFSM(StatesGroup):
 
 
 NAME_MAX = 64
+MAX_GROUPS = 50  # of a network: the target picker of posts has a button for each one
 GROUPS_PAGE = 10
 CHATS_PAGE = 10
 ORPHANS_SHOWN = 15
@@ -75,6 +76,11 @@ async def admin_group(call: CallbackQuery, data: GrCB, ctx: Ctx, session: AsyncS
 
 async def network_chats(session: AsyncSession, ws_id: int) -> list[Chat]:
     return await audience.bot_chats(session, ws_id, statuses=NETWORK)
+
+
+async def groups_full(session: AsyncSession, ws_id: int) -> bool:
+    """The network has ``MAX_GROUPS`` groups of chats: no more can be created."""
+    return len(await audience.bot_groups(session, ws_id)) >= MAX_GROUPS
 
 
 async def posts_using(session: AsyncSession, ws_id: int, group_id: int) -> list[Post]:
@@ -157,15 +163,23 @@ async def ask_name(event: Event, ctx: Ctx, state: FSMContext, error: str | None 
 
 
 @router.callback_query(GrCB.filter(F.a == "new"))
-async def on_new(call: CallbackQuery, ctx: Ctx, state: FSMContext) -> None:
-    if await guard(call, ctx):
-        await ask_name(call, ctx, state)
+async def on_new(call: CallbackQuery, ctx: Ctx, session: AsyncSession, state: FSMContext) -> None:
+    if not await guard(call, ctx):
+        return
+    if await groups_full(session, ctx.ws_id):
+        await alert(call, ctx.t("gr.limit", max=MAX_GROUPS))
+        return
+    await ask_name(call, ctx, state)
 
 
 @router.message(GroupsFSM.name, F.chat.type == "private", ~F.text.startswith("/"))
 async def on_name_input(message: Message, ctx: Ctx, session: AsyncSession, state: FSMContext) -> None:
     if not await guard(message, ctx):
         await state.clear()
+        return
+    if await groups_full(session, ctx.ws_id):  # the last ones were created while the name was asked
+        await state.clear()
+        await render_groups(message, ctx, session, notice=ctx.t("gr.limit", max=MAX_GROUPS))
         return
     name, error = clean_name(ctx, message)
     if error:
