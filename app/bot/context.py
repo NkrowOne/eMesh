@@ -192,7 +192,11 @@ class DbContextMiddleware(BaseMiddleware):
             user: User | None = None
             bu: BotUser | None = None
             private = tg_chat is not None and tg_chat.type == "private"
-            if tg_user is not None and not tg_user.is_bot:
+            # Messages inside groups and channels only matter to the chat events (pins, discovery): their senders
+            # are not stored, so a busy group doesn't write a user row per message.
+            chat_message = not private and isinstance(event, Update) and (
+                event.message is not None or event.channel_post is not None)
+            if tg_user is not None and not tg_user.is_bot and not chat_message:
                 user = await upsert_user(session, tg_user)
                 bu = await session.get(BotUser, (bot_rec.id, user.id))
                 if bu is None and private:

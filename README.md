@@ -1,0 +1,108 @@
+# eMesh — Red de distribución de mensajes para Telegram
+
+Bot para **distribuir mensajes en tus canales y grupos**: escribes los mensajes una vez (texto, foto, vídeo, GIF,
+archivo, audio o nota de voz, con **botones de colores**) y el bot los publica solo, con la **frecuencia** que elijas,
+en todos tus canales o en los **grupos de canales** que crees. Otras personas pueden unir sus canales a tu red y
+**pausarla cuando quieran**: tú recibes el aviso y lo ves en tu panel.
+
+Cada persona puede tener **su propio bot (clon)** con su propia red, y tú, como dueño de la plataforma, los
+controlas todos desde el **👑 Panel** del bot principal (e incluso gestionas la red de un clon desde ahí: 🛠 Gestionar).
+
+Hecho con la **última API de Telegram (Bot API 10.3)** y aiogram 3.31. Misma base técnica que eButtons.
+
+## Qué hace
+
+- **📣 Canales y grupos**: añades el bot como admin con un botón (los permisos salen ya marcados). Los tuyos entran
+  al momento; si el bot pierde permisos o lo quitan, recibes un aviso. 📥 Importar canales donde el bot ya era admin.
+- **🤝 Canales externos (socios)**: actívalo y cualquiera puede añadir el bot a su canal o grupo (con o sin tu
+  aprobación, con mínimo de miembros). Desde **📣 Mis canales** pueden **pausar** la distribución 1 h, 6 h, 24 h,
+  3 días, 7 días o hasta que la reanuden, elegir categorías y salir de la red. **Cada pausa te llega como aviso** y
+  aparece en tu inicio («⏸ Pausados por su dueño»), en la lista de canales y en 📜 Actividad.
+- **📝 Mensajes**: asistente de 4 pasos (mensaje → botones → destino → cuándo). Vista previa real, 🚀 enviar ahora,
+  🔄 aplicar cambios a lo ya publicado (corrige una errata en todos los canales), 🔚 retirar, 🧬 duplicar.
+- **🔘 Botones**: editor visual (toca un botón para cambiarlo, muévelo, cambia su color) o escríbelos todos de golpe:
+  `Web - https://ejemplo.com 🟢`, varios en una fila con `&&`, colores 🔵 🟢 🔴 y botones de **copiar texto**
+  (`Código - copiar: PROMO10`).
+- **🎯 Destinos**: 🌐 Todos, 🏠 Solo propios, 🤝 Solo externos o tus **🗂 grupos de canales** (combinables).
+- **⏰ Frecuencias, fáciles siempre**: una pantalla con todas. Global («cada 3 h de 08:00 a 23:00») o propia de cada
+  grupo de canales («a las 10:00, 14:00 y 22:00, de lunes a viernes»). Los mensajes en **rotación** se turnan en cada
+  canal; también hay mensajes con su propio horario, de una sola vez o solo manuales, y **fechas de campaña**.
+- **🛡 Anti-spam**: máximo de mensajes al día por chat, separación mínima y «uno a la vez» (borra el anterior).
+- **Opciones de cada mensaje**: fijar, sin sonido, proteger contenido, vista previa de enlaces, texto encima de la
+  media, spoiler, borrado automático (hasta 48 h) y borrar su envío anterior.
+- **📊 Estadísticas y 📜 Actividad**: envíos, entregas, fallos, alcance, mensajes más enviados, y el historial de
+  todo lo que pasa en la red. Resumen diario e informe de cada envío (opcionales).
+- **🤖 Clones**: cualquiera crea su bot en 2 toques (Managed Bots de Telegram) o con un token de @BotFather.
+  Clonación **abierta, con aprobación o cerrada**, límite de bots por persona y límites de chats/mensajes por clon.
+- **👑 Panel**: estadísticas de la plataforma, lista de clones con búsqueda, activar/desactivar, aprobar, límites,
+  escribir al dueño, actividad, eliminar, **🛠 Gestionar** su red desde el bot principal, aviso a todos los dueños y
+  descarga de errores.
+- **Límites de Telegram respetados siempre**: ~30 mensajes/segundo, 1/segundo por chat privado, 20/minuto por grupo
+  o canal, y reintentos automáticos si Telegram pide esperar (429).
+- Español 🇪🇸 e inglés 🇬🇧. Zona horaria por continente y país.
+
+## Puesta en marcha
+
+### 1. Prepara el bot en @BotFather
+1. `/newbot` → copia el **token**.
+2. Para clonar en 2 toques: abre la Mini App de @BotFather → tu bot → **Bot Settings** → activa **Bot Management
+   Mode**. (Sin esto, los clones se crean pegando un token.)
+3. Si quieres grupos: `/setjoingroups` → *Enable*.
+
+### 2. Despliega
+
+**Railway (lo más fácil)**
+1. Nuevo proyecto desde este repositorio.
+2. Añade **PostgreSQL** (➕ New → Database → PostgreSQL).
+3. En el servicio del bot → **Variables**: `BOT_TOKEN`, `SUPER_ADMIN_IDS` (tu ID), `ENCRYPTION_KEY` (ver
+   `.env.example`) y `DATABASE_URL` = `${{Postgres.DATABASE_URL}}`.
+4. Deploy. Las tablas se crean solas al arrancar. Deja **1 réplica**.
+
+**Docker (VPS)**
+```bash
+cp .env.example .env   # rellena BOT_TOKEN, SUPER_ADMIN_IDS y ENCRYPTION_KEY
+docker compose up -d --build
+```
+
+**Local**
+```bash
+python -m venv .venv && . .venv/bin/activate
+pip install -r requirements.txt
+cp .env.example .env   # rellénalo
+python -m app
+```
+
+Para saber tu ID de Telegram: arranca el bot y escribe `/id`.
+
+### 3. Primeros pasos
+1. `/start` en tu bot → **➕ Añadir canal** (y grupo). Tus canales entran solos.
+2. **📝 Mensajes → ➕ Nuevo mensaje**: envía el mensaje, añade botones, elige a quién y cuándo.
+3. **⏰ Frecuencias**: elige cada cuánto recibe un mensaje cada canal (global o por grupo de canales).
+4. ¿Quieres socios? **⚙️ Ajustes → 🤝 Canales externos** y comparte el enlace `https://t.me/<tu_bot>?start=join`.
+
+## Variables de entorno
+
+Todas están explicadas en [`.env.example`](.env.example). Obligatorias: `BOT_TOKEN`, `SUPER_ADMIN_IDS`,
+`DATABASE_URL` (en producción) y `ENCRYPTION_KEY` (si usas clones).
+
+## Desarrollo
+
+```bash
+pip install -r requirements-dev.txt
+pytest -q
+```
+
+Los tests levantan un **Telegram falso** (`tests/fake_tg.py`) y prueban los flujos completos, incluidos los límites
+de velocidad. La arquitectura está en [`docs/ARCHITECTURE.md`](docs/ARCHITECTURE.md).
+
+```
+app/
+  main.py            arranque (python -m app)
+  config.py          variables de entorno
+  db/                modelos y migraciones (Alembic)
+  telegram/          gestor de varios bots, límites de velocidad, FSM
+  bot/routers/       pantallas y comandos
+  services/          lógica: contenido, frecuencias, destinos, publicar, programar, clones
+  i18n/locales/      textos (es / en)
+tests/               tests con Telegram falso
+```
