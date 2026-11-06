@@ -285,6 +285,9 @@ owner-only (admins see them read only).
 `activity` (arg page, admins): `events.recent` 10 per page, each `events.describe`; nav; `[🔙]` → home.
 
 ### 5.5 Posts (posts module)
+Long lists never pass Telegram's limits: target and group names are summarised («Cine, Series +3», at most 2 names
+per row in lists and 10 in a detail, each cut to 30 characters) and the target picker shows at most 60 groups of
+chats (the chosen ones first).
 `posts` (arg page): «📝 <b>Mensajes</b>» + one line «🔁 rotación · ⏰ horario propio · 📆 una vez · ✋ manual», then
 per post `1. ▶️ 🔁 <b>Promo Cine</b> · 🖼` + `   └🎯 Todos · 📤 12 envíos` (or `📅 next send`). Active and paused
 first, done last. Buttons: one per post (`#1 Promo Cine`, 2 per row), `[➕ Nuevo mensaje]` (success),
