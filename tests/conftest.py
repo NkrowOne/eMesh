@@ -22,6 +22,7 @@ from app.config import Settings  # noqa: E402
 from app.db.base import Base  # noqa: E402
 from app.db.session import create_engine, create_sessionmaker  # noqa: E402
 from app.main import build_dispatcher  # noqa: E402
+from app.services import clones  # noqa: E402
 from app.services.publisher import Publisher  # noqa: E402
 from app.services.scheduler import Scheduler  # noqa: E402
 from app.telegram.manager import BotManager  # noqa: E402
@@ -303,6 +304,7 @@ async def app(settings: Settings, fake: FakeTelegram) -> AsyncIterator[App]:
     publisher = Publisher(manager, sm, settings)
     scheduler = Scheduler(manager, sm, settings, publisher)
     dp.workflow_data.update(settings=settings, sm=sm, manager=manager, publisher=publisher, scheduler=scheduler)
+    clones.install(manager, sm, settings)
     await manager.start()
     a = App(fake, settings, engine, sm, dp, storage, manager, publisher, scheduler)
     try:

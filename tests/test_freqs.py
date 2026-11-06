@@ -279,7 +279,7 @@ async def test_old_buttons_in_a_hub_main_bot_do_nothing(app: App, wakes: list[in
     app.settings.MAIN_BOT_MODE = "hub"  # the main bot runs no network any more
     await app.press(SUPER_ID, FqCB(a="ev", t=0, v=60).pack())
     await app.press(SUPER_ID, FqCB(a="rot", v=1).pack())
-    await open_menu(app, SUPER_ID, "freq_edit_dash", g)
-    assert answers(app) == ["⌛ Este botón ya no está activo. Pulsa /start."] * 3
+    await open_menu(app, SUPER_ID, "freq_edit_dash", g)  # a hub hides network screens: it opens the home
+    assert answers(app) == ["⌛ Este botón ya no está activo. Pulsa /start."] * 2 + [""]
     rec = await load(app, BotRecord, MAIN_BOT_ID)
     assert (rec.freq, rec.rotation) == (DEFAULT_FREQ, "seq") and wakes == []

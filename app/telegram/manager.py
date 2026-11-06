@@ -12,6 +12,7 @@ from aiogram import Bot, Dispatcher
 from aiogram.client.default import DefaultBotProperties
 from aiogram.client.session.aiohttp import AiohttpSession
 from aiogram.client.telegram import TelegramAPIServer
+from aiogram.utils.token import TokenValidationError
 from aiogram.enums import ParseMode
 from aiogram.exceptions import (
     AiogramError,
@@ -197,7 +198,10 @@ class BotManager:
         token = token.strip()
         if ":" not in token or not token.split(":", 1)[0].isdigit():
             raise BotTokenError("format")
-        bot = self.build_bot(token)
+        try:
+            bot = self.build_bot(token)
+        except TokenValidationError as exc:  # e.g. spaces inside it
+            raise BotTokenError("format") from exc
         try:
             me = await bot.get_me()
         except TelegramUnauthorizedError as exc:

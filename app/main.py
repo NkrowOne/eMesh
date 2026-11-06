@@ -15,7 +15,7 @@ from app import i18n
 from app.bot.routers import setup_dispatcher
 from app.config import Settings, get_settings
 from app.db.session import LeaderLock, create_engine, create_sessionmaker
-from app.services import logbook
+from app.services import clones, logbook
 from app.services.publisher import Publisher
 from app.services.scheduler import Scheduler
 from app.telegram.fsm_storage import SQLStorage
@@ -97,6 +97,7 @@ async def amain() -> None:
     publisher = Publisher(manager, sm, settings)
     scheduler = Scheduler(manager, sm, settings, publisher)
     dp.workflow_data.update(settings=settings, sm=sm, manager=manager, publisher=publisher, scheduler=scheduler)
+    clones.install(manager, sm, settings)  # a clone whose token stops working: its owner gets a DM
 
     stop = asyncio.Event()
     loop = asyncio.get_running_loop()
