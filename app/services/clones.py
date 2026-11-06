@@ -164,7 +164,8 @@ async def connect_clone(manager: BotManager, session: AsyncSession, settings: Se
                         *, managed: bool = False) -> tuple[BotRecord, bool]:
     """:func:`connect_bot` with the platform's clone policy (👑 › ⚙️ Plataforma): ``closed`` refuses new bots
     (code ``closed``) and ``approval`` stores them pending. Super admins, and owners re-connecting one of their own
-    bots (e.g. with a new token), are not affected; a bot still waiting for approval stays pending."""
+    bots (e.g. with a new token), are not affected; a bot still waiting for approval stays pending, whatever the
+    policy is now, until a super admin approves it."""
     bot_id = token_bot_id(token)
     if bot_id is None:
         raise BotTokenError("format")
@@ -174,8 +175,8 @@ async def connect_clone(manager: BotManager, session: AsyncSession, settings: Se
     exempt = owner_id in settings.super_admin_ids
     if policy == "closed" and not own and not exempt:
         raise BotTokenError("closed")
-    pending = (policy == "approval" and not exempt
-               and (not own or (existing is not None and existing.status == BotStatus.PENDING)))
+    waiting = own and existing is not None and existing.status == BotStatus.PENDING
+    pending = not exempt and (waiting or (policy == "approval" and not own))
     return await connect_bot(manager, session, settings, token, owner_id, managed=managed, pending=pending)
 
 

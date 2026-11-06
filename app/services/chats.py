@@ -139,8 +139,16 @@ async def open_groups_of(session: AsyncSession, ws_id: int, chat_pk: int) -> lis
     return [g for g in await audience.bot_groups(session, ws_id) if g.open and g.id in member]
 
 
-def group_names(groups: list[ChatGroup]) -> str:
-    return ", ".join(esc(g.name) for g in groups)
+def names_text(names: list[str], limit: int, width: int = 0) -> str:
+    """``Cine, Series +3`` (HTML): the first ``limit`` names (cut to ``width`` characters, 0 = whole) and how many
+    more there are. A chat can be in many groups: the message must stay within Telegram's 4096 characters."""
+    shown = [esc(truncate(n, width) if width else n) for n in names[:limit]]
+    more = len(names) - len(shown)
+    return ", ".join(shown) + (f" +{more}" if more else "")
+
+
+def group_names(groups: list[ChatGroup], limit: int = 10) -> str:
+    return names_text([g.name for g in groups], limit)
 
 
 # --------------------------------------------------------------------------- queries
@@ -326,7 +334,8 @@ async def approve(bot: Bot, session: AsyncSession, ws_rec: BotRecord, chat: Chat
 
 async def request(bot: Bot, session: AsyncSession, ws_rec: BotRecord, chat: Chat) -> None:
     """An external chat waits for an admin: its owner is told, the event is logged and the admins get a notice
-    with ✅ Aceptar / ❌ Rechazar (only once: a chat that lost and got back its rights while waiting keeps them)."""
+    with ✅ Aceptar / ❌ Rechazar (only once: a chat that lost and got back its rights while waiting keeps them; the
+    notices of a chat that left are closed, so one that comes back is asked again)."""
     chat.status = ChatStatus.PENDING
     sent = await session.execute(select(RequestNotice.id).where(RequestNotice.chat_pk == chat.id).limit(1))
     if sent.first() is not None:
@@ -404,12 +413,17 @@ async def remove(bot: Bot, session: AsyncSession, ws_rec: BotRecord, chat: Chat,
                  publisher: Publisher, ban: bool = False, by_owner: bool = False) -> None:
     """Takes ``chat`` out of the network: its posts still up there are deleted first (the bot can't once it is out),
     then the bot leaves. Status ``left`` (adding the bot again is a new admission) or ``banned`` (``ban``: adding it
-    again is refused). ``by_owner``: the partner left the network from their panel."""
+    again is refused). ``by_owner``: the partner left the network from their panel (an admin's pause stays: it is
+    not theirs to lift)."""
     await publisher.drop_chat(chat.id)
     _decide(chat, ChatStatus.BANNED if ban else ChatStatus.LEFT, by_user)
     chat.approved_at = None
-    chat.admin_paused = chat.owner_paused = False
-    chat.owner_paused_until = chat.paused_at = None
+    chat.owner_paused = False
+    chat.owner_paused_until = None
+    if not by_owner:
+        chat.admin_paused = False
+    if not chat.admin_paused:
+        chat.paused_at = None
     await close_notices(bot, session, chat, "rq.closed.banned" if ban else "rq.closed.removed", by_user)
     await session.flush()
     await leave_chat(bot, chat)
