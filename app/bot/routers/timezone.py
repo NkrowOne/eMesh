@@ -2,7 +2,7 @@
 
 Admins change the timezone of the network (its frequencies and dates are in it, so every next time is recalculated);
 users change their own (dates are shown in it). The owner of a new clone chooses it on the first /start, before the
-home: Telegram doesn't tell bots the timezone of their owner.
+setup wizard and the home: Telegram doesn't tell bots the timezone of their owner.
 """
 from __future__ import annotations
 
@@ -120,7 +120,7 @@ async def _apply_zone(event: Message | CallbackQuery, ctx: Ctx, session: AsyncSe
         ws.timezone = zone
         ws.timezone_set = True
         await refresh_schedules(session, ws)
-        if first:  # onboarding done: on to the home
+        if first:  # onboarding: on to the home, which opens the setup wizard of a new bot first
             await open_screen("home", event, ctx, session, notice=ctx.t("tz.saved.first", zone=esc(zone)))
         else:
             await open_screen("settings", event, ctx, session, notice=ctx.t("tz.saved.admin", zone=esc(zone)))

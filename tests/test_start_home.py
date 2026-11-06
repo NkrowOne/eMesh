@@ -5,11 +5,11 @@ from __future__ import annotations
 from datetime import datetime, timedelta, timezone
 
 import pytest
-from sqlalchemy import select
+from sqlalchemy import select, update
 
 from app.bot.routers.start import StCB, deep_link_target
 from app.db.base import utcnow
-from app.db.models import ChatOrigin, ChatStatus, Event, EventKind, PostStatus
+from app.db.models import Chat, ChatOrigin, ChatStatus, Event, EventKind, PostStatus
 from app.services import freq, limits
 from app.services.chatinfo import add_to_channel_url, add_to_group_url
 from app.ui.callbacks import MenuCB
@@ -105,7 +105,7 @@ async def test_owner_home_of_an_empty_network(app: App) -> None:
                            "   └ Añade el bot a tus canales y grupos con los botones ➕ de abajo.\n"
                            "📝 Mensajes activos: <b>0</b>\n   └ Crea el primero en 📝 Mensajes.\n"
                            "⏰ Frecuencia global: cada 4 h · 08:00-22:00\n📅 Próximo turno: <b>")
-    for absent in ("Pausados por su dueño", "Solicitudes pendientes", "Sin permisos", "está pausada"):
+    for absent in ("Estado", "Pausados por su dueño", "Solicitudes pendientes", "Sin permisos", "está pausada"):
         assert absent not in text
     for label in (*ADMIN_BUTTONS, "Crear mi bot", "Panel"):
         assert has_button(app, SUPER_ID, label), f"{label!r} missing in {button_texts(app, SUPER_ID)}"
@@ -144,6 +144,7 @@ async def test_admin_home_summarizes_the_network(app: App) -> None:
     await app.send(SUPER_ID, "/start")
     text = app.last_text(SUPER_ID)
     assert ("📣 Canales y grupos: <b>4</b> (👤 2,000)\n   └ 🏠 Propios: 2 · 🤝 Externos: 2\n"
+            "📊 Estado: ✅ 2 reciben · ⏸ 1 pausado · ⚠️ 1 sin permisos · ⏳ 1 pendiente\n"
             "📝 Mensajes activos: <b>2</b>\n⏰ Frecuencia global: cada 3 h · 08:00-23:00\n"
             f"📅 Próximo turno: <b>{dt(slot, 'Europe/Madrid')}</b>\n"
             "⏸ Pausados por su dueño: <b>1</b>\n⏳ Solicitudes pendientes: <b>1</b>\n⚠️ Sin permisos: <b>1</b>") in text
@@ -151,6 +152,54 @@ async def test_admin_home_summarizes_the_network(app: App) -> None:
     assert ["⏳ Solicitudes (1)", "⏸ Pausados (1)"] in button_rows(app, SUPER_ID)
     assert callback_of(app, SUPER_ID, "Solicitudes (1)") == MenuCB(screen="requests").pack()
     assert callback_of(app, SUPER_ID, "Pausados (1)") == MenuCB(screen="paused").pack()
+
+
+async def test_status_line_and_the_paused_button(app: App) -> None:
+    """The status line counts every chat once; ⏸ Pausados counts admin pauses too and is always there when partners
+    can join (even with 0)."""
+    past = utcnow() - timedelta(hours=1)
+    own = await add_chat_row(app, members=10)
+    await add_chat_row(app, members=20)
+    await app.send(SUPER_ID, "/start")
+    assert "\n📊 Estado: ✅ 2 reciben · ⏸ 0 pausados · ⚠️ 0 sin permisos · ⏳ 0 pendientes\n" in app.last_text(SUPER_ID)
+    assert not has_button(app, SUPER_ID, "Pausados")  # a private network with nothing paused
+    async with app.db() as s:
+        chat = await s.get(Chat, own)
+        assert chat is not None
+        chat.admin_paused = True
+    await add_chat_row(app, owner_paused=True, admin_paused=True)  # paused twice: one chat
+    await add_chat_row(app, owner_paused=True, owner_paused_until=past)  # a pause that is over
+    await app.send(SUPER_ID, "/start")
+    text = app.last_text(SUPER_ID)
+    assert "📊 Estado: ✅ 2 reciben · ⏸ 2 pausados · ⚠️ 0 sin permisos · ⏳ 0 pendientes" in text
+    assert "⏸ Pausados por su dueño: <b>1</b>" in text
+    assert callback_of(app, SUPER_ID, "⏸ Pausados (2)") == MenuCB(screen="paused").pack()
+    async with app.db() as s:
+        await s.execute(update(Chat).values(admin_paused=False, owner_paused=False))
+    async with edit_bot(app) as rec:
+        rec.join_open = True
+    await app.send(SUPER_ID, "/start")
+    assert "📊 Estado: ✅ 4 reciben · ⏸ 0 pausados" in app.last_text(SUPER_ID)
+    assert has_button(app, SUPER_ID, "⏸ Pausados (0)")  # partners may pause: always in sight
+    async with edit_bot(app) as rec:
+        rec.join_open = False
+    await add_chat_row(app, origin=ChatOrigin.EXTERNAL, owner_user_id=USER_ID)
+    await app.send(SUPER_ID, "/start")
+    assert has_button(app, SUPER_ID, "⏸ Pausados (0)")  # the network still has partners
+
+
+async def test_status_line_with_only_pending_chats(app: App) -> None:
+    await add_chat_row(app, origin=ChatOrigin.EXTERNAL, status=ChatStatus.PENDING)
+    await add_chat_row(app, origin=ChatOrigin.EXTERNAL, status=ChatStatus.PENDING)
+    await app.send(SUPER_ID, "/start")
+    text = app.last_text(SUPER_ID)
+    assert "📣 Canales y grupos: <b>0</b>" in text
+    assert "📊 Estado: ✅ 0 reciben · ⏸ 0 pausados · ⚠️ 0 sin permisos · ⏳ 2 pendientes" in text
+    assert has_button(app, SUPER_ID, "⏳ Solicitudes (2)")
+    app.fake.add_user(778, "Eng", "eng", lang="en")
+    await make_admin(app, 778)
+    await app.send(778, "/start")
+    assert "📊 Status: ✅ 0 receiving · ⏸ 0 paused · ⚠️ 0 missing rights · ⏳ 2 pending" in app.last_text(778)
 
 
 async def test_next_turn_is_computed_when_missing_or_past(app: App) -> None:
@@ -247,6 +296,18 @@ async def test_partner_home_when_the_network_accepts_external_chats(app: App) ->
         rec.min_members = 0
     await app.send(USER_ID, "/start")
     assert "Mínimo" not in app.last_text(USER_ID) and "revisa" not in app.last_text(USER_ID)
+
+
+async def test_the_default_welcome_promises_pauses_only_when_partners_can_pause(app: App) -> None:
+    async with edit_bot(app) as rec:
+        rec.join_open = True
+        rec.join_approval = False
+        rec.partners_can_pause = False
+    await app.send(USER_ID, "/start")
+    text = app.last_text(USER_ID)
+    assert text.endswith("🤝 <b>Únete a la red de @emesh_test_bot</b>\n\nAñade este bot a tu canal o grupo y recibirá "
+                         "las publicaciones de la red.")
+    assert "pausar" not in text.lower()
 
 
 async def test_partner_home_with_a_custom_join_text(app: App) -> None:
@@ -503,9 +564,17 @@ async def test_guide_describes_the_real_features(app: App) -> None:
     admin = " ".join(t(f"guide.admin.{i}", "es") for i in range(1, 6))
     for feature in ("Pausar todo", "Importar", "Canales externos", "&amp;&amp;", "copiar:", "rotación",
                     "horario propio", "Anti-spam", "uno a la vez", "/admin @usuario", "/deladmin", "Mis avisos",
-                    "Zona horaria", "Estadísticas", "Crear mi bot", "48 h"):
+                    "Zona horaria", "Estadísticas", "Crear mi bot", "48 h", "Asistente de configuración",
+                    "las pausas de los socios"):
         assert feature in admin, feature
+    # The partners pause within the admins' rules, and the admins can resume any pause.
+    pauses = t("guide.admin.2", "es")
+    assert "según las reglas de la red" in pauses and "por defecto, hasta 1 día" in pauses
+    assert "Los admins pueden reanudar cualquier pausa" in pauses and "Solo su dueño puede reanudarlo" not in pauses
     partner = " ".join(t(f"guide.partner.{i}", "es") for i in range(1, 3))
-    for feature in ("Añadir a mi canal", "pendiente", "1 h, 6 h, 24 h, 3 días, 7 días", "Categorías", "Salir"):
+    for feature in ("Añadir a mi canal", "pendiente", "dentro de las reglas de la red (por ejemplo, hasta 1 día)",
+                    "la administración también puede reanudarlo", "Categorías", "Salir"):
         assert feature in partner, feature
-    assert "Usar token" in t("guide.hub.2", "es") and "/newbot" in t("guide.hub.2", "es")
+    assert "3 días, 7 días" not in partner  # not every network allows them
+    hub_2 = t("guide.hub.2", "es")
+    assert "Usar token" in hub_2 and "/newbot" in hub_2 and "preguntas rápidas" in hub_2

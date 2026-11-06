@@ -58,13 +58,15 @@ def stub_screens(monkeypatch: pytest.MonkeyPatch) -> list[tuple[str, int]]:
     return calls
 
 
-async def add_clone(app: App, *, owner_id: int = OWNER2_ID, timezone_set: bool = True) -> int:
-    """Registers and starts a clone owned by ``owner_id``. Returns its id."""
-    await app.add_clone(CLONE_ID, CLONE_USERNAME, owner_id)
+async def add_clone(app: App, *, owner_id: int = OWNER2_ID, timezone_set: bool = True,
+                    setup_done: bool = True) -> int:
+    """Registers and starts a clone owned by ``owner_id``. Returns its id. ``timezone_set`` / ``setup_done``: its
+    owner already chose the timezone / went through the setup wizard (a brand new clone has both False)."""
+    await app.add_clone(CLONE_ID, CLONE_USERNAME, owner_id, setup_done=setup_done)
     async with app.db() as s:
         rec = await s.get(BotRecord, CLONE_ID)
         assert rec is not None
-        rec.timezone_set = timezone_set  # True: its owner already went through the first /start
+        rec.timezone_set = timezone_set
     return CLONE_ID
 
 

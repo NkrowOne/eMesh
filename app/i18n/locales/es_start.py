@@ -16,6 +16,15 @@ STRINGS = {
     "home.owner_paused": "⏸ Pausados por su dueño: <b>{n}</b>",
     "home.pending": "⏳ Solicitudes pendientes: <b>{n}</b>",
     "home.no_rights": "⚠️ Sin permisos: <b>{n}</b>",
+    "home.status": "📊 Estado: {parts}",
+    "home.st.ok": "✅ {n} reciben",
+    "home.st.ok.1": "✅ {n} recibe",
+    "home.st.paused": "⏸ {n} pausados",
+    "home.st.paused.1": "⏸ {n} pausado",
+    "home.st.no_rights": "⚠️ {n} sin permisos",
+    "home.st.no_rights.1": "⚠️ {n} sin permisos",
+    "home.st.pending": "⏳ {n} pendientes",
+    "home.st.pending.1": "⏳ {n} pendiente",
     "home.paused": "⏸ <b>La distribución está pausada.</b> No se envía nada hasta que la reanudes.",
     "home.btn.posts": "📝 Mensajes",
     "home.btn.chats": "📣 Canales",
@@ -46,6 +55,10 @@ STRINGS = {
         "🤝 <b>Únete a la red de @{bot}</b>\n\n"
         "Añade este bot a tu canal o grupo y recibirá las publicaciones de la red.\n"
         "⏸ Puedes pausarlas cuando quieras desde 📣 Mis canales."
+    ),
+    "home.join.default_no_pause": (
+        "🤝 <b>Únete a la red de @{bot}</b>\n\n"
+        "Añade este bot a tu canal o grupo y recibirá las publicaciones de la red."
     ),
     "home.join.min": "👤 Mínimo para unirse: <b>{n}</b> miembros.",
     "home.join.approval": "⏳ La administración revisa cada canal antes de aceptarlo.",
@@ -96,8 +109,10 @@ STRINGS = {
         "<b>Pausas</b>\n"
         "• ⏸ <b>Pausar todo</b>, en el inicio, detiene toda la red.\n"
         "• Cada canal se puede pausar desde su ficha.\n"
-        "• El dueño de un canal externo puede pausarlo cuando quiera: se avisa a los admins y se ve en "
-        "⏸ Pausados y en 📜 Actividad. Solo su dueño puede reanudarlo."
+        "• El dueño de un canal externo puede pausarlo según las reglas de la red (⚙️ Ajustes › 🤝 Canales "
+        "externos): por defecto, hasta 1 día. Se avisa a los admins y se ve en el inicio, en ⏸ Pausados y en "
+        "📜 Actividad.\n"
+        "• Los admins pueden reanudar cualquier pausa; si era del socio, se le avisa."
     ),
     "guide.admin.3": (
         "📝 <b>Mensajes</b>\n\n"
@@ -135,8 +150,9 @@ STRINGS = {
         "• 🔔 <b>Mis avisos</b>: alertas de la red, resumen diario e informe de cada envío. Cada admin elige los "
         "suyos.\n"
         "• 🗺 <b>Zona horaria</b>: las frecuencias y las fechas se calculan con ella.\n"
-        "• 🤝 <b>Canales externos</b>: admitirlos o no, aprobación manual, mínimo de miembros, texto de bienvenida "
-        "y el enlace para invitar.\n"
+        "• 🤝 <b>Canales externos</b>: admitirlos o no, aprobación manual, mínimo de miembros, texto de bienvenida, "
+        "las pausas de los socios y el enlace para invitar.\n"
+        "• 🧭 <b>Asistente de configuración</b>: repasa paso a paso lo principal de la red.\n"
         "• 📊 <b>Estadísticas</b> y 📜 <b>Actividad</b>: envíos, alcance y lo que pasa en los canales.\n\n"
         "🤖 <b>Clones</b>: cada bot de la plataforma es una red independiente. Cualquiera puede crear el suyo con "
         "🤖 <b>Crear mi bot</b> en el bot principal y gestionarlo en 🤖 <b>Mis bots</b>."
@@ -157,8 +173,9 @@ STRINGS = {
     "guide.partner.2": (
         "⏸ <b>Pausar, categorías y salir</b>\n\n"
         "En 📣 <b>Mis canales</b> tienes la ficha de cada uno de tus canales:\n"
-        "• ⏸ <b>Pausar</b>: deja de recibir mensajes durante 1 h, 6 h, 24 h, 3 días, 7 días o hasta que lo "
-        "reanudes con ▶️ <b>Reanudar</b>.\n"
+        "• ⏸ <b>Pausar</b>: deja de recibir mensajes durante un tiempo, dentro de las reglas de la red (por "
+        "ejemplo, hasta 1 día). Lo reanudas cuando quieras con ▶️ <b>Reanudar</b>; la administración también puede "
+        "reanudarlo.\n"
         "• 🗂 <b>Categorías</b>: únete a las categorías abiertas de la red o sal de ellas.\n"
         "• 🚪 <b>Salir de la red</b>: el bot sale de tu canal y deja de publicar en él.\n\n"
         "Si al bot le faltan permisos o termina una pausa, se te avisa por aquí."
@@ -178,8 +195,8 @@ STRINGS = {
         "Pulsa <b>✨ Crear mi bot</b> y elige:\n"
         "• ✨ <b>Crear bot</b>: Telegram lo crea por ti en un par de toques (si está disponible).\n"
         "• 🔑 <b>Usar token</b>: crea el bot en @BotFather con /newbot y pega aquí el token que te da.\n\n"
-        "Después abre tu bot y pulsa /start: elige la zona horaria, añade el bot a tus canales y crea tu primer "
-        "mensaje. Dentro, 📖 <b>Guía</b> lo explica todo.\n\n"
+        "Después abre tu bot y pulsa /start: elige la zona horaria, responde unas preguntas rápidas, añade el bot a "
+        "tus canales y crea tu primer mensaje. Dentro, 📖 <b>Guía</b> lo explica todo.\n\n"
         "🤖 En <b>Mis bots</b> puedes pausar, reanudar o desconectar tus bots."
     ),
     # --- Ajustes -----------------------------------------------------------------------------------
@@ -201,6 +218,9 @@ STRINGS = {
     "set.btn.admins": "👮 Admins",
     "set.btn.externals": "🤝 Canales externos",
     "set.btn.support": "🛟 Soporte",
+    "set.btn.setup": "🧭 Asistente de configuración",
+    "set.days": "{n} días",
+    "set.days.1": "{n} día",
     # --- Mis avisos --------------------------------------------------------------------------------
     "set.nt.title": "🔔 <b>Mis avisos</b>",
     "set.nt.notify": "🔔 Alertas de la red: {v}",
@@ -216,8 +236,8 @@ STRINGS = {
     # --- Canales externos --------------------------------------------------------------------------
     "set.ext.title": "🤝 <b>Canales externos</b>",
     "set.ext.intro": (
-        "Otras personas pueden añadir el bot a sus canales y grupos para recibir los mensajes de la red, y "
-        "pausarlos cuando quieran."
+        "Otras personas pueden añadir el bot a sus canales y grupos para recibir los mensajes de la red. Las "
+        "reglas las pones tú."
     ),
     "set.ext.open": "🤝 Admitir canales externos: {v}",
     "set.ext.hint.closed": "   └ Ahora la red es privada: solo los admins añaden canales.",
@@ -234,11 +254,17 @@ STRINGS = {
     "set.ext.hint.groups": "   └ Los canales externos entran solos en ellos y pueden salir desde su panel.",
     "set.ext.link": "🔗 Enlace para invitar: {link}",
     "set.ext.hint.link": "   └ Compártelo con los dueños de canales: les explica cómo unirse.",
+    "set.ext.pause": "⏸ Los socios pueden pausar: {v}",
+    "set.ext.hint.no_pause": "   └ Solo los admins pueden pausar sus canales.",
+    "set.ext.pmax": "⏸ Pausa máxima: <b>{v}</b>",
+    "set.ext.hint.pmax": "   └ Tú siempre puedes reanudar una pausa.",
+    "set.ext.pmax.none": "Sin límite",
     "set.ext.btn.open": "🤝 Admitir canales externos",
     "set.ext.btn.approval": "✋ Aprobación manual",
     "set.ext.btn.min": "🔢 Mínimo de miembros: {n}",
     "set.ext.btn.text": "💬 Texto de bienvenida",
     "set.ext.btn.groups": "🗂 Grupos abiertos",
+    "set.ext.btn.pause": "⏸ Los socios pueden pausar",
     "set.ext.min.prompt": (
         "🔢 <b>Mínimo de miembros</b>\n\n"
         "Actual: <b>{n}</b>\n"
@@ -335,7 +361,7 @@ STRINGS = {
     ),
     "tz.write.invalid": "⚠️ Esa zona horaria no es válida. Usa el formato <code>Continente/Ciudad</code>.",
     "tz.saved.admin": "✅ Zona horaria de la red: <b>{zone}</b>. Los próximos envíos se han recalculado.",
-    "tz.saved.first": "✅ Zona horaria de la red: <b>{zone}</b>. ¡Todo listo para empezar!",
+    "tz.saved.first": "✅ Zona horaria de la red: <b>{zone}</b>.",
     "tz.saved.user": "✅ Tu zona horaria es ahora <b>{zone}</b>.",
     # --- Estadísticas y actividad ------------------------------------------------------------------
     "stats.title": "📊 <b>Estadísticas</b> · {period}",

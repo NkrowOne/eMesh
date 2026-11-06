@@ -1,8 +1,9 @@
-"""⚙️ Settings: notifications, external chats, support contact, admins and language.
+"""⚙️ Settings: notifications, external chats (and the partners' pause rules), support contact, admins and language.
 
 Everything about the network uses the workspace (``ctx.ws_rec``): a super admin may be managing a clone. Bot level
-settings (external chats, support, admins) are changed by the owner only; the other admins see them. Also hosts the
-admin role helpers used by ``/admin`` and ``/deladmin`` (start.py).
+settings (external chats, support, admins) are changed by the owner only; the other admins see them. The owner can
+also run the 🧭 setup wizard again (``setup``). Also hosts the admin role helpers used by ``/admin`` and
+``/deladmin`` (start.py).
 """
 from __future__ import annotations
 
@@ -21,11 +22,11 @@ from app.data.timezones import utc_offset_label
 from app.db.models import Bot as BotRecord
 from app.db.models import BotUser, Role, User
 from app.i18n import LANG_NAMES, SUPPORTED_LANGS, t
-from app.services import audience, content
+from app.services import audience, content, freq
 from app.services import users as users_svc
 from app.services.notify import send_dm
 from app.ui.callbacks import MenuCB
-from app.ui.common import alert, back_row, btn, kb, prompt, show, toast, toggle_label, visible_len
+from app.ui.common import alert, back_row, btn, choice_label, grid, kb, prompt, show, toast, toggle_label, visible_len
 from app.ui.fmt import esc, num, onoff, truncate, user_link
 from app.ui.screens import screen
 
@@ -35,7 +36,8 @@ MIN_MEMBERS_MAX = 100_000_000
 JOIN_TEXT_MAX = 1000  # visible characters of the welcome text of the partners
 USER_TOGGLES = {"notify": "notify", "summary": "summary", "reports": "run_reports"}
 ADMIN_TOGGLES = frozenset({"summary", "reports"})  # only admins get these
-BOT_TOGGLES = {"open": "join_open", "approval": "join_approval"}
+BOT_TOGGLES = {"open": "join_open", "approval": "join_approval", "pause": "partners_can_pause"}
+PAUSE_MAX_CHOICES = (24, 72, 168, 0)  # ⏸ the longest pause of a partner, in hours (0 = until they resume it)
 
 
 class SettingsFSM(StatesGroup):
@@ -46,7 +48,7 @@ class SettingsFSM(StatesGroup):
 
 class SsCB(CallbackData, prefix="ss"):
     """``tg`` toggles ``key``; ``min``, ``jt`` and ``sup`` ask for a value; ``jt_reset`` and ``sup_reset`` go back
-    to the default."""
+    to the default; ``pmax`` sets the longest pause of the partners to ``key`` hours."""
 
     action: str
     key: str = ""
@@ -161,6 +163,19 @@ def with_notice(text: str, notice: str | None) -> str:
     return f"{notice}\n\n{text}" if notice else text
 
 
+def duration_text(ctx: Ctx, minutes: int) -> str:
+    """``1 día``, ``3 días``, ``6 h``, ``1 h 30 min``."""
+    days, rest = divmod(max(0, minutes), 1440)
+    if days and not rest:
+        return ctx.t("set.days.1" if days == 1 else "set.days", n=days)
+    return freq.every_text(minutes, ctx.lang)
+
+
+def pause_max_text(ctx: Ctx, hours: int) -> str:
+    """The longest pause partners may choose: ``1 día``, ``12 h``… or ``Sin límite`` (0: until they resume it)."""
+    return duration_text(ctx, hours * 60) if hours > 0 else ctx.t("set.ext.pmax.none")
+
+
 async def _deny(event: Message | CallbackQuery, ctx: Ctx) -> None:
     await alert(event, ctx.t("common.no_permission"))
 
@@ -189,7 +204,7 @@ def _notif_line(ctx: Ctx) -> str:
     return ctx.t("set.notif.user", a=onoff(notify))
 
 
-def _externals_line(ctx: Ctx) -> str:
+def externals_line(ctx: Ctx) -> str:
     ws = ctx.ws_rec
     if not ws.join_open:
         return ctx.t("set.line.ext_closed")
@@ -219,7 +234,7 @@ async def _admin_settings(ctx: Ctx, session: AsyncSession) -> tuple[str, InlineK
         _lang_line(ctx),
         ctx.t("set.admins", n=len(await users_svc.admin_ids(session, ws))),
         _notif_line(ctx),
-        _externals_line(ctx),
+        externals_line(ctx),
         ctx.t("set.support", user=f"@{esc(contact)}" if contact else "—"),
     ]
     rows: list[list[InlineKeyboardButton]] = [
@@ -230,6 +245,8 @@ async def _admin_settings(ctx: Ctx, session: AsyncSession) -> tuple[str, InlineK
     if ctx.is_owner:
         rows.append([btn(ctx.t("set.btn.externals"), MenuCB(screen="externals")),
                      btn(ctx.t("set.btn.support"), MenuCB(screen="support"))])
+        if not ctx.in_ws:  # the wizard is the owner's, in the bot itself
+            rows.append([btn(ctx.t("set.btn.setup"), MenuCB(screen="setup", arg=1))])
     else:
         lines += ["", ctx.t("set.owner_only")]
     rows.append(back_row(ctx.lang, "home"))
@@ -330,7 +347,12 @@ async def externals_screen(
             ctx.t("set.ext.hint.text"),
             ctx.t("set.ext.groups", n=open_groups),
             ctx.t("set.ext.hint.groups"),
+            ctx.t("set.ext.pause", v=onoff(ws.partners_can_pause)),
         ]
+        if ws.partners_can_pause:
+            lines += [ctx.t("set.ext.pmax", v=pause_max_text(ctx, ws.pause_max_hours)), ctx.t("set.ext.hint.pmax")]
+        else:
+            lines.append(ctx.t("set.ext.hint.no_pause"))
         if ws.username:
             lines += ["", ctx.t("set.ext.link", link=esc(_join_link(ws))), ctx.t("set.ext.hint.link")]
         rows += [
@@ -339,9 +361,27 @@ async def externals_screen(
             [btn(ctx.t("set.ext.btn.min", n=num(ws.min_members)), SsCB(action="min"))],
             [btn(ctx.t("set.ext.btn.text"), SsCB(action="jt"))],
             [btn(ctx.t("set.ext.btn.groups"), MenuCB(screen="groups"))],
+            [btn(toggle_label(ctx.t("set.ext.btn.pause"), ws.partners_can_pause), SsCB(action="tg", key="pause"))],
         ]
+        if ws.partners_can_pause:
+            rows += grid([btn(choice_label(pause_max_text(ctx, hours), hours == ws.pause_max_hours),
+                              SsCB(action="pmax", key=str(hours))) for hours in PAUSE_MAX_CHOICES], 2)
     rows.append(back_row(ctx.lang, "settings"))
     await show(event, with_notice("\n".join(lines), notice), kb(*rows))
+
+
+@router.callback_query(SsCB.filter(F.action == "pmax"))
+async def on_pause_max(
+    call: CallbackQuery, callback_data: SsCB, ctx: Ctx, session: AsyncSession, state: FSMContext
+) -> None:
+    """⏸ Pausa máxima of the partners (a rule changed later applies to new pauses)."""
+    if not _can_edit_network(ctx):
+        await _deny(call, ctx)
+        return
+    await state.clear()
+    if callback_data.key in {str(hours) for hours in PAUSE_MAX_CHOICES}:  # a forged value changes nothing
+        ctx.ws_rec.pause_max_hours = int(callback_data.key)
+    await externals_screen(call, ctx, session)
 
 
 # --- 🔢 minimum members -----------------------------------------------------------------------------
@@ -376,7 +416,9 @@ async def on_min_input(message: Message, ctx: Ctx, session: AsyncSession, state:
 
 # --- 💬 welcome text of the partners ------------------------------------------------------------------
 def join_text_default(ctx: Ctx) -> str:
-    return ctx.t("home.join.default", bot=esc(ctx.ws_rec.username))
+    """The welcome text of the partners (it only promises pauses when the admins allow them)."""
+    key = "home.join.default" if ctx.ws_rec.partners_can_pause else "home.join.default_no_pause"
+    return ctx.t(key, bot=esc(ctx.ws_rec.username))
 
 
 def _join_text_prompt(ctx: Ctx) -> str:
