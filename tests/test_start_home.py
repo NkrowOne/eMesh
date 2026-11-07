@@ -569,10 +569,10 @@ async def test_guide_describes_the_real_features(app: App) -> None:
         assert feature in admin, feature
     # The partners pause within the admins' rules, and the admins can resume any pause.
     pauses = t("guide.admin.2", "es")
-    assert "según las reglas de la red" in pauses and "por defecto, hasta 1 día" in pauses
+    assert "según las reglas de la red" in pauses and "por defecto, hasta que lo reanude" in pauses
     assert "Los admins pueden reanudar cualquier pausa" in pauses and "Solo su dueño puede reanudarlo" not in pauses
     partner = " ".join(t(f"guide.partner.{i}", "es") for i in range(1, 3))
-    for feature in ("Añadir a mi canal", "pendiente", "dentro de las reglas de la red (por ejemplo, hasta 1 día)",
+    for feature in ("Añadir a mi canal", "pendiente", "dentro de las reglas de la red",
                     "la administración también puede reanudarlo", "Categorías", "Salir"):
         assert feature in partner, feature
     assert "3 días, 7 días" not in partner  # not every network allows them
