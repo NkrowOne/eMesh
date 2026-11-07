@@ -94,6 +94,7 @@ async def test_network_end_to_end(app: App) -> None:  # noqa: PLR0915 - one stor
         assert await s.get(GroupChat, (group.id, own.id)) is not None
     await app.press(SUPER_ID, MenuCB(screen="freq_edit", arg=group.id).pack())
     await app.click(SUPER_ID, "Usar la global")  # the group gets its own frequency
+    await app.click(SUPER_ID, "Cada cierto tiempo")  # the default is a fixed hour; the group wants an interval
     await app.click(SUPER_ID, "2 h")
     async with app.db() as s:
         group = await s.get(ChatGroup, group.id)
