@@ -149,32 +149,31 @@ visitors). Times: frequencies and dates are in the workspace timezone (`ctx.bot_
   the announced auto deletes still happen.
 * **Targets of a post** (`Post.targets`): `all` (🌐 Todos), `own` (🏠 Solo propios), `ext` (🤝 Solo externos),
   `g<id>` (🗂 a group of chats). Several may be combined (union). An empty list targets nobody (show ⚠️).
-* **Frequencies**: the global one (`Bot.freq`, 🌐; a new network starts with every 4 h from 08:00 to 22:00) and a
-  group's own one (`ChatGroup.freq`, None = the chats follow the global one). A chat follows the frequency of the first of its groups (by `sort`, then id) that has its own
+* **Frequencies**: the global one (`Bot.freq`, 🌐; a new network starts with once a day at 12:00, `DEFAULT_FREQ`)
+  and a group's own one (`ChatGroup.freq`, None = the chats follow the global one). A chat follows the frequency of the first of its groups (by `sort`, then id) that has its own
   frequency, otherwise the global one: that is its **source**. Every slot of a source, each sendable chat following
   it receives **one** post: the next of its **rotation** (the active rotation posts that target it, inside their
   campaign dates, in order of creation — or random when `Bot.rotation == "random"`; never the same twice in a row
   when there are more). `Chat.rot_last_post_id` remembers the last one. UI text: «Cada canal recibe un mensaje en
   cada turno de su frecuencia; los mensajes en rotación se van turnando.»
 * **Schedule modes of a post** (`Post.mode`): 🔁 `rotation` (default, above), ⏰ `own` (its own frequency
-  `Post.freq`: at each of its slots it goes to its whole audience, outside the rotation), 📆 `once` (`Post.send_at`,
-  then status `done`), ✋ `manual` (only with 🚀 Enviar ahora). Campaign dates (`starts_on`, `ends_on`, optional,
+  `Post.freq`: at each of its slots it goes to its whole audience, outside the rotation), 📢 `once` («Difusión
+  puntual»: `Post.send_at`, right now or a date, then status `done`), ✋ `manual` (only with 🚀 Enviar ahora). Campaign dates (`starts_on`, `ends_on`, optional,
   bot timezone) limit rotation and own posts; after `ends_on` the post becomes `done`.
 * **🛡 Anti-spam** (per bot, applies to every automatic run and to 🚀 Enviar ahora): at most `max_per_day` posts per
   chat per day (bot timezone), at least `min_gap` minutes between two posts in a chat, `one_at_a_time` (the previous
   post of the network in that chat is deleted before sending a new one). Chats left out are counted as skipped.
 * **Options of a post**: 📌 `pin` (silently), 🔕 `silent`, 🛡 `protect` (no forwarding/saving), 🔗 `link_preview`
   (text posts), 🔼 `caption_above` and 🫣 `spoiler` (photo/video/GIF), 🗑 `delete_after` minutes (default
-  `DEFAULT_DELETE_AFTER` = 1 day; 0 = never; max 2880 = 48 h because Telegram doesn't let bots delete older
-  messages), ♻️ `delete_previous` (its own previous copy
+  `DEFAULT_DELETE_AFTER` = 0 = never; max 2880 = 48 h because Telegram doesn't let bots delete older messages), ♻️ `delete_previous` (its own previous copy
   in that chat is deleted when it is sent again). New posts take `Bot.post_defaults`.
 * **Partners**: when the bot accepts external chats (`Bot.join_open`), anyone can add it to their channel or group.
   With `join_approval` the chat waits for an admin (`pending` + a request to the admins), otherwise it is approved
   at once. External chats join every 🤝 open group (`ChatGroup.open`) and can leave / join open groups from their
   panel.
 * **The admins rule over the partners.** A partner can pause the distribution in their chat only when the admins
-  allow it (`Bot.partners_can_pause`, default yes) and for at most `Bot.pause_max_hours` (default
-  `DEFAULT_PAUSE_MAX_HOURS` = 24 h, one day; 0 = until they resume it): the pause menu only offers the allowed
+  allow it (`Bot.partners_can_pause`, default yes) and for at most `Bot.pause_max_hours` (0 = until they resume
+  it, the default `DEFAULT_PAUSE_MAX_HOURS`; or 1, 3, 7 days): the pause menu only offers the allowed
   durations among 1 h, 6 h, 24 h, 3 días, 7 días and «hasta que la reanude» (a forged callback for another one is
   refused). The partner resumes their own pause whenever they want. Every change is an event that alerts the owner
   and admins (`events.emit`) and the admins **always** see every pause: the status line of the home, ⏸ Pausados (who
@@ -248,10 +247,10 @@ Step by step, one question per screen, the current value pre-selected (✅), `[�
 1. «🤝 <b>¿Aceptas canales de otras personas?</b>» `[✅ Sí, con mi aprobación (recomendado)]`, `[⚡ Sí, entran
    solos]`, `[🔒 No, solo los míos]` → `join_open` / `join_approval`.
 2. Only when they are accepted: «⏸ <b>¿Pueden pausar la distribución en sus canales?</b>» (└ «Tú siempre ves quién
-   pausa y puedes reanudarlo.») `[Hasta 1 día (recomendado)]`, `[Hasta 3 días]`, `[Hasta 7 días]`,
-   `[Sin límite]`, `[🚫 No pueden pausar]` → `partners_can_pause` / `pause_max_hours`.
-3. «⏰ <b>¿Cada cuánto recibe un mensaje cada canal?</b>» `[Cada 2 h][Cada 4 h][Cada 6 h][Cada 12 h]` and
-   `[1 al día (12:00)]` (interval from 08:00 to 22:00, or times `12:00`) → `Bot.freq` + `freq.refresh_bot`.
+   pausa y puedes reanudarlo.») `[Hasta 1 día]`, `[Hasta 3 días]`, `[Hasta 7 días]`, `[Sin límite]`,
+   `[🚫 No pueden pausar]` → `partners_can_pause` / `pause_max_hours`.
+3. «⏰ <b>¿Cada cuánto recibe un mensaje cada canal?</b>» `[1 al día (12:00) (recomendado)]` (the default), then
+   `[Cada 2 h][Cada 4 h][Cada 6 h][Cada 12 h]` (from 08:00 to 22:00) → `Bot.freq` + `freq.refresh_bot`.
 4. «🗑 <b>¿Cuánto tiempo siguen publicados los mensajes?</b>» `[1 h][6 h][12 h][1 día][2 días]`,
    `[♾ No se borran]` → `Bot.post_defaults["delete_after"]` (a new dict).
 5. «✅ <b>Todo listo</b>» + a summary of the answers + `[➕ Añadir canal ↗][➕ Añadir grupo ↗]`,
@@ -333,11 +332,12 @@ first, done last. Buttons: one per post (`#1 Promo Cine`, 2 per row), `[➕ Nuev
    `[🤝 Solo externos]`, one per group of chats `[🗂 Cine (5)]`, live count «👥 Lo recibirán: 23 chats · 👤 45,320»
    (`audience.targets_size`), `[✅ Continuar]` (needs a target).
 4. «⏰ <b>¿Cuándo se envía?</b> · 4/5»: `[🔁 En rotación (recomendado)]` (└ «Se turna con los demás mensajes según
-   la frecuencia de cada canal (global: cada 4 h).»), `[⏰ Con su propio horario]`, `[📆 Una sola vez]` (asks the
-   date: `freq.parse_datetime`), `[✋ Solo cuando lo envíe yo]`.
+   la frecuencia de cada canal (global: 1 al día a las 12:00).»), `[⏰ Con su propio horario]`,
+   `[📢 Difusión puntual]` (still step 4: `[🚀 Ahora mismo]` — created with `send_at` = now, the scheduler sends it
+   once at once — or a typed date: `freq.parse_datetime`), `[✋ Solo cuando lo envíe yo]`.
 5. «🗑 <b>¿Cuánto tiempo sigue publicado?</b> · 5/5» (└ «Pasado ese tiempo se borra solo de los canales.»):
    `[1 h][3 h][6 h][12 h][1 día][2 días]`, `[♾ No borrar]`, the default of the network pre-selected
-   (`Bot.post_defaults["delete_after"]`, else `DEFAULT_DELETE_AFTER`, 1 día). Steps 1-3 say «· 1/5» … «· 3/5».
+   (`Bot.post_defaults["delete_after"]`, else `DEFAULT_DELETE_AFTER`: no borrar). Steps 1-3 say «· 1/5» … «· 3/5».
 Then: create the `Post` (`apply` content with `ctx.bot_id`, `name = default_name`, `ws.post_defaults`, `targets`,
 `mode`; own mode starts with a copy of the global frequency), `freq.refresh_post`, `scheduler.wake()`, show «✅
 Mensaje guardado» + the `post` detail; own mode opens `freq_edit` (arg -id) right away.

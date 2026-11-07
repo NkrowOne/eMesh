@@ -108,8 +108,8 @@ STRINGS = {
         "• ⏸ <b>Pause all</b>, on the home screen, stops the whole network.\n"
         "• Each channel can be paused from its page.\n"
         "• The owner of an external channel can pause it within the network's rules (⚙️ Settings › 🤝 External "
-        "channels): by default, up to 1 day. The admins are alerted and it shows on the home screen, in ⏸ Paused "
-        "and in 📜 Activity.\n"
+        "channels): by default, until they resume it; you can limit it to 1, 3 or 7 days or not allow it. The admins "
+        "are alerted and it shows on the home screen, in ⏸ Paused and in 📜 Activity.\n"
         "• The admins can resume any pause; a partner whose pause is lifted is told."
     ),
     "guide.admin.3": (
@@ -121,15 +121,17 @@ STRINGS = {
         "<code>&amp;&amp;</code>, a color at the end (🔵 🟢 🔴) or a text to copy: "
         "<code>Code - copy: PROMO10</code>.\n"
         "3. 🎯 <b>Target</b>: 🌐 everyone, 🏠 own only, 🤝 external only or a 🗂 channel group.\n"
-        "4. ⏰ <b>When</b>: 🔁 in rotation, ⏰ on its own schedule, 📆 just once or ✋ only when you send it.\n\n"
+        "4. ⏰ <b>When</b>: 🔁 in rotation, ⏰ on its own schedule, 📢 one-off broadcast (just once: right now or on "
+        "a date) or ✋ only when you send it.\n"
+        "5. 🗑 <b>How long it stays published</b>: from 1 h to 2 days, or it isn't deleted.\n\n"
         "⚙️ <b>Options</b>: 📌 pin, 🔕 silent, 🛡 protect content, 🗑 delete after a while (max. 48 h), ♻️ delete "
         "its previous copy…\n"
         "👁 <b>Preview</b> shows it as is; 🚀 <b>Send now</b> publishes it right away."
     ),
     "guide.admin.4": (
         "⏰ <b>Frequencies, rotation and anti-spam</b>\n\n"
-        "• 🌐 <b>Global frequency</b>: every channel follows it. For example, every 4 h from 08:00 to 23:00, or at "
-        "fixed times (10:00, 14:00 and 22:00), on the days you choose.\n"
+        "• 🌐 <b>Global frequency</b>: every channel follows it. By default, once a day (at 12:00); also every so "
+        "often (for example, every 4 h from 08:00 to 22:00) or at fixed times, on the days you choose.\n"
         "• 🗂 A <b>channel group</b> can have its own frequency: its channels follow it instead of the global one.\n"
         "• 🔁 <b>Rotation</b>: on each turn, every channel gets its next post, in order or at random, never the "
         "same one twice in a row.\n"
@@ -169,8 +171,8 @@ STRINGS = {
     "guide.partner.2": (
         "⏸ <b>Pause, categories and leaving</b>\n\n"
         "In 📣 <b>My channels</b> you have the page of each of your channels:\n"
-        "• ⏸ <b>Pause</b>: stop receiving posts for a while, within the network's rules (for example, up to 1 "
-        "day). Resume whenever you want with ▶️ <b>Resume</b>; the network's team can resume it too.\n"
+        "• ⏸ <b>Pause</b>: stop receiving posts for a while, within the network's rules. Resume whenever you "
+        "want with ▶️ <b>Resume</b>; the network's team can resume it too.\n"
         "• 🗂 <b>Categories</b>: join or leave the open categories of the network.\n"
         "• 🚪 <b>Leave the network</b>: the bot leaves your channel and stops posting there.\n\n"
         "If the bot is missing rights or a pause ends, you are notified here."

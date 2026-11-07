@@ -17,14 +17,14 @@ Hecho con la **última API de Telegram (Bot API 10.3)** y aiogram 3.31. Misma ba
 - **🤝 Canales externos (socios)**: actívalo y cualquiera puede añadir el bot a su canal o grupo (con o sin tu
   aprobación, con mínimo de miembros). Desde **📣 Mis canales** pueden **pausar** la distribución, elegir
   categorías y salir de la red.
-- **👮 Tú mandas sobre los socios**: decides si pueden pausar y cuánto como máximo (por defecto **1 día**; también
-  3 días, 7 días o sin límite), **puedes reanudar cualquier pausa** y lo ves siempre: cada pausa te llega como
+- **👮 Tú mandas sobre los socios**: decides si pueden pausar y cuánto como máximo (por defecto sin límite; o 1, 3
+  o 7 días), **puedes reanudar cualquier pausa** y lo ves siempre: cada pausa te llega como
   aviso y aparece en el estado de tu inicio, en **⏸ Pausados** (quién, desde cuándo, hasta cuándo), en la lista de
   canales y en 📜 Actividad.
 - **🧭 Asistente al crear un bot**: paso a paso pregunta si aceptas canales de otros, cuánto pueden pausar, cada
   cuánto se publica y cuánto duran los mensajes. Se puede repetir desde ⚙️ Ajustes.
-- **📝 Mensajes**: asistente de 5 pasos (mensaje → botones → destino → cuándo → cuánto tiempo sigue publicado, por
-  defecto **1 día**). Vista previa real, 🚀 enviar ahora, 🔄 aplicar cambios a lo ya publicado (corrige una errata
+- **📝 Mensajes**: asistente de 5 pasos (mensaje → botones → destino → cuándo → cuánto tiempo sigue publicado).
+  **📢 Difusión puntual**: un mensaje que se envía una sola vez, **ahora mismo** o en la fecha que elijas. Vista previa real, 🚀 enviar ahora, 🔄 aplicar cambios a lo ya publicado (corrige una errata
   en todos los canales), 🔚 retirar, 🧬 duplicar.
 - **🔘 Botones**: editor visual (toca un botón para cambiarlo, muévelo, cambia su color) o escríbelos todos de golpe:
   `Web - https://ejemplo.com 🟢`, varios en una fila con `&&`, colores 🔵 🟢 🔴 y botones de **copiar texto**
@@ -32,10 +32,11 @@ Hecho con la **última API de Telegram (Bot API 10.3)** y aiogram 3.31. Misma ba
 - **🎯 Destinos**: 🌐 Todos, 🏠 Solo propios, 🤝 Solo externos o tus **🗂 grupos de canales** (combinables).
 - **⏰ Frecuencias, fáciles siempre**: una pantalla con todas. Global («cada 3 h de 08:00 a 23:00») o propia de cada
   grupo de canales («a las 10:00, 14:00 y 22:00, de lunes a viernes»). Los mensajes en **rotación** se turnan en cada
-  canal; también hay mensajes con su propio horario, de una sola vez o solo manuales, y **fechas de campaña**.
+  canal; también hay mensajes con su propio horario, difusiones puntuales o solo manuales, y **fechas de
+  campaña**. Por defecto, cada canal recibe **1 mensaje al día** (a las 12:00).
 - **🛡 Anti-spam**: máximo de mensajes al día por chat, separación mínima y «uno a la vez» (borra el anterior).
 - **Opciones de cada mensaje**: fijar, sin sonido, proteger contenido, vista previa de enlaces, texto encima de la
-  media, spoiler, borrado automático (por defecto 1 día, hasta 48 h o nunca) y borrar su envío anterior.
+  media, spoiler, borrado automático (de 1 h a 48 h, o nunca) y borrar su envío anterior.
 - **📊 Estadísticas y 📜 Actividad**: envíos, entregas, fallos, alcance, mensajes más enviados, y el historial de
   todo lo que pasa en la red. Resumen diario e informe de cada envío (opcionales).
 - **🤖 Clones**: cualquiera crea su bot en 2 toques (Managed Bots de Telegram) o con un token de @BotFather.
