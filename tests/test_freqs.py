@@ -35,6 +35,7 @@ def wakes(app: App, monkeypatch: pytest.MonkeyPatch) -> list[int]:
 
 
 TWO_HOURS = {"mode": "interval", "every": 120, "window": "", "days": "0123456"}
+EVERY_4H = {"mode": "interval", "every": 240, "window": "08:00-22:00", "days": "0123456"}
 TIMES = {"mode": "times", "times": "10:00,22:00", "days": "01234"}
 
 
@@ -72,7 +73,7 @@ async def test_dashboard_shows_every_frequency_and_its_chats(app: App) -> None:
     await open_menu(app, SUPER_ID, "freqs")
     text = app.last_text(SUPER_ID)
     assert text.startswith("⏰ <b>Frecuencias</b>\nCada canal recibe un mensaje en cada turno de su frecuencia")
-    assert "🌐 <b>Global</b>: cada 4 h · 08:00-22:00\n   └ 2 chats · ≈ 4 al día · próximo: " in text
+    assert "🌐 <b>Global</b>: a las 12:00\n   └ 2 chats · ≈ 1 al día · próximo: " in text
     assert "🗂 <b>Cine</b>: cada 2 h\n   └ 2 chats · ≈ 12 al día · próximo: " in text
     assert "🗂 <b>Noticias</b>: 🌐 la global\n" in text
     assert "🗂 <b>Estrenos</b>: a las 10:00 y 22:00 · de lunes a viernes\n   └ 1 chat · ≈ 2 al día · próximo: " in text
@@ -82,7 +83,7 @@ async def test_dashboard_shows_every_frequency_and_its_chats(app: App) -> None:
     assert "🛡 Anti-spam: sin máximo diario · sin separación mínima · 🧹 uno a la vez ✖️" in text
     assert "pausada" not in text
     assert button_texts(app) == [
-        "🌐 Global: cada 4 h · 08:00-22:00", "🗂 Cine: cada 2 h", "🗂 Noticias: 🌐 la global",
+        "🌐 Global: a las 12:00", "🗂 Cine: cada 2 h", "🗂 Noticias: 🌐 la global",
         "🗂 Estrenos: a las 10:00 y 22:00 · de lunes a viernes", "✅ En orden", "⚪ Al azar", "🛡 Anti-spam",
         "🔙 Regresar",
     ]
@@ -225,6 +226,7 @@ async def test_an_admin_demoted_during_an_input_cannot_finish_it(app: App) -> No
     await started(app, OWNER2_ID)
     async with app.db() as s:
         (await s.get(BotUser, (MAIN_BOT_ID, OWNER2_ID))).role = Role.ADMIN
+        (await s.get(BotRecord, MAIN_BOT_ID)).freq = EVERY_4H
     await app.press(OWNER2_ID, FqCB(a="ev", t=0, v=60).pack())  # admins can
     assert (await load(app, BotRecord, MAIN_BOT_ID)).freq["every"] == 60
     await app.press(OWNER2_ID, FqCB(a="evx", t=0).pack())
@@ -239,7 +241,8 @@ async def test_super_admin_edits_the_frequencies_of_the_clone_he_manages(app: Ap
     clone = 7_000_000_201
     await app.add_clone(clone, "clon_cine_bot", OWNER2_ID)
     async with app.db() as s:
-        (await s.get(BotRecord, clone)).timezone = "America/Mexico_City"
+        rec = await s.get(BotRecord, clone)
+        rec.timezone, rec.freq = "America/Mexico_City", EVERY_4H
     clone_group = await add_group(app, "Grupo del clon", bot_id=clone)
     main_group = await add_group(app, "Principal")
     await add_chat(app, -5001, "Canal del clon", bot_id=clone)

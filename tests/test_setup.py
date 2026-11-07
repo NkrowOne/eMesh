@@ -97,35 +97,34 @@ async def test_the_whole_wizard(app: App, monkeypatch: pytest.MonkeyPatch) -> No
     await click(app, "Sí, con mi aprobación")
     rec = await get_bot(app, CLONE_ID)
     assert (rec.join_open, rec.join_approval, rec.setup_done) == (True, True, False)
-    # 2. The partners' pauses: up to one day by default.
+    # 2. The partners' pauses: no limit by default.
     assert app.last_text(OWNER2_ID) == (
         f"{STEP_2}\nCada socio la pausa desde su panel, como mucho el tiempo que elijas.\n"
         "   └ Tú siempre ves quién pausa y puedes reanudarlo.")
-    assert button_rows(app, OWNER2_ID) == [["✅ Hasta 1 día (recomendado)"], ["⚪ Hasta 3 días"], ["⚪ Hasta 7 días"],
-                                           ["⚪ Sin límite"], ["⚪ No pueden pausar"], ["🔙 Regresar"]]
+    assert button_rows(app, OWNER2_ID) == [["⚪ Hasta 1 día"], ["⚪ Hasta 3 días"], ["⚪ Hasta 7 días"],
+                                           ["✅ Sin límite"], ["⚪ No pueden pausar"], ["🔙 Regresar"]]
     assert callback_of(app, OWNER2_ID, "Regresar") == MenuCB(screen="setup", arg=1).pack()
     assert_buttons_valid(app)
     await click(app, "Hasta 3 días")
     rec = await get_bot(app, CLONE_ID)
     assert (rec.partners_can_pause, rec.pause_max_hours) == (True, 72)
-    # 3. The global frequency: every 4 h from 08:00 to 22:00 by default.
+    # 3. The global frequency: once a day at 12:00 by default.
     assert app.last_text(OWNER2_ID).startswith(f"{STEP_3}\nCada canal recibe un mensaje en cada turno de su frecuencia")
     assert app.last_text(OWNER2_ID).endswith("Luego se puede afinar en ⏰ Frecuencias.")
-    assert button_rows(app, OWNER2_ID) == [["⚪ Cada 2 h", "✅ Cada 4 h"], ["⚪ Cada 6 h", "⚪ Cada 12 h"],
-                                           ["⚪ 1 al día (12:00)"], ["🔙 Regresar"]]
+    assert button_rows(app, OWNER2_ID) == [["✅ 1 al día (12:00) (recomendado)"], ["⚪ Cada 2 h", "⚪ Cada 4 h"],
+                                           ["⚪ Cada 6 h", "⚪ Cada 12 h"], ["🔙 Regresar"]]
     assert callback_of(app, OWNER2_ID, "Regresar") == MenuCB(screen="setup", arg=2).pack()
     before = utcnow()
-    await click(app, "1 al día")
+    await click(app, "Cada 4 h")
     after = utcnow()
     rec = await get_bot(app, CLONE_ID)
-    assert rec.freq == {"mode": "times", "times": "12:00", "days": "0123456"}
+    assert rec.freq == {"mode": "interval", "every": 240, "window": "08:00-22:00", "days": "0123456"}
     assert_next_slot(rec.rot_next_at, rec.freq, before, after)
-    assert to_local(rec.rot_next_at, "Europe/Madrid").strftime("%H:%M") == "12:00"
     assert woken == [True]  # the scheduler looks at the new slot at once
-    # 4. How long posts stay published: one day by default.
+    # 4. How long posts stay published: never deleted by default.
     assert app.last_text(OWNER2_ID).startswith(f"{STEP_4}\nPasado ese tiempo se borran solos de los canales.")
-    assert button_rows(app, OWNER2_ID) == [["⚪ 1 h", "⚪ 6 h", "⚪ 12 h"], ["✅ 1 día", "⚪ 2 días"],
-                                           ["⚪ No se borran"], ["🔙 Regresar"]]
+    assert button_rows(app, OWNER2_ID) == [["⚪ 1 h", "⚪ 6 h", "⚪ 12 h"], ["⚪ 1 día", "⚪ 2 días"],
+                                           ["✅ No se borran"], ["🔙 Regresar"]]
     assert callback_of(app, OWNER2_ID, "Regresar") == MenuCB(screen="setup", arg=3).pack()
     await click(app, "2 días")
     rec = await get_bot(app, CLONE_ID)
@@ -134,7 +133,7 @@ async def test_the_whole_wizard(app: App, monkeypatch: pytest.MonkeyPatch) -> No
     assert rec.setup_done
     assert app.last_text(OWNER2_ID) == (
         f"{DONE}\n\n🤝 Canales externos: ✅ admitidos (con aprobación)\n⏸ Pausas de los socios: hasta 3 días\n"
-        "⏰ Frecuencia global: a las 12:00\n🗑 Borrado automático: al cabo de 2 días\n"
+        "⏰ Frecuencia global: cada 4 h · 08:00-22:00\n🗑 Borrado automático: al cabo de 2 días\n"
         f"🗺 Zona horaria: Europe/Madrid ({utc_offset_label('Europe/Madrid')})\n\n"
         "👇 Ahora añade el bot a tus canales y grupos y crea un mensaje.\n"
         "   └ Todo se puede cambiar en ⚙️ Ajustes, ⏰ Frecuencias y 📝 Mensajes.")
@@ -166,7 +165,7 @@ async def test_every_choice_is_saved_and_then_ticked(app: App) -> None:
     await answer(app, 1, 1)
     assert await ticked(app, 1) == [labels_1[1]]
     # 2. (partners_can_pause, pause_max_hours): «No pueden pausar» keeps the longest pause for later.
-    labels_2 = ["✅ Hasta 1 día (recomendado)", "✅ Hasta 3 días", "✅ Hasta 7 días", "✅ Sin límite",
+    labels_2 = ["✅ Hasta 1 día", "✅ Hasta 3 días", "✅ Hasta 7 días", "✅ Sin límite",
                 "✅ No pueden pausar"]
     for index, expected in enumerate(((True, 24), (True, 72), (True, 168), (True, 0), (False, 0))):
         await answer(app, 2, index)
@@ -175,9 +174,10 @@ async def test_every_choice_is_saved_and_then_ticked(app: App) -> None:
         assert app.last_text(OWNER2_ID).startswith(STEP_3)
         assert await ticked(app, 2) == [labels_2[index]]
     # 3. The global frequency, with its next slot refreshed.
-    labels_3 = ["✅ Cada 2 h", "✅ Cada 4 h", "✅ Cada 6 h", "✅ Cada 12 h", "✅ 1 al día (12:00)"]
-    expected_freqs = [{"mode": "interval", "every": hours * 60, "window": "08:00-22:00", "days": "0123456"}
-                      for hours in (2, 4, 6, 12)] + [{"mode": "times", "times": "12:00", "days": "0123456"}]
+    labels_3 = ["✅ 1 al día (12:00) (recomendado)", "✅ Cada 2 h", "✅ Cada 4 h", "✅ Cada 6 h", "✅ Cada 12 h"]
+    expected_freqs = [{"mode": "times", "times": "12:00", "days": "0123456"}] + [
+        {"mode": "interval", "every": hours * 60, "window": "08:00-22:00", "days": "0123456"}
+        for hours in (2, 4, 6, 12)]
     for index, expected_freq in enumerate(expected_freqs):
         async with edit_bot(app, CLONE_ID) as rec:
             rec.rot_next_at = None
@@ -416,14 +416,14 @@ async def test_the_wizard_in_english(app: App) -> None:
                                            ["⚪ Yes, they join on their own"], ["✅ No, only mine"],
                                            ["⏭ Skip the wizard"]]
     await click(app, "Yes, they join")
-    assert button_texts(app, OWNER2_ID) == ["✅ Up to 1 day (recommended)", "⚪ Up to 3 days", "⚪ Up to 7 days",
-                                            "⚪ No limit", "⚪ They can't pause", "🔙 Back"]
+    assert button_texts(app, OWNER2_ID) == ["⚪ Up to 1 day", "⚪ Up to 3 days", "⚪ Up to 7 days",
+                                            "✅ No limit", "⚪ They can't pause", "🔙 Back"]
     await click(app, "Up to 1 day")
-    assert button_rows(app, OWNER2_ID)[:3] == [["⚪ Every 2 h", "✅ Every 4 h"], ["⚪ Every 6 h", "⚪ Every 12 h"],
-                                               ["⚪ Once a day (12:00)"]]
+    assert button_rows(app, OWNER2_ID)[:3] == [["✅ Once a day (12:00) (recommended)"], ["⚪ Every 2 h", "⚪ Every 4 h"],
+                                               ["⚪ Every 6 h", "⚪ Every 12 h"]]
     await click(app, "Every 4 h")
-    assert button_rows(app, OWNER2_ID)[:3] == [["⚪ 1 h", "⚪ 6 h", "⚪ 12 h"], ["✅ 1 day", "⚪ 2 days"],
-                                               ["⚪ Never deleted"]]
+    assert button_rows(app, OWNER2_ID)[:3] == [["⚪ 1 h", "⚪ 6 h", "⚪ 12 h"], ["⚪ 1 day", "⚪ 2 days"],
+                                               ["✅ Never deleted"]]
     await click(app, "Never deleted")
     text = app.last_text(OWNER2_ID)
     assert text.startswith("✅ <b>All set</b>")

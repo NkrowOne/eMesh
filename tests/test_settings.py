@@ -93,7 +93,7 @@ async def test_admins_see_the_bot_settings_read_only(app: App) -> None:
         assert denied(app), data
     assert await fsm_state(app, USER_ID) is None
     rec = await get_bot(app)
-    assert (rec.join_open, rec.join_approval, rec.partners_can_pause, rec.pause_max_hours) == (False, True, True, 24)
+    assert (rec.join_open, rec.join_approval, rec.partners_can_pause, rec.pause_max_hours) == (False, True, True, 0)
 
 
 async def test_user_settings(app: App) -> None:
@@ -176,14 +176,14 @@ async def test_external_chats_toggles(app: App) -> None:
             "💬 Texto de bienvenida: el predeterminado\n") in text
     assert ("🗂 Grupos abiertos: <b>0</b>\n"
             "   └ Los canales externos entran solos en ellos y pueden salir desde su panel.\n"
-            "⏸ Los socios pueden pausar: ✅\n⏸ Pausa máxima: <b>1 día</b>\n"
+            "⏸ Los socios pueden pausar: ✅\n⏸ Pausa máxima: <b>Sin límite</b>\n"
             "   └ Tú siempre puedes reanudar una pausa.\n\n"
             "🔗 Enlace para invitar: https://t.me/emesh_test_bot?start=join\n"
             "   └ Compártelo con los dueños de canales: les explica cómo unirse.") in text
     assert button_texts(app, SUPER_ID) == ["✅ Admitir canales externos", "✅ Aprobación manual",
                                            "🔢 Mínimo de miembros: 0", "💬 Texto de bienvenida", "🗂 Grupos abiertos",
-                                           "✅ Los socios pueden pausar", "✅ 1 día", "⚪ 3 días", "⚪ 7 días",
-                                           "⚪ Sin límite", "🔙 Regresar"]
+                                           "✅ Los socios pueden pausar", "⚪ 1 día", "⚪ 3 días", "⚪ 7 días",
+                                           "✅ Sin límite", "🔙 Regresar"]
     await app.click(SUPER_ID, "Aprobación manual")
     assert not (await get_bot(app)).join_approval
     assert "✋ Aprobación manual: ✖️\n   └ Entran solos, sin revisión." in app.last_text(SUPER_ID)
@@ -196,8 +196,8 @@ async def test_partners_pause_rules(app: App) -> None:
     async with edit_bot(app) as rec:
         rec.join_open = True
     await open_externals(app)
-    assert button_rows(app, SUPER_ID)[-4:] == [["✅ Los socios pueden pausar"], ["✅ 1 día", "⚪ 3 días"],
-                                               ["⚪ 7 días", "⚪ Sin límite"], ["🔙 Regresar"]]
+    assert button_rows(app, SUPER_ID)[-4:] == [["✅ Los socios pueden pausar"], ["⚪ 1 día", "⚪ 3 días"],
+                                               ["⚪ 7 días", "✅ Sin límite"], ["🔙 Regresar"]]
     assert callback_of(app, SUPER_ID, "Los socios pueden pausar") == SsCB(action="tg", key="pause").pack()
     assert callback_of(app, SUPER_ID, "3 días") == SsCB(action="pmax", key="72").pack()
     await app.click(SUPER_ID, "7 días")
@@ -205,6 +205,7 @@ async def test_partners_pause_rules(app: App) -> None:
     assert "⏸ Pausa máxima: <b>7 días</b>" in app.last_text(SUPER_ID)
     assert button_rows(app, SUPER_ID)[-3:-1] == [["⚪ 1 día", "⚪ 3 días"], ["✅ 7 días", "⚪ Sin límite"]]
     await app.click(SUPER_ID, "Sin límite")
+    assert button_rows(app, SUPER_ID)[-3:-1] == [["⚪ 1 día", "⚪ 3 días"], ["⚪ 7 días", "✅ Sin límite"]]
     assert (await get_bot(app)).pause_max_hours == 0
     assert "⏸ Pausa máxima: <b>Sin límite</b>" in app.last_text(SUPER_ID)
     for key in ("5", "-1", "abc", "1000", ""):  # forged values change nothing
@@ -239,8 +240,8 @@ async def test_pause_rules_in_english(app: App) -> None:
     await app.click(SUPER_ID, "Settings")
     await app.click(SUPER_ID, "External channels")
     text = app.last_text(SUPER_ID)
-    assert "⏸ Partners can pause: ✅\n⏸ Longest pause: <b>1 day</b>\n   └ You can always resume a pause." in text
-    assert button_rows(app, SUPER_ID)[-3:-1] == [["✅ 1 day", "⚪ 3 days"], ["⚪ 7 days", "⚪ No limit"]]
+    assert "⏸ Partners can pause: ✅\n⏸ Longest pause: <b>No limit</b>\n   └ You can always resume a pause." in text
+    assert button_rows(app, SUPER_ID)[-3:-1] == [["⚪ 1 day", "⚪ 3 days"], ["⚪ 7 days", "✅ No limit"]]
 
 
 async def test_open_groups_are_counted_and_linked(app: App) -> None:
