@@ -104,7 +104,7 @@ async def test_owner_home_of_an_empty_network(app: App) -> None:
     assert text.startswith("🕸 <b>Tu red de distribución</b>\n\n📣 Canales y grupos: <b>0</b>\n"
                            "   └ Añade el bot a tus canales y grupos con los botones ➕ de abajo.\n"
                            "📝 Mensajes activos: <b>0</b>\n   └ Crea el primero en 📝 Mensajes.\n"
-                           "⏰ Frecuencia global: cada 4 h · 08:00-22:00\n📅 Próximo turno: <b>")
+                           "⏰ Frecuencia global: a las 12:00\n📅 Próximo turno: <b>")
     for absent in ("Estado", "Pausados por su dueño", "Solicitudes pendientes", "Sin permisos", "está pausada"):
         assert absent not in text
     for label in (*ADMIN_BUTTONS, "Crear mi bot", "Panel"):

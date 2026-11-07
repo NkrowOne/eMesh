@@ -420,7 +420,7 @@ async def apply(event: Event, ctx: Ctx, session: AsyncSession, scheduler: Schedu
 
 def interval_of(f: dict[str, Any], **changes: Any) -> dict[str, Any]:
     """An interval frequency from ``f`` (a "times" one has no interval yet: it starts from the default one)."""
-    base = {"mode": "interval", "every": f.get("every", freq.DEFAULT_EVERY), "window": f.get("window", ""),
+    base = {"mode": "interval", "every": f.get("every", freq_svc.DEFAULT_EVERY), "window": f.get("window", ""),
             "days": f["days"]}
     return {**base, **changes}
 

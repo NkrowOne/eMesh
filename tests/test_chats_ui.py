@@ -168,7 +168,7 @@ async def test_chat_detail(app: App) -> None:
     assert ("📌 Estado: ⚠️ Faltan permisos: fijar mensajes · ⏸ Pausado por su dueño hasta que lo reanude"
             in text)
     assert "   └ Si lo reanudas, se anula su pausa y se le avisa." in text
-    assert "⏰ Frecuencia: 🌐 la global (cada 4 h · 08:00-22:00)" in text and "🕐 Último: —" in text
+    assert "⏰ Frecuencia: 🌐 la global (a las 12:00)" in text and "🕐 Último: —" in text
     assert labels(app.last_panel(SUPER_ID))[2:4] == ["▶️ Reanudar (anula la pausa del socio)", "⏸ Pausar"]
 
 

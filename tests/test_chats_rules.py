@@ -69,12 +69,28 @@ def test_pause_allowed() -> None:
     assert not chat_svc.pause_allowed(ws, timedelta(hours=1)) and not chat_svc.pause_allowed(ws, None)
 
 
-async def test_default_rules_offer_up_to_one_day(app: App) -> None:
+async def test_default_rules_allow_any_pause(app: App) -> None:
     await start(app, SUPER_ID, USER_ID)
     chat = await partner_chat(app)
     await pa(app, USER_ID, "op", chat.id)
     await app.click(USER_ID, "Pausar")
     assert "¿Cuánto tiempo?" in app.last_text(USER_ID)
+    assert labels(app.last_panel(USER_ID)) == [*ALL_PAUSES, "🔙 Regresar"]
+
+    await app.click(USER_ID, "7 días")
+    chat = await get_chat(app)
+    assert chat.owner_pause_active()
+    assert timedelta(days=6, hours=23) < chat.owner_paused_until - utcnow() <= timedelta(days=7)
+    [event] = await events_of(app, EventKind.CHAT_PAUSED)
+    assert event.data == {"by": "owner", "until": chat.owner_paused_until.isoformat()}
+
+
+async def test_a_forged_long_pause_is_refused_when_the_rules_limit_it(app: App) -> None:
+    await start(app, SUPER_ID, USER_ID)
+    await set_bot(app, pause_max_hours=24)
+    chat = await partner_chat(app)
+    await pa(app, USER_ID, "op", chat.id)
+    await app.click(USER_ID, "Pausar")
     assert labels(app.last_panel(USER_ID)) == ["⏸ 1 h", "⏸ 6 h", "⏸ 24 h", "🔙 Regresar"]
 
     for value in (4, 5, 6):  # forged: 3 días, 7 días, hasta que la reanude
@@ -158,6 +174,8 @@ async def test_pause_by_owner_refuses_what_the_rules_dont_allow(app: App) -> Non
     bot = app.manager.get(MAIN_BOT_ID)
     async with app.db() as s:
         ws, row = await s.get(BotRecord, MAIN_BOT_ID), await s.get(Chat, chat.id)
+        assert ws.pause_max_hours == 0, "unlimited by default"
+        ws.pause_max_hours = 24
         assert not await chat_svc.pause_by_owner(bot, s, ws, row, USER_ID, utcnow() + timedelta(hours=25))
         assert not await chat_svc.pause_by_owner(bot, s, ws, row, USER_ID, None)
         ws.partners_can_pause = False
