@@ -129,7 +129,7 @@ async def test_once_date_in_year_9999_west_of_utc_is_refused(app: App) -> None:
     pid = await add_post(app)
     await started(app, SUPER_ID)
     await open_menu(app, SUPER_ID, "post_sched", pid)
-    await app.click(SUPER_ID, "Una sola vez")
+    await app.click(SUPER_ID, "Difusión puntual")
     await app.send(SUPER_ID, "31/12/9999 23:59")  # parse_when only catches ValueError: OverflowError escapes
     text = app.last_text(SUPER_ID)
     assert not text.startswith(ERROR), text

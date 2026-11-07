@@ -62,13 +62,13 @@ def test_parse_minutes_errors(text: str, key: str) -> None:
         parse_minutes(text)
 
 
-def test_default_options_delete_new_posts_after_one_day() -> None:
-    assert DEFAULT_DELETE_AFTER == 1440
+def test_default_options_never_delete_new_posts() -> None:
+    assert DEFAULT_DELETE_AFTER == 0
     assert defaults_of(BotRecord(post_defaults={})) == {"pin": False, "silent": False, "protect": False,
                                                        "link_preview": False, "delete_previous": True,
-                                                       "delete_after": 1440}
-    assert defaults_of(BotRecord(post_defaults={"pin": True}))["delete_after"] == 1440  # a network without one
-    assert defaults_of(BotRecord(post_defaults={"delete_after": 0}))["delete_after"] == 0  # never: kept
+                                                       "delete_after": 0}
+    assert defaults_of(BotRecord(post_defaults={"pin": True}))["delete_after"] == 0  # a network without one
+    assert defaults_of(BotRecord(post_defaults={"delete_after": 1440}))["delete_after"] == 1440
     assert defaults_of(BotRecord(post_defaults={"delete_after": 360}))["delete_after"] == 360
 
 
@@ -192,7 +192,7 @@ async def test_schedule_modes(app: App, engine: SimpleNamespace, freq_screen: li
     text = await open_screen_of(app, "post_sched", pid)
     assert "⏰ <b>Programación</b> · Promo Cine" in text and "(global: cada 3 h)" in text
     assert "📆 Campaña: sin fechas" in text and "Próximo envío" not in text
-    assert button_texts(app) == ["✅ En rotación", "⚪ Con su propio horario", "⚪ Una sola vez",
+    assert button_texts(app) == ["✅ En rotación", "⚪ Con su propio horario", "⚪ Difusión puntual",
                                  "⚪ Solo cuando lo envíe yo", "📆 Desde: —", "📆 Hasta: —", "🔙 Regresar"]
 
     await app.click(SUPER_ID, "Con su propio horario")
@@ -211,7 +211,7 @@ async def test_schedule_modes(app: App, engine: SimpleNamespace, freq_screen: li
     post = await load(app, Post, pid)
     assert post.mode == SchedMode.MANUAL and post.next_send_at is None and engine.woke == 2
 
-    await app.click(SUPER_ID, "Una sola vez")  # no date yet: it is asked first
+    await app.click(SUPER_ID, "Difusión puntual")  # no date yet: it is asked first
     assert "📆 <b>Fecha del envío</b> · Promo Cine" in app.last_text(SUPER_ID)
     await app.send(SUPER_ID, "32/13/2026 10:00")
     assert "Escribe la fecha y la hora así" in app.last_text(SUPER_ID)
@@ -230,7 +230,7 @@ async def test_schedule_modes(app: App, engine: SimpleNamespace, freq_screen: li
     await app.click(SUPER_ID, "En rotación")
     post = await load(app, Post, pid)
     assert post.mode == SchedMode.ROTATION and post.next_send_at is None and post.send_at is not None
-    await app.click(SUPER_ID, "Una sola vez")  # its date is still in the future: no question
+    await app.click(SUPER_ID, "Difusión puntual")  # its date is still in the future: no question
     post = await load(app, Post, pid)
     assert post.mode == SchedMode.ONCE and post.next_send_at == post.send_at
 
@@ -318,10 +318,10 @@ async def test_options_of_a_post(app: App, engine: SimpleNamespace) -> None:
 async def test_default_options_of_new_posts(app: App, engine: SimpleNamespace) -> None:
     text = await open_screen_of(app, "post_defaults")
     assert text.startswith("⚙️ <b>Opciones por defecto</b>\nSe aplican a los mensajes nuevos")
-    assert "🗑 Borrado automático: a las 24 h de enviarse" in text  # nothing stored yet: one day
+    assert "🗑 Borrado automático: ✖️ nunca" in text  # nothing stored yet: never
     assert button_texts(app)[:5] == ["✖️ Fijar", "✖️ Sin sonido", "✖️ Proteger contenido",
                                      "✖️ Vista previa de enlaces", "✅ Borrar su envío anterior"]
-    assert button_texts(app)[5:12] == ["⚪ Nunca", "⚪ 1 h", "⚪ 3 h", "⚪ 6 h", "⚪ 12 h", "✅ 1 día", "⚪ 2 días"]
+    assert button_texts(app)[5:12] == ["✅ Nunca", "⚪ 1 h", "⚪ 3 h", "⚪ 6 h", "⚪ 12 h", "⚪ 1 día", "⚪ 2 días"]
     assert "✖️ Spoiler" not in button_texts(app)
     await app.click(SUPER_ID, "Proteger contenido")
     await app.click(SUPER_ID, "6 h")

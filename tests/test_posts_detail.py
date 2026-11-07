@@ -56,11 +56,11 @@ async def test_list_describes_posts_and_puts_finished_ones_last(app: App, engine
     await open_menu(app, SUPER_ID, "posts")
     text = app.last_text(SUPER_ID)
     nxt = fmt.dt((await load(app, Post, own)).next_send_at, TZ)
-    assert text.startswith("📝 <b>Mensajes</b>\n🔁 rotación · ⏰ horario propio · 📆 una vez · ✋ manual")
+    assert text.startswith("📝 <b>Mensajes</b>\n🔁 rotación · ⏰ horario propio · 📢 puntual · ✋ manual")
     assert "1. ▶️ 🔁 <b>Promo &lt;Cine&gt;</b> · 🖼\n   └🎯 Todos · 📤 12 envíos" in text
     assert f"2. ▶️ ⏰ <b>Horario</b> · 📝\n   └🎯 Propios, Cine · 📅 {nxt}" in text
     assert "3. ⏸ 🔁 <b>Pausado</b> · 📝\n   └🎯 ⚠️ nadie · 📤 0 envíos" in text
-    assert "4. ✅ 📆 <b>Vieja</b> · 📝" in text  # finished posts last
+    assert "4. ✅ 📢 <b>Vieja</b> · 📝" in text  # finished posts last
     assert button_texts(app) == ["#1 Promo <Cine>", "#2 Horario", "#3 Pausado", "#4 Vieja", "➕ Nuevo mensaje",
                                  "⚙️ Opciones por defecto", "🔙 Regresar"]
     new, _ = app.find_button(SUPER_ID, "Nuevo mensaje")
@@ -136,7 +136,7 @@ async def test_detail_of_own_and_once_posts(app: App, engine: SimpleNamespace) -
     text = await open_post(app, once)
     assert "📌 Estado: ⏸ Pausado" in text and "🧩 Tipo: 🖼 Foto · sin botones" in text
     assert "🎯 Destino: ⚠️ ninguno, no se envía a nadie" in text
-    assert f"⏰ Envío: 📆 Una sola vez · {fmt.dt(when, TZ)}" in text and "📅 Próximo envío: <b>—</b>" in text
+    assert f"⏰ Envío: 📢 Difusión puntual · {fmt.dt(when, TZ)}" in text and "📅 Próximo envío: <b>—</b>" in text
     assert "🔼 Texto encima de la media: ✖️\n🫣 Spoiler: ✅" in text and "Vista previa de enlaces" not in text
     activate, _ = app.find_button(SUPER_ID, "Activar")
     assert activate["text"] == "▶️ Activar" and activate.get("style") == "success"

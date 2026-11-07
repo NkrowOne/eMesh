@@ -4,15 +4,19 @@ from __future__ import annotations
 
 from datetime import datetime, timedelta, timezone
 from types import SimpleNamespace
+from unittest.mock import AsyncMock
 from zoneinfo import ZoneInfo
 
 import pytest
+from sqlalchemy import select
 
 from app.bot.routers.posts import PwCB
 from app.db.base import utcnow
 from app.db.models import Bot as BotRecord
-from app.db.models import ChatGroup, ChatOrigin, Post, PostStatus, SchedMode
+from app.db.models import Chat, ChatGroup, ChatOrigin, Post, PostStatus, Run, SchedMode
+from app.services.scheduler import Scheduler
 from tests.conftest import MAIN_BOT_ID, OWNER2_ID, SUPER_ID, App
+from tests.test_engine import make_chats, texts_in
 from tests.test_posts_helpers import (  # noqa: F401 - fixtures
     CLONE_ID,
     EXPIRED,
@@ -115,8 +119,8 @@ async def test_wizard_text_post_with_colored_buttons_and_defaults(app: App, engi
     await app.click(SUPER_ID, "Continuar")
 
     text = app.last_text(SUPER_ID)
-    assert "⏰ <b>¿Cuándo se envía?</b> · 4/5" in text and "(global: cada 4 h · 08:00-22:00)" in text
-    assert button_texts(app)[:4] == ["🔁 En rotación (recomendado)", "⏰ Con su propio horario", "📆 Una sola vez",
+    assert "⏰ <b>¿Cuándo se envía?</b> · 4/5" in text and "(global: a las 12:00)" in text
+    assert button_texts(app)[:4] == ["🔁 En rotación (recomendado)", "⏰ Con su propio horario", "📢 Difusión puntual",
                                      "✋ Solo cuando lo envíe yo"]
     await app.click(SUPER_ID, "En rotación")
 
@@ -165,8 +169,8 @@ async def test_wizard_photo_post_to_a_group_of_chats_once(app: App, engine: Simp
     assert "👥 Lo recibirán: <b>1 chat</b> · 👤 1,200" in app.last_text(SUPER_ID)
     assert "✅ Cine (1)" in button_texts(app) and "⚪ Todos" in button_texts(app)
     await app.click(SUPER_ID, "Continuar")
-    await app.click(SUPER_ID, "Una sola vez")
-    assert "📆 <b>Una sola vez</b> · 4/5" in app.last_text(SUPER_ID)  # the date still belongs to step 4
+    await app.click(SUPER_ID, "Difusión puntual")
+    assert "📢 <b>Difusión puntual</b> · 4/5" in app.last_text(SUPER_ID)  # the date still belongs to step 4
     assert "🗺 Zona horaria: Europe/Madrid" in app.last_text(SUPER_ID)
     await app.send(SUPER_ID, "mañana por la tarde")
     assert "Escribe la fecha y la hora así" in app.last_text(SUPER_ID)
@@ -187,7 +191,7 @@ async def test_wizard_photo_post_to_a_group_of_chats_once(app: App, engine: Simp
     assert post.send_at == expected and post.next_send_at == expected and post.delete_after == 2880
     text = app.last_text(SUPER_ID)
     assert "✅ Mensaje guardado" in text and "🎯 Destino: 🗂 Cine → 1 chat (👤 1,200)" in text
-    assert "⏰ Envío: 📆 Una sola vez · " in text and "🧩 Tipo: 🖼 Foto · 🔘 2 botones" in text
+    assert "⏰ Envío: 📢 Difusión puntual · " in text and "🧩 Tipo: 🖼 Foto · 🔘 2 botones" in text
     assert "🫣 Spoiler: ✖️" in text and "🗑 Borrado automático: a las 48 h de enviarse" in text  # visual media
 
 
@@ -205,7 +209,7 @@ async def test_wizard_own_schedule_opens_the_frequency_editor(app: App, engine: 
     await app.click(SUPER_ID, "Continuar")
     assert "(global: cada 2 h · 08:00-22:00)" in app.last_text(SUPER_ID)
     await app.click(SUPER_ID, "Con su propio horario")
-    assert "✅ 1 día" in button_texts(app) and freq_screen == []  # no default stored: one day
+    assert "✅ No borrar" in button_texts(app) and freq_screen == []  # no default stored: never
     await app.click(SUPER_ID, "1 día")
 
     post = await only_post(app)
@@ -252,7 +256,7 @@ async def test_wizard_back_goes_to_the_previous_step_keeping_answers(app: App, e
     assert "· 2/5" in app.last_text(SUPER_ID)
     await app.click(SUPER_ID, "Sin botones")
     await app.click(SUPER_ID, "Continuar")
-    await app.click(SUPER_ID, "Una sola vez")
+    await app.click(SUPER_ID, "Difusión puntual")
     await app.click(SUPER_ID, "Regresar")
     assert "¿Cuándo se envía?" in app.last_text(SUPER_ID)
     await app.click(SUPER_ID, "En rotación")
@@ -372,8 +376,8 @@ async def test_wizard_step_5_stores_each_choice(app: App, engine: SimpleNamespac
 
 async def test_wizard_step_5_preselects_the_default_of_the_network(app: App, engine: SimpleNamespace) -> None:
     await to_step_5(app, "En rotación")
-    assert step_5_rows(app) == [["⚪ 1 h", "⚪ 3 h", "⚪ 6 h"], ["⚪ 12 h", "✅ 1 día", "⚪ 2 días"], ["⚪ No borrar"],
-                                ["🔙 Regresar", "❌ Cancelar"]]  # no default stored: one day
+    assert step_5_rows(app) == [["⚪ 1 h", "⚪ 3 h", "⚪ 6 h"], ["⚪ 12 h", "⚪ 1 día", "⚪ 2 días"], ["✅ No borrar"],
+                                ["🔙 Regresar", "❌ Cancelar"]]  # no default stored: never
     for stored, rows in (
         (360, [["⚪ 1 h", "⚪ 3 h", "✅ 6 h"], ["⚪ 12 h", "⚪ 1 día", "⚪ 2 días"], ["⚪ No borrar"]]),
         (0, [["⚪ 1 h", "⚪ 3 h", "⚪ 6 h"], ["⚪ 12 h", "⚪ 1 día", "⚪ 2 días"], ["✅ No borrar"]]),
@@ -432,14 +436,14 @@ async def test_wizard_once_mode_asks_the_date_then_step_5(app: App, engine: Simp
     await app.send(SUPER_ID, "Gran estreno")
     await app.click(SUPER_ID, "Sin botones")
     await app.click(SUPER_ID, "Continuar")
-    await app.click(SUPER_ID, "Una sola vez")
-    assert "📆 <b>Una sola vez</b> · 4/5" in app.last_text(SUPER_ID)
+    await app.click(SUPER_ID, "Difusión puntual")
+    assert "📢 <b>Difusión puntual</b> · 4/5" in app.last_text(SUPER_ID)
     day = (utcnow() + timedelta(days=2)).astimezone(MADRID)
     await app.send(SUPER_ID, day.strftime("%d/%m/%Y") + " 21:00")
     assert app.last_text(SUPER_ID) == STEP_5 and await all_posts(app) == []
-    await app.click(SUPER_ID, "Regresar")  # back to step 4: the date is asked again with 📆 Una sola vez
+    await app.click(SUPER_ID, "Regresar")  # back to step 4: the date is asked again with 📢 Difusión puntual
     assert "⏰ <b>¿Cuándo se envía?</b> · 4/5" in app.last_text(SUPER_ID)
-    await app.click(SUPER_ID, "Una sola vez")
+    await app.click(SUPER_ID, "Difusión puntual")
     await app.send(SUPER_ID, day.strftime("%d/%m/%Y") + " 21:00")
     assert app.last_text(SUPER_ID) == STEP_5
 
@@ -447,7 +451,7 @@ async def test_wizard_once_mode_asks_the_date_then_step_5(app: App, engine: Simp
     monkeypatch.setattr("app.bot.routers.posts.utcnow", lambda: later)  # the date passes while step 5 is open
     await app.click(SUPER_ID, "12 h")
     text = app.last_text(SUPER_ID)
-    assert text.startswith("⚠️ Esa fecha ya ha pasado.\n\n📆 <b>Una sola vez</b> · 4/5") and await all_posts(app) == []
+    assert text.startswith("⚠️ Esa fecha ya ha pasado.\n\n📢 <b>Difusión puntual</b> · 4/5") and await all_posts(app) == []
     nxt = day + timedelta(days=1)
     await app.send(SUPER_ID, nxt.strftime("%d/%m/%Y") + " 10:00")
     assert app.last_text(SUPER_ID) == STEP_5
@@ -457,3 +461,88 @@ async def test_wizard_once_mode_asks_the_date_then_step_5(app: App, engine: Simp
     expected = datetime(nxt.year, nxt.month, nxt.day, 10, 0, tzinfo=MADRID)
     assert (post.mode, post.send_at, post.next_send_at, post.delete_after) == (SchedMode.ONCE, expected, expected, 720)
     assert "🗑 Borrado automático: a las 12 h de enviarse" in app.last_text(SUPER_ID)
+
+
+# --- 📢 Difusión puntual › 🚀 Ahora mismo ------------------------------------------------------------------------
+async def to_date_step(app: App) -> None:
+    """A text post without buttons, to everyone, in 📢 Difusión puntual: waiting for the date (step 4)."""
+    await start_wizard(app)
+    await app.send(SUPER_ID, "Aviso urgente")
+    await app.click(SUPER_ID, "Sin botones")
+    await app.click(SUPER_ID, "Continuar")
+    await app.click(SUPER_ID, "Difusión puntual")
+    assert "📢 <b>Difusión puntual</b> · 4/5" in app.last_text(SUPER_ID)
+    assert "🚀 Ahora mismo" in button_texts(app)
+
+
+async def all_runs(app: App) -> list[Run]:
+    async with app.db() as s:
+        return list((await s.execute(select(Run))).scalars())
+
+
+async def test_wizard_send_right_now_creates_a_once_post_that_the_scheduler_sends_once(
+        app: App, monkeypatch: pytest.MonkeyPatch) -> None:
+    monkeypatch.setattr(Scheduler, "_refresh_chats", AsyncMock())
+    monkeypatch.setattr(Scheduler, "_summary", AsyncMock())
+    pks = await make_chats(app, 2)
+    before = utcnow()
+    await to_date_step(app)
+    button, _ = app.find_button(SUPER_ID, "Ahora mismo")
+    assert button.get("style") == "success"
+    await app.click(SUPER_ID, "Ahora mismo")
+    assert app.last_text(SUPER_ID) == STEP_5 and await all_posts(app) == []  # created only after step 5
+    await app.click(SUPER_ID, "No borrar")
+
+    post = await only_post(app)
+    assert post.mode == SchedMode.ONCE and post.status == PostStatus.ACTIVE and post.runs_count == 0
+    assert post.send_at is not None and before <= post.send_at <= utcnow()
+    assert post.next_send_at == post.send_at
+    assert "⏰ Envío: 📢 Difusión puntual · " in app.last_text(SUPER_ID)
+
+    await app.scheduler.tick(wait=True)
+    async with app.db() as s:
+        chats = list((await s.execute(select(Chat).where(Chat.id.in_(pks)))).scalars())
+    assert len(chats) == 2
+    for chat in chats:
+        assert texts_in(app, chat.chat_id) == ["Aviso urgente"]
+    post = await only_post(app)
+    assert (post.status, post.next_send_at, post.runs_count) == (PostStatus.DONE, None, 1)
+    [run] = await all_runs(app)
+    assert run.post_id == post.id and run.sent == 2
+
+    await app.scheduler.tick(wait=True)  # it is done: nothing more is sent
+    assert len(await all_runs(app)) == 1
+    for chat in chats:
+        assert texts_in(app, chat.chat_id) == ["Aviso urgente"]
+
+
+async def test_wizard_back_from_step_5_returns_to_the_date_step_after_send_right_now(app: App) -> None:
+    await to_date_step(app)
+    await app.click(SUPER_ID, "Ahora mismo")
+    assert app.last_text(SUPER_ID) == STEP_5
+    await app.click(SUPER_ID, "Regresar")  # back to step 4: the mode is asked again
+    assert "⏰ <b>¿Cuándo se envía?</b> · 4/5" in app.last_text(SUPER_ID) and await all_posts(app) == []
+    await app.click(SUPER_ID, "Difusión puntual")
+    assert "📢 <b>Difusión puntual</b> · 4/5" in app.last_text(SUPER_ID) and "🚀 Ahora mismo" in button_texts(app)
+    await app.click(SUPER_ID, "Ahora mismo")  # it can be chosen again
+    assert app.last_text(SUPER_ID) == STEP_5
+
+
+async def test_wizard_a_date_typed_after_send_right_now_replaces_it(app: App, monkeypatch: pytest.MonkeyPatch) -> None:
+    monkeypatch.setattr(Scheduler, "_refresh_chats", AsyncMock())
+    monkeypatch.setattr(Scheduler, "_summary", AsyncMock())
+    await make_chats(app, 1)
+    await to_date_step(app)
+    await app.click(SUPER_ID, "Ahora mismo")
+    await app.click(SUPER_ID, "Regresar")
+    await app.click(SUPER_ID, "Difusión puntual")
+    day = (utcnow() + timedelta(days=3)).astimezone(MADRID)
+    await app.send(SUPER_ID, day.strftime("%d/%m/%Y") + " 20:30")
+    assert app.last_text(SUPER_ID) == STEP_5
+    await app.click(SUPER_ID, "No borrar")
+
+    post = await only_post(app)
+    expected = datetime(day.year, day.month, day.day, 20, 30, tzinfo=MADRID)
+    assert post.mode == SchedMode.ONCE and post.send_at == expected and post.next_send_at == expected
+    await app.scheduler.tick(wait=True)  # its date is in the future: it is not sent right now
+    assert await all_runs(app) == [] and (await only_post(app)).status == PostStatus.ACTIVE
