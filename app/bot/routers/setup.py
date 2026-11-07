@@ -37,16 +37,16 @@ WINDOW = "08:00-22:00"
 JOIN_OPTIONS: tuple[tuple[bool, bool | None], ...] = ((True, True), (True, False), (False, None))
 # Step 2: the longest pause of a partner in hours (0 = until they resume it); None: partners can't pause.
 PAUSE_OPTIONS: tuple[int | None, ...] = (*PAUSE_MAX_CHOICES, None)
-# Step 3: the global frequency: every 2, 4, 6 or 12 h from 08:00 to 22:00, or once a day at 12:00.
+# Step 3: the global frequency: once a day at 12:00 (the default), or every 2, 4, 6 or 12 h from 08:00 to 22:00.
 FREQ_OPTIONS: tuple[dict[str, Any], ...] = tuple(freq.normalize(f) for f in (
-    *({"mode": "interval", "every": hours * 60, "window": WINDOW, "days": freq.ALL_DAYS} for hours in (2, 4, 6, 12)),
     {"mode": "times", "times": "12:00", "days": freq.ALL_DAYS},
+    *({"mode": "interval", "every": hours * 60, "window": WINDOW, "days": freq.ALL_DAYS} for hours in (2, 4, 6, 12)),
 ))
 # Step 4: how long new posts stay published, in minutes (0 = never deleted).
 DELETE_OPTIONS = (60, 360, 720, 1440, 2880, 0)
 OPTIONS: dict[int, tuple[Any, ...]] = {1: JOIN_OPTIONS, 2: PAUSE_OPTIONS, 3: FREQ_OPTIONS, 4: DELETE_OPTIONS}
-LAYOUT = {1: (1, 1, 1), 2: (1, 1, 1, 1, 1), 3: (2, 2, 1), 4: (3, 2, 1)}  # buttons per row of each step
-RECOMMENDED = {1: 0, 2: 0}  # the option marked «(recomendado)»
+LAYOUT = {1: (1, 1, 1), 2: (1, 1, 1, 1, 1), 3: (1, 2, 2), 4: (3, 2, 1)}  # buttons per row of each step
+RECOMMENDED = {1: 0, 3: 0}  # the option marked «(recomendado)»
 KEEP_MAX = 45  # characters of a current value shown on its «Mantener» button
 
 
@@ -69,7 +69,7 @@ def can_setup(ctx: Ctx) -> bool:
 
 
 def delete_after_of(ws: BotRecord) -> int:
-    """Minutes new posts stay published (``Bot.post_defaults``, else the default: one day; 0 = never deleted)."""
+    """Minutes new posts stay published (``Bot.post_defaults``, else the default; 0 = never deleted)."""
     stored = ws.post_defaults.get("delete_after") if isinstance(ws.post_defaults, dict) else None
     return stored if isinstance(stored, int) and stored >= 0 else DEFAULT_DELETE_AFTER
 
@@ -126,8 +126,8 @@ def _labels(ctx: Ctx, step: int) -> list[str]:
                   for hours in PAUSE_MAX_CHOICES]
         labels.append(ctx.t("setup.pause.no"))
     elif step == 3:
-        labels = [ctx.t("setup.freq.every", t=freq.every_text(f["every"], ctx.lang)) for f in FREQ_OPTIONS[:-1]]
-        labels.append(ctx.t("setup.freq.daily"))
+        labels = [ctx.t("setup.freq.daily")]
+        labels += [ctx.t("setup.freq.every", t=freq.every_text(f["every"], ctx.lang)) for f in FREQ_OPTIONS[1:]]
     else:
         labels = [duration_text(ctx, minutes) if minutes else ctx.t("setup.delete.never") for minutes in DELETE_OPTIONS]
     if step in RECOMMENDED:

@@ -130,13 +130,13 @@ class EventKind:
     BOT_RESUMED = "bot_resumed"
 
 
-# A new post is deleted from the chats one day after it is sent (the wizard asks; 0 = never).
-DEFAULT_DELETE_AFTER = 1440
-# Partners may pause the distribution in their chats for one day at most, unless the admins choose otherwise.
-DEFAULT_PAUSE_MAX_HOURS = 24
+# A new post stays in the chats until it is deleted (the wizard asks how long; 0 = never deleted).
+DEFAULT_DELETE_AFTER = 0
+# Partners may pause the distribution in their chats until they resume it (0 = no limit), unless the admins limit it.
+DEFAULT_PAUSE_MAX_HOURS = 0
 
-# Global frequency of a new bot: a post every 4 hours from 08:00 to 22:00 (08, 12, 16 and 20 h), every day.
-DEFAULT_FREQ: dict[str, Any] = {"mode": "interval", "every": 240, "window": "08:00-22:00", "days": "0123456"}
+# Global frequency of a new bot: once a day, at 12:00 (a post can also be a one-off broadcast: SchedMode.ONCE).
+DEFAULT_FREQ: dict[str, Any] = {"mode": "times", "times": "12:00", "days": "0123456"}
 
 
 # ---------------------------------------------------------------------------

@@ -22,7 +22,7 @@ def upgrade() -> None:
     with op.batch_alter_table('em_bots', schema=None) as batch_op:
         batch_op.add_column(sa.Column('setup_done', sa.Boolean(), server_default=sa.true(), nullable=False))
         batch_op.add_column(sa.Column('partners_can_pause', sa.Boolean(), server_default=sa.true(), nullable=False))
-        batch_op.add_column(sa.Column('pause_max_hours', sa.Integer(), server_default='24', nullable=False))
+        batch_op.add_column(sa.Column('pause_max_hours', sa.Integer(), server_default='0', nullable=False))
 
     # ### end Alembic commands ###
 

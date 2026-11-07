@@ -23,6 +23,8 @@ if TYPE_CHECKING:
     from app.db.models import Bot as BotRecord
     from app.db.models import ChatGroup, Post
 
+DEFAULT_EVERY = 240  # minutes: an interval frequency without a valid "every" (4 h)
+DEFAULT_TIMES = "12:00"  # a times frequency without valid times
 MIN_EVERY = 10  # minutes
 MAX_EVERY = 1440
 MAX_TIMES = 24
@@ -53,13 +55,11 @@ def normalize(freq: dict[str, Any] | None) -> dict[str, Any]:
     days = "".join(sorted({c for c in str(src.get("days", ALL_DAYS)) if c in ALL_DAYS}))
     if src.get("mode") == "times":
         times = ",".join(f"{h:02d}:{m:02d}" for h, m in _times_of(str(src.get("times") or "")))
-        if times:
-            return {"mode": "times", "times": times, "days": days}
-        src = DEFAULT_FREQ
+        return {"mode": "times", "times": times or DEFAULT_TIMES, "days": days}
     try:
-        every = int(src.get("every") or DEFAULT_FREQ["every"])
+        every = int(src.get("every") or DEFAULT_EVERY)
     except (TypeError, ValueError):
-        every = int(DEFAULT_FREQ["every"])
+        every = DEFAULT_EVERY
     every = min(max(every, MIN_EVERY), MAX_EVERY)
     window = str(src.get("window") or "")
     if window and _window_of(window) is None:

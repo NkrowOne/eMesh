@@ -1,7 +1,7 @@
 STRINGS = {
     # --- list ---
     "po.list.title": "📝 <b>Posts</b>",
-    "po.list.legend": "🔁 rotation · ⏰ own schedule · 📆 once · ✋ manual",
+    "po.list.legend": "🔁 rotation · ⏰ own schedule · 📢 one-off · ✋ manual",
     "po.list.item": "{n}. {status} {mode} <b>{name}</b> · {kind}\n   └🎯 {targets} · {extra}",
     "po.list.runs": "📤 {sends}",
     "po.list.next": "📅 {date}",
@@ -60,12 +60,12 @@ STRINGS = {
         "   └ It takes turns with the other posts at the frequency of each channel (global: {freq}).\n"
         "⏰ <b>On its own schedule</b>\n"
         "   └ It has its own frequency; at each slot it goes to all its chats.\n"
-        "📆 <b>Just once</b>\n"
-        "   └ On the date and time chosen; then it is finished.\n"
+        "📢 <b>One-off broadcast</b>\n"
+        "   └ It is sent just once to its whole target: right now or on the date you choose.\n"
         "✋ <b>Only when sent by hand</b>\n"
         "   └ Only with 🚀 Send now."
     ),
-    "po.w.date": "📆 <b>Just once</b> · 4/5\n\n{ask}",
+    "po.w.date": "📢 <b>One-off broadcast</b> · 4/5\n\nPress 🚀 <b>Right now</b> or {ask}",
     "po.w.delete": (
         "🗑 <b>How long does it stay published?</b> · 5/5\n"
         "   └ After that time it is deleted from the channels automatically."
@@ -85,10 +85,11 @@ STRINGS = {
     "po.mode.rotation": "🔁 In rotation",
     "po.mode.rotation_rec": "🔁 In rotation (recommended)",
     "po.mode.own": "⏰ On its own schedule",
-    "po.mode.once": "📆 Just once",
+    "po.mode.once": "📢 One-off broadcast",
+    "po.w.now": "🚀 Right now",
     "po.mode.manual": "✋ Only when I send it",
     "po.date.ask": (
-        "Send the date and time: <code>25/12/2026 20:00</code>, <code>25/12 20:00</code> or just the time "
+        "send the date and time: <code>25/12/2026 20:00</code>, <code>25/12 20:00</code> or just the time "
         "(<code>20:00</code>: today, or tomorrow when it has already passed).\n🗺 Timezone: {tz}"
     ),
     "po.saved": "✅ Post saved",
@@ -108,7 +109,7 @@ STRINGS = {
     "po.d.mode": "⏰ Sending: {value}",
     "po.dm.rotation": "🔁 In rotation",
     "po.dm.own": "⏰ Own schedule · {freq}",
-    "po.dm.once": "📆 Just once · {date}",
+    "po.dm.once": "📢 One-off broadcast · {date}",
     "po.dm.manual": "✋ Manual",
     "po.dh.rotation": "   └ Each channel gets it in turns, at its frequency.",
     "po.dh.own": "   └ At each slot of its schedule it goes to all its chats.",
@@ -213,8 +214,8 @@ STRINGS = {
         "   └ It takes turns with the other posts at the frequency of each channel (global: {freq}).\n"
         "⏰ <b>On its own schedule</b>\n"
         "   └ At each slot of its schedule it goes to all its chats.\n"
-        "📆 <b>Just once</b>\n"
-        "   └ On the date chosen; then it is finished.\n"
+        "📢 <b>One-off broadcast</b>\n"
+        "   └ It is sent just once, on the date chosen; then it is finished.\n"
         "✋ <b>Only when I send it</b>\n"
         "   └ Only with 🚀 Send now."
     ),

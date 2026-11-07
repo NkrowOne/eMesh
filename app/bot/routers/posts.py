@@ -114,7 +114,7 @@ LIST_GROUPS = 2
 DETAIL_GROUPS = 10
 PICKER_GROUPS = 60  # above groups.MAX_GROUPS: a network may have more groups from before that limit
 STATUS_ICON = {PostStatus.ACTIVE: "▶️", PostStatus.PAUSED: "⏸", PostStatus.DONE: "✅"}
-MODE_ICON = {SchedMode.ROTATION: "🔁", SchedMode.OWN: "⏰", SchedMode.ONCE: "📆", SchedMode.MANUAL: "✋"}
+MODE_ICON = {SchedMode.ROTATION: "🔁", SchedMode.OWN: "⏰", SchedMode.ONCE: "📢", SchedMode.MANUAL: "✋"}
 MODES = (SchedMode.ROTATION, SchedMode.OWN, SchedMode.ONCE, SchedMode.MANUAL)
 OPTIONS = ("pin", "silent", "protect", "link_preview", "caption_above", "spoiler", "delete_previous")
 DEFAULT_OPTIONS = ("pin", "silent", "protect", "link_preview", "delete_previous")  # Bot.post_defaults (+ delete_after)
@@ -864,8 +864,9 @@ async def wizard_prompt(event: Event, ctx: Ctx, session: AsyncSession, step: Sta
     elif step == PostsFSM.new_delete:
         text = ctx.t("po.w.delete")
         rows = lifetime_rows(ctx, defaults_of(ctx.ws_rec)["delete_after"])
-    else:
+    else:  # the date of a one-off broadcast, or right now
         text = ctx.t("po.w.date", ask=ctx.t("po.date.ask", tz=fmt.esc(ctx.bot_tz)))
+        rows = [[btn(ctx.t("po.w.now"), PwCB(a="now"), style="success")]]
     back = None if step == PostsFSM.new_content else PwCB(a="back")
     await prompt(event, ctx, with_notice(text, error), cancel_screen="posts", extra_rows=rows, back=back)
 
@@ -1033,8 +1034,17 @@ async def on_wizard_date(message: Message, ctx: Ctx, session: AsyncSession, stat
     if when is None:
         await wizard_retry(message, ctx, session, state, PostsFSM.new_date, error or "")
         return
-    await state.update_data(mode=SchedMode.ONCE, send_at=when.isoformat())  # FSM data is JSON
+    await state.update_data(mode=SchedMode.ONCE, send_at=when.isoformat(), now=False)  # FSM data is JSON
     await wizard_goto(message, ctx, session, state, PostsFSM.new_delete)
+
+
+@router.callback_query(PwCB.filter(F.a == "now"))
+async def on_wizard_now(call: CallbackQuery, ctx: Ctx, session: AsyncSession, state: FSMContext) -> None:
+    """📢 Difusión puntual › 🚀 Ahora mismo: it is sent once as soon as the wizard ends."""
+    if await wizard_data(call, ctx, session, state, PostsFSM.new_date) is None:
+        return
+    await state.update_data(mode=SchedMode.ONCE, send_at=None, now=True)
+    await wizard_goto(call, ctx, session, state, PostsFSM.new_delete)
 
 
 @router.callback_query(PwCB.filter(F.a == "del"))
@@ -1074,8 +1084,9 @@ async def finish_wizard(call: CallbackQuery, ctx: Ctx, session: AsyncSession, st
         await wizard_prompt(call, ctx, session, PostsFSM.new_targets, {**data, "targets": []},
                             ctx.t("po.tg.need_one"))
         return
-    send_at = stored_datetime(data.get("send_at")) if mode == SchedMode.ONCE else None
-    if mode == SchedMode.ONCE and (send_at is None or send_at <= utcnow()):  # its date passed meanwhile
+    right_now = mode == SchedMode.ONCE and bool(data.get("now"))
+    send_at = (utcnow() if right_now else stored_datetime(data.get("send_at"))) if mode == SchedMode.ONCE else None
+    if mode == SchedMode.ONCE and not right_now and (send_at is None or send_at <= utcnow()):  # date passed meanwhile
         await state.set_state(PostsFSM.new_date)
         await wizard_prompt(call, ctx, session, PostsFSM.new_date, data, ctx.t("freq.err.past"))
         return

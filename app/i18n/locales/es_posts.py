@@ -1,7 +1,7 @@
 STRINGS = {
     # --- list ---
     "po.list.title": "📝 <b>Mensajes</b>",
-    "po.list.legend": "🔁 rotación · ⏰ horario propio · 📆 una vez · ✋ manual",
+    "po.list.legend": "🔁 rotación · ⏰ horario propio · 📢 puntual · ✋ manual",
     "po.list.item": "{n}. {status} {mode} <b>{name}</b> · {kind}\n   └🎯 {targets} · {extra}",
     "po.list.runs": "📤 {sends}",
     "po.list.next": "📅 {date}",
@@ -58,12 +58,12 @@ STRINGS = {
         "   └ Se turna con los demás mensajes según la frecuencia de cada canal (global: {freq}).\n"
         "⏰ <b>Con su propio horario</b>\n"
         "   └ Tiene su propia frecuencia; en cada turno se envía a todos sus chats.\n"
-        "📆 <b>Una sola vez</b>\n"
-        "   └ En la fecha y hora que elijas; después queda terminado.\n"
+        "📢 <b>Difusión puntual</b>\n"
+        "   └ Se envía una sola vez a todo su destino: ahora mismo o en la fecha que elijas.\n"
         "✋ <b>Solo cuando lo envíes</b>\n"
         "   └ Únicamente con 🚀 Enviar ahora."
     ),
-    "po.w.date": "📆 <b>Una sola vez</b> · 4/5\n\n{ask}",
+    "po.w.date": "📢 <b>Difusión puntual</b> · 4/5\n\nPulsa 🚀 <b>Ahora mismo</b> o {ask}",
     "po.w.delete": (
         "🗑 <b>¿Cuánto tiempo sigue publicado?</b> · 5/5\n"
         "   └ Pasado ese tiempo se borra solo de los canales."
@@ -83,10 +83,11 @@ STRINGS = {
     "po.mode.rotation": "🔁 En rotación",
     "po.mode.rotation_rec": "🔁 En rotación (recomendado)",
     "po.mode.own": "⏰ Con su propio horario",
-    "po.mode.once": "📆 Una sola vez",
+    "po.mode.once": "📢 Difusión puntual",
+    "po.w.now": "🚀 Ahora mismo",
     "po.mode.manual": "✋ Solo cuando lo envíe yo",
     "po.date.ask": (
-        "Envía la fecha y la hora: <code>25/12/2026 20:00</code>, <code>25/12 20:00</code> o solo la hora "
+        "envía la fecha y la hora: <code>25/12/2026 20:00</code>, <code>25/12 20:00</code> o solo la hora "
         "(<code>20:00</code>: hoy, o mañana si ya ha pasado).\n🗺 Zona horaria: {tz}"
     ),
     "po.saved": "✅ Mensaje guardado",
@@ -106,7 +107,7 @@ STRINGS = {
     "po.d.mode": "⏰ Envío: {value}",
     "po.dm.rotation": "🔁 En rotación",
     "po.dm.own": "⏰ Horario propio · {freq}",
-    "po.dm.once": "📆 Una sola vez · {date}",
+    "po.dm.once": "📢 Difusión puntual · {date}",
     "po.dm.manual": "✋ Manual",
     "po.dh.rotation": "   └ Cada canal lo recibe por turnos según su frecuencia.",
     "po.dh.own": "   └ En cada turno de su horario se envía a todos sus chats.",
@@ -211,8 +212,8 @@ STRINGS = {
         "   └ Se turna con los demás mensajes según la frecuencia de cada canal (global: {freq}).\n"
         "⏰ <b>Con su propio horario</b>\n"
         "   └ En cada turno de su horario se envía a todos sus chats.\n"
-        "📆 <b>Una sola vez</b>\n"
-        "   └ En la fecha elegida; después queda terminado.\n"
+        "📢 <b>Difusión puntual</b>\n"
+        "   └ Se envía una sola vez, en la fecha elegida; después queda terminado.\n"
         "✋ <b>Solo cuando lo envíe yo</b>\n"
         "   └ Únicamente con 🚀 Enviar ahora."
     ),
