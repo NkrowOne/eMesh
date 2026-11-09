@@ -167,8 +167,11 @@ async def test_token_flow(app: App, caplog: pytest.LogCaptureFixture) -> None:
     assert app.manager.is_running(CLONE_ID)
     notice = next(t for t in dms(app, SUPER_ID) if "Nuevo clon" in t)
     assert f"@{CLONE_USERNAME}" in notice and "Token de @BotFather" in notice and "Pendiente" not in notice
-    # every message sent while the token was asked was deleted at once
-    assert len({c.params["message_id"] for c in app.fake.calls_of("deleteMessage", chat_id=USER_ID)}) == 6
+    # every message sent while the token was asked was deleted at once (the bot's own replaced prompts aside)
+    bot_messages = {c.result["message_id"] for c in app.fake.calls if isinstance(c.result, dict)
+                    and "message_id" in c.result}
+    deleted = {c.params["message_id"] for c in app.fake.calls_of("deleteMessage", chat_id=USER_ID)}
+    assert len(deleted - bot_messages) == 6
     # the token never shows up: not in any text sent by the bots, not in the logs
     assert all(clone_token not in json.dumps(c.params, ensure_ascii=False) for c in app.fake.calls)
     assert not [r for r in caplog.records
