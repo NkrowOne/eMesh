@@ -56,7 +56,7 @@ STRINGS = {
     "po.w.continue": "✅ Continue",
     "po.w.when": (
         "⏰ <b>When is it sent?</b> · 4/5\n\n"
-        "🔁 <b>In rotation</b> (recommended)\n"
+        "🔁 <b>In rotation</b>\n"
         "   └ It takes turns with the other posts at the frequency of each channel (global: {freq}).\n"
         "⏰ <b>On its own schedule</b>\n"
         "   └ It has its own frequency; at each slot it goes to all its chats.\n"
@@ -83,7 +83,6 @@ STRINGS = {
         "Code - copy: PROMO10 🔵</pre>"
     ),
     "po.mode.rotation": "🔁 In rotation",
-    "po.mode.rotation_rec": "🔁 In rotation (recommended)",
     "po.mode.own": "⏰ On its own schedule",
     "po.mode.once": "📢 One-off broadcast",
     "po.w.now": "🚀 Right now",

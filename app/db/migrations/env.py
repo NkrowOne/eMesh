@@ -22,10 +22,16 @@ def _url() -> str:
     return url
 
 
+def _own_table(name: str | None, type_: str, parent_names: dict) -> bool:  # noqa: ARG001
+    """Autogenerate only looks at eMesh's tables (``em_``): the database may be shared with eButtons (``eb_``)."""
+    return type_ != "table" or bool(name and name.startswith("em_"))
+
+
 def _configure(**kw) -> None:  # noqa: ANN003
     context.configure(
         target_metadata=target_metadata,
         version_table=VERSION_TABLE,
+        include_name=_own_table,
         render_as_batch=_url().startswith("sqlite"),
         compare_type=True,
         **kw,

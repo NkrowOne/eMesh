@@ -99,10 +99,8 @@ STRINGS = {
     "ch.filter.rights": "⚠️",
     "ch.btn.add_channel": "➕ Añadir canal ↗",
     "ch.btn.add_group": "➕ Añadir grupo ↗",
-    "ch.btn.import": "📥 Importar",
     "ch.btn.partners_msg": "📢 Avisar a los dueños",
     "ch.btn.requests": "⏳ Solicitudes ({n})",
-    "ch.btn.chats": "📣 Canales y grupos",
     # --- detail of a chat ---
     "ch.d.id": "🆔 <code>{id}</code>",
     "ch.d.link": "🔗 {link}",
@@ -179,20 +177,6 @@ STRINGS = {
     "ch.paused.until_open": "hasta que lo reanude",
     "ch.paused.until_admin": "sin fecha de fin",
     "ch.paused.empty": "✅ No hay chats pausados.",
-    # --- 📥 import ---
-    "ch.import.prompt": "📥 <b>Importar canales</b>\n\nSi el bot ya es administrador en canales o grupos (por ejemplo, "
-                        "venías de otro bot), envía sus @usuarios o IDs, uno por línea.",
-    "ch.import.invalid": "⚠️ Envía entre 1 y {max} @usuarios o IDs.",
-    "ch.import.title": "📥 <b>Importación terminada</b>",
-    "ch.import.added": "✅ Añadidos: {n}",
-    "ch.import.pending": "⏳ Pendientes (faltan permisos o aprobación): {n}",
-    "ch.import.existing": "☑️ Ya estaban: {n}",
-    "ch.import.not_admin": "⚠️ El bot no es admin: {n}",
-    "ch.import.not_found": "❓ No encontrados: {n}",
-    "ch.import.limit": "🔒 Sin hueco (límite de la red): {n}",
-    "ch.import.rejected": "🚫 No admitidos: {n}",
-    "ch.import.refs": "   └ {refs}",
-    "ch.btn.import_more": "📥 Importar más",
     # --- 📢 message to the partners ---
     "ch.pm.prompt": "📢 <b>Avisar a los dueños</b>\n\nEnvía el mensaje para los dueños de los canales externos "
                     "(<b>{n}</b> personas): texto, foto, vídeo… Les llegará tal cual.",

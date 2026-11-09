@@ -95,6 +95,9 @@ class FakeTelegram:
         self.star_balance: dict[int, int] = {}  # bot id -> stars (getMyStarBalance)
         self._invoice_ids = itertools.count(1)
         self.files: dict[str, bytes] = {}
+        self.profile_photos: dict[int, str] = {}  # bot/user id -> file_unique_id of its profile photo
+        self.profile_uploads: dict[int, bytes] = {}  # bot id -> bytes of the last setMyProfilePhoto
+        self._photo_uids = itertools.count(1)
         self._msg_ids: dict[int, itertools.count] = defaultdict(lambda: itertools.count(1000))
         self._update_ids = itertools.count(1)
         self._file_ids = itertools.count(1)
@@ -590,7 +593,26 @@ class FakeTelegram:
         return {"short_description": self.bots[token].get("short_description", "")}
 
     def m_getUserProfilePhotos(self, token: str, p: dict[str, Any]) -> dict[str, Any]:
-        return {"total_count": 0, "photos": []}
+        uid = self.profile_photos.get(int(p.get("user_id") or 0))
+        if uid is None:
+            return {"total_count": 0, "photos": []}
+        return {"total_count": 1,
+                "photos": [[{"file_id": f"pf_{uid}", "file_unique_id": uid, "width": 640, "height": 640}]]}
+
+    def m_setMyProfilePhoto(self, token: str, p: dict[str, Any]) -> bool:
+        photo = p.get("photo") if isinstance(p.get("photo"), dict) else {}
+        ref = str(photo.get("photo") or "")
+        upload = p.get(ref[len("attach://"):]) if ref.startswith("attach://") else None
+        if not isinstance(upload, str) or upload not in self.files or photo.get("type") != "static":
+            raise ApiError(400, "Bad Request: photo must be uploaded as a new static file")
+        bot_id = self.bot_id(token)
+        self.profile_uploads[bot_id] = self.files[upload]
+        self.profile_photos[bot_id] = f"profile{next(self._photo_uids)}"
+        return True
+
+    def m_removeMyProfilePhoto(self, token: str, p: dict[str, Any]) -> bool:
+        self.profile_photos.pop(self.bot_id(token), None)
+        return True
 
     def m_getFile(self, token: str, p: dict[str, Any]) -> dict[str, Any]:
         fid = str(p.get("file_id"))

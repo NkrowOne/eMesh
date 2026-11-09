@@ -8,7 +8,8 @@ from collections.abc import Callable, Sequence
 from contextvars import ContextVar
 from typing import TYPE_CHECKING, TypeVar
 
-from aiogram.exceptions import TelegramBadRequest, TelegramForbiddenError
+from aiogram import Bot
+from aiogram.exceptions import TelegramAPIError, TelegramBadRequest, TelegramForbiddenError
 from aiogram.filters.callback_data import CallbackData
 from aiogram.types import (
     CallbackQuery,
@@ -38,6 +39,11 @@ TEXT_LIMIT = 4096
 # "🛠 Gestionando @clone": set by the context middleware while a super admin manages another bot's network, and
 # shown on top of every panel so it is always clear which network is being changed.
 ws_banner: ContextVar[str] = ContextVar("ws_banner", default="")
+
+# Input prompts waiting for an answer: (bot id, chat id) -> message id. A prompt is always sent as the newest message
+# of the chat, so nothing covers it, and the message it replaces is deleted; once answered, the next panel replaces it.
+_prompts: dict[tuple[int, int], int] = {}
+_PROMPTS_MAX = 50_000
 
 
 def strip_button_icons(markup: InlineKeyboardMarkup | None) -> InlineKeyboardMarkup | None:
@@ -150,6 +156,43 @@ def _has_media(msg: Message) -> bool:
     return bool(msg.photo or msg.video or msg.animation or msg.document or msg.audio)
 
 
+def _where(event: Message | CallbackQuery) -> tuple[Bot, int, Message | None] | None:
+    """The bot, the chat and the message of the pressed button (callbacks) of a panel event."""
+    bot = event.bot
+    if bot is None:
+        return None
+    if isinstance(event, CallbackQuery):
+        pressed = event.message if isinstance(event.message, Message) else None
+        return bot, (pressed.chat.id if pressed is not None else event.from_user.id), pressed
+    return bot, event.chat.id, None
+
+
+async def _delete(bot: Bot, chat_id: int, message_id: int) -> None:
+    try:
+        await bot.delete_message(chat_id, message_id)
+    except TelegramAPIError as exc:  # already gone, or too old to delete
+        log.debug("Message %s of chat %s could not be deleted: %s", message_id, chat_id, exc)
+
+
+async def release_prompt(event: Message | CallbackQuery, new: bool = False) -> None:
+    """A panel is about to be shown: the prompt it replaces stops waiting. A typed answer (or a command) deletes the
+    prompt, as the new panel takes its place below; on its own buttons the prompt itself becomes the panel. ``show``
+    calls it; call it yourself only when you edit a panel without ``show`` (``new``: the pressed message stays)."""
+    where = _where(event)
+    if where is None:
+        return
+    bot, chat_id, pressed = where
+    key = (bot.id, chat_id)
+    waiting = _prompts.get(key)
+    if waiting is None:
+        return
+    if pressed is None:
+        del _prompts[key]
+        await _delete(bot, chat_id, waiting)
+    elif pressed.message_id == waiting and not new:
+        del _prompts[key]
+
+
 async def _send(
     bot_msg_target: Message | CallbackQuery,
     chat_id: int,
@@ -196,8 +239,9 @@ async def show(
 
     * Callback: edits the message in place when possible (text -> text); otherwise deletes it and
       sends a new one (media changes, too old to edit...).
-    * Message: always sends a new panel.
+    * Message: always sends a new panel (and deletes the input prompt it answers).
     """
+    await release_prompt(event, new)
     banner = ws_banner.get()
     if banner and not text.startswith(banner):
         text = f"{banner}\n\n{text}"
@@ -244,17 +288,34 @@ async def prompt(
     cancel_arg: int = 0,
     extra_rows: Sequence[Sequence[InlineKeyboardButton]] = (),
     back: CallbackData | None = None,
+    media_id: str | InputFile | None = None,
+    media_type: str | None = None,
 ) -> Message | None:
     """Asks the user for a text/media input. Pair it with ``state.set_state(...)``.
 
-    ``back`` adds "🔙 Regresar" (previous step of a multi-step flow) next to the Cancel button.
+    The prompt is always a new message at the bottom of the chat, right above where the user types, so nothing
+    covers it; the message it replaces is deleted (the panel of the pressed button, or the previous prompt).
+    ``back`` adds "🔙 Regresar" (previous step of a multi-step flow) next to the Cancel button; ``media_id`` /
+    ``media_type`` show a photo (or video, GIF) on top, as in :func:`show`.
     """
     rows = [list(r) for r in extra_rows]
     last = cancel_row(ctx.lang, cancel_screen, cancel_arg)
     if back is not None:
         last.insert(0, btn(t("common.back", ctx.lang), back))
     rows.append(last)
-    return await show(event, text, kb(*rows))
+    where = _where(event)
+    previous = _prompts.pop((where[0].id, where[1]), None) if where is not None else None
+    sent = await show(event, text, kb(*rows), media_id=media_id, media_type=media_type, new=True)
+    if where is not None:
+        bot, chat_id, pressed = where
+        replaced = {previous, pressed.message_id if pressed is not None else None}
+        for message_id in replaced - {None, sent.message_id if sent is not None else None}:
+            await _delete(bot, chat_id, message_id)  # type: ignore[arg-type]
+        if sent is not None:
+            if len(_prompts) >= _PROMPTS_MAX:
+                _prompts.clear()
+            _prompts[(bot.id, chat_id)] = sent.message_id
+    return sent
 
 
 callback_answered: ContextVar[bool] = ContextVar("callback_answered", default=False)

@@ -73,7 +73,7 @@ STRINGS = {
     "content.err.empty": "⚠️ El mensaje está vacío.",
     "content.err.text_long": "⚠️ El texto es demasiado largo: máximo 4096 caracteres.",
     "content.err.caption_long": "⚠️ Con foto, vídeo o archivo el texto puede tener como máximo 1024 caracteres. "
-                                "Acórtalo o envíalo sin la media.",
+                                "Acórtalo o envíalo sin el contenido multimedia.",
     "content.err.unsupported": "⚠️ Ese tipo de mensaje no se puede distribuir. Envía texto, foto, vídeo, GIF, "
                                "archivo, audio o nota de voz.",
     "content.err.format": "⚠️ Línea {line}: escribe cada botón así: <code>Nombre - https://enlace</code>.",

@@ -15,7 +15,7 @@ from app import i18n
 from app.bot.routers import setup_dispatcher
 from app.config import Settings, get_settings
 from app.db.session import LeaderLock, create_engine, create_sessionmaker
-from app.services import clones, logbook
+from app.services import clones, logbook, zones
 from app.services.publisher import Publisher
 from app.services.scheduler import Scheduler
 from app.telegram.fsm_storage import SQLStorage
@@ -139,6 +139,7 @@ async def amain() -> None:
         await manager.shutdown()
         await storage.close()
         await lock.release()
+        await zones.reset()  # the engine of eButtons' own database, when EBUTTONS_DATABASE_URL is set
         await engine.dispose()
 
 

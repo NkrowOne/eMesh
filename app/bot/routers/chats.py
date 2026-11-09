@@ -1,10 +1,9 @@
 """📣 Canales y grupos (admins): the list with filters, a chat's detail and its actions (groups of chats, check,
-pause, resume — a partner's pause too —, remove, ban), ⏸ Pausados, 📥 import and 📢 a message to the partners."""
+pause, resume — a partner's pause too —, remove, ban), ⏸ Pausados and 📢 a message to the partners."""
 from __future__ import annotations
 
 import asyncio
 import logging
-import re
 from datetime import datetime
 from typing import Any
 
@@ -17,7 +16,6 @@ from aiogram.types import CallbackQuery, InlineKeyboardButton, InlineKeyboardMar
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.bot.context import Ctx
-from app.config import Settings
 from app.db.base import utcnow
 from app.db.models import Chat, ChatGroup, ChatStatus, Post, User
 from app.db.session import SessionMaker
@@ -57,7 +55,6 @@ PER_PAGE = 10
 MAX_GROUP_BUTTONS = 90
 # Groups of chats named in a row of the list (cut to ROW_GROUP_WIDTH characters) and in a chat's detail; "+N" the rest.
 ROW_GROUPS, ROW_GROUP_WIDTH, DETAIL_GROUPS = 2, 24, 10
-IMPORT_MAX = 30
 FILTER_ALL, FILTER_OWN, FILTER_EXT, FILTER_PAUSED, FILTER_RIGHTS = range(5)
 FILTERS = (
     (FILTER_ALL, "ch.filter.all"),
@@ -70,7 +67,6 @@ FILTERS = (
 
 class ChatsFSM(StatesGroup):
     reason = State()  # ⏳ requests: why a request is rejected
-    refs = State()  # 📥 import: @usernames / ids
     blast = State()  # 📢 the message for the partners
 
 
@@ -197,8 +193,7 @@ async def render_list(event: Message | CallbackQuery, ctx: Ctx, session: AsyncSe
         *grid(buttons, 2),
         filters_row,
         add_row(ctx),
-        [btn(ctx.t("ch.btn.import"), MenuCB(screen="import")),
-         btn(ctx.t("ch.btn.partners_msg"), MenuCB(screen="partners_msg")) if has_partners else None],
+        [btn(ctx.t("ch.btn.partners_msg"), MenuCB(screen="partners_msg"))] if has_partners else None,
         [btn(ctx.t("ch.btn.requests", n=num(pending)), MenuCB(screen="requests"))] if pending else None,
         nav_row(page, pages, lambda p: ChCB(a="ls", f=flt, p=p), ctx.lang),
         back_row(ctx.lang),
@@ -569,71 +564,6 @@ async def render_paused(event: Message | CallbackQuery, ctx: Ctx, session: Async
 async def paused_screen(event: Message | CallbackQuery, ctx: Ctx, session: AsyncSession, arg: int = 0,
                         **_: object) -> None:
     await render_paused(event, ctx, session, arg)
-
-
-# --------------------------------------------------------------------------- 📥 import
-@screen("import")
-async def import_screen(event: Message | CallbackQuery, ctx: Ctx, session: AsyncSession, arg: int = 0,
-                        **_: object) -> None:
-    if not ctx.is_admin:
-        await show(event, ctx.t("common.no_permission"), kb(back_row(ctx.lang)))
-        return
-    state = fsm_of(event, ctx)
-    if state is not None:
-        await state.set_state(ChatsFSM.refs)
-    await prompt(event, ctx, ctx.t("ch.import.prompt"), cancel_screen="chats")
-
-
-_REF_RE = re.compile(r"^(?:https?://)?(?:t\.me/|telegram\.me/)?@?([A-Za-z][A-Za-z0-9_]{3,31})/?$")
-
-
-def parse_ref(raw: str) -> int | str | None:
-    """``-100123`` -> int, ``@canal`` / ``t.me/canal`` -> ``"@canal"``; None when it is neither."""
-    raw = raw.strip()
-    if re.fullmatch(r"-?\d{1,20}", raw):
-        return int(raw)
-    m = _REF_RE.match(raw)
-    return f"@{m.group(1)}" if m else None
-
-
-IMPORT_ORDER = (chat_svc.ADDED, chat_svc.PENDING, chat_svc.EXISTING, chat_svc.NOT_ADMIN, chat_svc.NOT_FOUND,
-                chat_svc.LIMIT, chat_svc.REJECTED)
-
-
-@router.message(ChatsFSM.refs, F.chat.type == "private", ~F.text.startswith("/"))
-async def on_import_refs(message: Message, ctx: Ctx, session: AsyncSession, state: FSMContext,
-                         settings: Settings) -> None:
-    if not ctx.is_admin:
-        await state.clear()
-        return
-    raw = [part for part in re.split(r"[\s,;]+", message.text or "") if part]
-    if not raw or len(raw) > IMPORT_MAX:
-        await prompt(message, ctx, ctx.t("ch.import.invalid", max=IMPORT_MAX) + "\n\n" + ctx.t("ch.import.prompt"),
-                     cancel_screen="chats")
-        return
-    bot = ctx.ws_bot()
-    if bot is None:
-        await state.clear()
-        await show(message, ctx.t("common.not_running"), kb(back_row(ctx.lang, "chats")))
-        return
-    await state.clear()
-    outcomes: dict[str, list[str]] = {key: [] for key in IMPORT_ORDER}
-    for part in dict.fromkeys(raw):
-        ref = parse_ref(part)
-        outcome = (await chat_svc.register_existing(bot, session, ctx.ws_rec, ref, added_by=ctx.user_id,
-                                                    settings=settings) if ref is not None else chat_svc.NOT_FOUND)
-        outcomes.setdefault(outcome, []).append(part)
-        await session.commit()  # one chat at a time: what was imported stays even if a later one fails
-    lines = [ctx.t("ch.import.title")]
-    for key in IMPORT_ORDER:
-        refs = outcomes.get(key) or []
-        if refs:
-            lines.append(ctx.t(f"ch.import.{key}", n=len(refs)))
-            if key not in (chat_svc.ADDED, chat_svc.EXISTING):
-                lines.append(ctx.t("ch.import.refs", refs=esc(", ".join(truncate(r, 40) for r in refs))))
-    markup = kb([btn(ctx.t("ch.btn.import_more"), MenuCB(screen="import"))],
-                [btn(ctx.t("ch.btn.chats"), MenuCB(screen="chats"))])
-    await show(message, "\n".join(lines), markup)
 
 
 # --------------------------------------------------------------------------- 📢 message to the partners

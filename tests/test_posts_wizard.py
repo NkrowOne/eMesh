@@ -120,7 +120,7 @@ async def test_wizard_text_post_with_colored_buttons_and_defaults(app: App, engi
 
     text = app.last_text(SUPER_ID)
     assert "⏰ <b>¿Cuándo se envía?</b> · 4/5" in text and "(global: a las 12:00)" in text
-    assert button_texts(app)[:4] == ["🔁 En rotación (recomendado)", "⏰ Con su propio horario", "📢 Difusión puntual",
+    assert button_texts(app)[:4] == ["🔁 En rotación", "⏰ Con su propio horario", "📢 Difusión puntual",
                                      "✋ Solo cuando lo envíe yo"]
     await app.click(SUPER_ID, "En rotación")
 

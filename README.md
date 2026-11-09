@@ -12,8 +12,10 @@ Hecho con la **última API de Telegram (Bot API 10.3)** y aiogram 3.31. Misma ba
 
 ## Qué hace
 
-- **📣 Canales y grupos**: añades el bot como admin con un botón (los permisos salen ya marcados). Los tuyos entran
-  al momento; si el bot pierde permisos o lo quitan, recibes un aviso. 📥 Importar canales donde el bot ya era admin.
+- **📣 Canales y grupos**: el primer botón del inicio, **➕ Añadir canal o grupo**, explica cómo y añade el bot como
+  admin con un toque (los permisos salen ya marcados). Los tuyos entran
+  al momento; si el bot pierde permisos o lo quitan, recibes un aviso. Si el bot ya era admin en un canal, este
+  se añade solo con su siguiente publicación.
 - **🤝 Canales externos (socios)**: actívalo y cualquiera puede añadir el bot a su canal o grupo (con o sin tu
   aprobación, con mínimo de miembros). Desde **📣 Mis canales** pueden **pausar** la distribución, elegir
   categorías y salir de la red.
@@ -35,18 +37,24 @@ Hecho con la **última API de Telegram (Bot API 10.3)** y aiogram 3.31. Misma ba
   canal; también hay mensajes con su propio horario, difusiones puntuales o solo manuales, y **fechas de
   campaña**. Por defecto, cada canal recibe **1 mensaje al día** (a las 12:00).
 - **🛡 Anti-spam**: máximo de mensajes al día por chat, separación mínima y «uno a la vez» (borra el anterior).
-- **Opciones de cada mensaje**: fijar, sin sonido, proteger contenido, vista previa de enlaces, texto encima de la
-  media, spoiler, borrado automático (de 1 h a 48 h, o nunca) y borrar su envío anterior.
+- **Opciones de cada mensaje**: fijar, sin sonido, proteger contenido, vista previa de enlaces, texto encima del
+  multimedia, spoiler (contenido multimedia borroso hasta que se pulsa), borrado automático (de 1 h a 48 h, o nunca)
+  y borrar su envío anterior.
 - **📊 Estadísticas y 📜 Actividad**: envíos, entregas, fallos, alcance, mensajes más enviados, y el historial de
   todo lo que pasa en la red. Resumen diario e informe de cada envío (opcionales).
-- **🤖 Clones**: cualquiera crea su bot en 2 toques (Managed Bots de Telegram) o con un token de @BotFather.
-  Clonación **abierta, con aprobación o cerrada**, límite de bots por persona y límites de chats/mensajes por clon.
+- **🤖 Clones**: para publicar, cada uno crea su propio bot en 2 toques (Managed Bots de Telegram) o con un token de
+  @BotFather; el bot principal lo explica al empezar. Clonación **abierta, con aprobación o cerrada**, límite de bots
+  por persona y límites de chats/mensajes por clon.
 - **👑 Panel**: estadísticas de la plataforma, lista de clones con búsqueda, activar/desactivar, aprobar, límites,
   escribir al dueño, actividad, eliminar, **🛠 Gestionar** su red desde el bot principal, aviso a todos los dueños y
-  descarga de errores.
+  descarga de errores. **🖼 Imagen del bot**: la foto de perfil del bot principal; los clones la llevan también (salvo
+  los que tienen una foto propia).
 - **Límites de Telegram respetados siempre**: ~30 mensajes/segundo, 1/segundo por chat privado, 20/minuto por grupo
   o canal, y reintentos automáticos si Telegram pide esperar (429).
-- Español 🇪🇸 e inglés 🇬🇧. Zona horaria por continente y país.
+- **🗺 Zona horaria**: por continente y país, con la imagen que elijas para ese menú. Se pregunta **una sola vez**:
+  si alguien ya la eligió en eMesh o en eButtons, no se le vuelve a preguntar.
+- **Fácil de usar**: cuando el bot te pide un texto, el mensaje sale siempre abajo del todo (el anterior se borra).
+- Español 🇪🇸 e inglés 🇬🇧.
 
 ## Puesta en marcha
 
@@ -90,7 +98,8 @@ Para saber tu ID de Telegram: arranca el bot y escribe `/id`.
 ## Variables de entorno
 
 Todas están explicadas en [`.env.example`](.env.example). Obligatorias: `BOT_TOKEN`, `SUPER_ADMIN_IDS`,
-`DATABASE_URL` (en producción) y `ENCRYPTION_KEY` (si usas clones).
+`DATABASE_URL` (en producción) y `ENCRYPTION_KEY` (si usas clones). Opcional: `EBUTTONS_DATABASE_URL`, la base de
+datos de eButtons si no es la misma que la de eMesh (así nadie elige dos veces su zona horaria).
 
 ## Desarrollo
 

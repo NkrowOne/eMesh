@@ -137,7 +137,7 @@ async def test_detail_of_own_and_once_posts(app: App, engine: SimpleNamespace) -
     assert "📌 Estado: ⏸ Pausado" in text and "🧩 Tipo: 🖼 Foto · sin botones" in text
     assert "🎯 Destino: ⚠️ ninguno, no se envía a nadie" in text
     assert f"⏰ Envío: 📢 Difusión puntual · {fmt.dt(when, TZ)}" in text and "📅 Próximo envío: <b>—</b>" in text
-    assert "🔼 Texto encima de la media: ✖️\n🫣 Spoiler: ✅" in text and "Vista previa de enlaces" not in text
+    assert "🔼 Texto encima del multimedia: ✖️\n🫣 Spoiler: ✅" in text and "Vista previa de enlaces" not in text
     activate, _ = app.find_button(SUPER_ID, "Activar")
     assert activate["text"] == "▶️ Activar" and activate.get("style") == "success"
 

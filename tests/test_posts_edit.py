@@ -105,10 +105,10 @@ async def test_change_the_message_the_text_and_the_name(app: App, engine: Simple
     text = app.last_text(SUPER_ID)
     assert text.startswith("✅ Guardado\n\n✏️ <b>Contenido</b>") and "🧩 Tipo: 🖼 Foto" in text
     assert "Actualizar publicados" not in text  # nothing published
-    assert "🖼 Quitar la media" in button_texts(app)
+    assert "🖼 Quitar multimedia" in button_texts(app)
 
     await app.click(SUPER_ID, "Cambiar solo el texto")
-    assert "con media, el texto puede tener como máximo 1024 caracteres" in app.last_text(SUPER_ID)
+    assert "así que el texto puede tener como máximo 1024 caracteres" in app.last_text(SUPER_ID)
     await app.feed(app.message_update(SUPER_ID, photo="ph_other"))
     assert "⚠️ Envíalo como texto." in app.last_text(SUPER_ID)
     await app.send(SUPER_ID, "y" * 1100)
@@ -134,22 +134,22 @@ async def test_change_the_message_the_text_and_the_name(app: App, engine: Simple
 async def test_remove_the_media(app: App, engine: SimpleNamespace) -> None:
     bare = await add_post(app, kind="photo", text=None, media={str(MAIN_BOT_ID): "ph"})
     await open_screen_of(app, "post_content", bare)
-    await app.click(SUPER_ID, "Quitar la media")
-    assert answers(app)[-1].startswith("⚠️ Sin la media quedaría vacío")
+    await app.click(SUPER_ID, "Quitar multimedia")
+    assert answers(app)[-1].startswith("⚠️ Sin el contenido multimedia quedaría vacío")
     assert (await load(app, Post, bare)).kind == "photo"
 
     pid = await add_post(app, kind="video", text="Tráiler", media={str(MAIN_BOT_ID): "vid"}, media_name="t.mp4")
     await open_screen_of(app, "post_content", pid)
-    await app.click(SUPER_ID, "Quitar la media")
-    assert "🖼 ¿Quitar la media de <b>Promo Cine</b>?" in app.last_text(SUPER_ID)
+    await app.click(SUPER_ID, "Quitar multimedia")
+    assert "🖼 ¿Quitar el contenido multimedia de <b>Promo Cine</b>?" in app.last_text(SUPER_ID)
     await app.click(SUPER_ID, "No")
     assert (await load(app, Post, pid)).kind == "video"
-    await app.click(SUPER_ID, "Quitar la media")
-    await app.click(SUPER_ID, "🖼 Quitar la media")
+    await app.click(SUPER_ID, "Quitar multimedia")
+    await app.click(SUPER_ID, "🖼 Quitar multimedia")
     post = await load(app, Post, pid)
     assert (post.kind, post.media, post.media_name, post.text) == ("text", {}, None, "Tráiler")
-    assert answers(app)[-1] == "🖼 Media quitada" and "🧩 Tipo: 📝 Texto" in app.last_text(SUPER_ID)
-    assert "🖼 Quitar la media" not in button_texts(app)
+    assert answers(app)[-1] == "🖼 Multimedia quitado" and "🧩 Tipo: 📝 Texto" in app.last_text(SUPER_ID)
+    assert "🖼 Quitar multimedia" not in button_texts(app)
 
 
 # --------------------------------------------------------------------------- 🎯 Destino
@@ -307,10 +307,10 @@ async def test_options_of_a_post(app: App, engine: SimpleNamespace) -> None:
 
     photo = await add_post(app, kind="photo", media={str(MAIN_BOT_ID): "ph"})
     await open_menu(app, SUPER_ID, "post_opts", photo)
-    assert "✖️ Texto encima de la media" in button_texts(app) and "✖️ Spoiler" in button_texts(app)
+    assert "✖️ Texto encima del multimedia" in button_texts(app) and "✖️ Spoiler" in button_texts(app)
     assert "✖️ Vista previa de enlaces" not in button_texts(app)
     await app.click(SUPER_ID, "Spoiler")
-    await app.click(SUPER_ID, "Texto encima de la media")
+    await app.click(SUPER_ID, "Texto encima del multimedia")
     post = await load(app, Post, photo)
     assert post.spoiler is True and post.caption_above is True
 

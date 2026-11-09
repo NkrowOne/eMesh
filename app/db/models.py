@@ -236,7 +236,10 @@ class BotUser(Base):
 
     user: Mapped[User] = relationship(lazy="joined")
 
-    __table_args__ = (Index("ix_em_bot_users_bot_role", "bot_id", "role"),)
+    __table_args__ = (
+        Index("ix_em_bot_users_bot_role", "bot_id", "role"),
+        Index("ix_em_bot_users_user", "user_id"),  # a person's rows in every bot (the timezone they already chose)
+    )
 
 
 class Chat(Base):

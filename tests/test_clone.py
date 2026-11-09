@@ -167,8 +167,11 @@ async def test_token_flow(app: App, caplog: pytest.LogCaptureFixture) -> None:
     assert app.manager.is_running(CLONE_ID)
     notice = next(t for t in dms(app, SUPER_ID) if "Nuevo clon" in t)
     assert f"@{CLONE_USERNAME}" in notice and "Token de @BotFather" in notice and "Pendiente" not in notice
-    # every message sent while the token was asked was deleted at once
-    assert len({c.params["message_id"] for c in app.fake.calls_of("deleteMessage", chat_id=USER_ID)}) == 6
+    # every message sent while the token was asked was deleted at once (the bot's own replaced prompts aside)
+    bot_messages = {c.result["message_id"] for c in app.fake.calls if isinstance(c.result, dict)
+                    and "message_id" in c.result}
+    deleted = {c.params["message_id"] for c in app.fake.calls_of("deleteMessage", chat_id=USER_ID)}
+    assert len(deleted - bot_messages) == 6
     # the token never shows up: not in any text sent by the bots, not in the logs
     assert all(clone_token not in json.dumps(c.params, ensure_ascii=False) for c in app.fake.calls)
     assert not [r for r in caplog.records
@@ -263,7 +266,8 @@ async def test_managed_bot_open_policy(app: App) -> None:
     assert app.manager.is_running(new_id)
     dm = app.fake.last("sendMessage", chat_id=USER_ID)
     assert dm.token == app.settings.BOT_TOKEN
-    assert dm.params["text"] == "✅ ¡Tu bot @pepe_mesh_bot está listo! Ábrelo y pulsa /start."
+    assert dm.params["text"] == ("✅ <b>¡Tu bot @pepe_mesh_bot está listo!</b> Ábrelo y pulsa /start: en un minuto "
+                                 "lo dejas a punto (zona horaria, unas preguntas y tus canales).")
     assert dm.params["reply_markup"]["inline_keyboard"][0][0]["url"] == "https://t.me/pepe_mesh_bot"
     notice = app.fake.last("sendMessage", chat_id=SUPER_ID)
     assert "Nuevo clon" in notice.params["text"] and "Creado con Telegram" in notice.params["text"]

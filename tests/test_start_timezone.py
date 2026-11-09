@@ -1,12 +1,15 @@
-"""Start module: timezone picker (continent -> country -> zone), typed zone, onboarding of a new clone's owner,
-the refresh of every next time of the network, and the data behind the picker."""
+"""Start module: timezone picker (continent -> America's regions -> country -> zone), typed zone, onboarding of a new
+clone's owner, the first-visit question of users, the refresh of every next time of the network, and the data behind
+the picker."""
 from __future__ import annotations
 
 import re
 from datetime import datetime, timedelta, timezone
 from zoneinfo import ZoneInfo, available_timezones
 
-from app.bot.routers.timezone import COUNTRIES_PER_PAGE, TzCB
+import pytest
+
+from app.bot.routers.timezone import ASK_HOME, ASK_JOIN, COUNTRIES_PER_PAGE, TzCB
 from app.data.timezones import (
     CONTINENTS,
     COUNTRIES,
@@ -18,7 +21,7 @@ from app.data.timezones import (
 )
 from app.db.base import utcnow
 from app.db.models import ChatGroup, Post, PostStatus, SchedMode
-from app.ui.callbacks import MenuCB
+from app.ui.callbacks import InputCancelCB, MenuCB
 from tests.conftest import MAIN_BOT_ID, OWNER2_ID, SUPER_ID, USER_ID, App
 from tests.test_start_helpers import (
     CLONE_ID,
@@ -27,18 +30,24 @@ from tests.test_start_helpers import (
     add_post,
     button_texts,
     callback_of,
+    dms_to,
     edit_bot,
     fsm_state,
     get_bot,
     get_bu,
     has_button,
+    last_answer,
     last_buttons,
     make_admin,
     manage,
 )
 
-CONTINENT_BUTTONS = ["🌎 América del Norte", "🌎 Centroamérica y Caribe", "🌎 América del Sur", "🌍 Europa", "🌏 Asia",
-                     "🌍 África", "🌏 Oceanía"]
+CONTINENT_BUTTONS = ["🌎 América", "🌍 Europa", "🌏 Asia", "🌍 África", "🌏 Oceanía"]
+REGION_BUTTONS = ["🌎 América del Norte", "🌎 Centroamérica y Caribe", "🌎 América del Sur"]
+PICK = "👇 Elige tu <b>continente</b> y luego tu <b>país</b>."
+ONBOARDING = "👋 <b>¡Te damos la bienvenida a tu bot!</b>\nYa funciona; déjalo listo en un minuto:\n"
+WELCOME_QUESTION = ("👋 <b>¡Hola!</b> Antes de empezar, elige tu <b>zona horaria</b>: así verás las fechas y las horas "
+                    "en tu hora local.\n   └ Solo se pregunta una vez.")
 TEN = {"mode": "times", "times": "10:00", "days": "0123456"}
 
 
@@ -57,6 +66,12 @@ async def pick_country(app: App, user_id: int, name: str, bot_id: int = MAIN_BOT
             return
         await app.click(user_id, next_label, bot_id=bot_id)
     raise AssertionError(f"{name!r} not found in {button_texts(app, user_id)}")
+
+
+async def pick_bogota(app: App, user_id: int, bot_id: int = MAIN_BOT_ID) -> None:
+    await app.click(user_id, "🌎 América", bot_id=bot_id)
+    await app.click(user_id, "América del Sur", bot_id=bot_id)
+    await app.click(user_id, "Colombia", bot_id=bot_id)
 
 
 def assert_buttons_valid(app: App, user_id: int) -> None:
@@ -95,10 +110,13 @@ async def test_timezone_root_for_admins(app: App) -> None:
                            "la red.")
     assert re.search(r"🕐 Actual: <b>Europe/Madrid</b> \(UTC\+[12]\) · \d{2}:\d{2}", text)
     assert "Es la zona de la red" not in text  # admins always see the network's timezone
-    assert text.endswith("👇 Elige tu <b>continente</b> y luego tu <b>país</b>.")
-    assert button_texts(app, SUPER_ID) == [*CONTINENT_BUTTONS, "✍️ Escribir zona", "🔙 Regresar"]
+    assert text.endswith(PICK)
+    # A super admin also chooses the photo of this menu (the same in every bot).
+    assert button_texts(app, SUPER_ID) == [*CONTINENT_BUTTONS, "✍️ Escribir zona", "🖼 Poner imagen", "🔙 Regresar"]
     assert callback_of(app, SUPER_ID, "Regresar") == MenuCB(screen="settings").pack()
     assert callback_of(app, SUPER_ID, "Escribir") == TzCB(a="w").pack()
+    assert callback_of(app, SUPER_ID, "🌎 América") == TzCB(a="r").pack()
+    assert callback_of(app, SUPER_ID, "Europa") == TzCB(a="c", c="eur").pack()
     assert_buttons_valid(app, SUPER_ID)
 
 
@@ -107,6 +125,7 @@ async def test_timezone_root_for_users(app: App) -> None:
     text = app.last_text(USER_ID)
     assert "Las fechas y las horas se muestran en tu zona horaria." in text
     assert "🕐 Actual: <b>Europe/Madrid</b>" in text and "   └ Es la zona de la red." in text
+    assert button_texts(app, USER_ID) == [*CONTINENT_BUTTONS, "✍️ Escribir zona", "🔙 Regresar"]  # no photo buttons
 
 
 async def test_admin_change_recalculates_every_next_time(app: App) -> None:
@@ -157,6 +176,7 @@ async def test_countries_with_several_zones_list_them(app: App) -> None:
     await app.click(SUPER_ID, "Islas Canarias")
     assert (await get_bot(app)).timezone == "Atlantic/Canary"
     await app.click(SUPER_ID, "Zona horaria")
+    await app.click(SUPER_ID, "🌎 América")
     await app.click(SUPER_ID, "América del Norte")
     await app.click(SUPER_ID, "Estados Unidos")
     assert len(last_buttons(app, SUPER_ID)) == 8
@@ -183,10 +203,18 @@ async def test_back_from_a_zone_list_returns_to_the_right_country_page(app: App)
     assert (await get_bot(app)).timezone == "Asia/Vladivostok"
 
 
-async def test_users_set_their_own_timezone(app: App) -> None:
+async def test_users_set_their_own_timezone_through_the_regions_of_america(app: App) -> None:
     ids = await schedules(app)
     await open_timezone(app, USER_ID)
     before = (await get_bot(app)).rot_next_at
+    await app.click(USER_ID, "🌎 América")
+    assert app.last_text(USER_ID) == "<b>🌎 América</b>\n\n👇 Elige tu región:"
+    assert button_texts(app, USER_ID) == [*REGION_BUTTONS, "🔙 Regresar"]
+    assert callback_of(app, USER_ID, "Regresar") == MenuCB(screen="timezone").pack()
+    await app.click(USER_ID, "América del Norte")
+    assert callback_of(app, USER_ID, "Regresar") == TzCB(a="r").pack()  # back to the regions
+    await app.click(USER_ID, "Regresar")
+    assert button_texts(app, USER_ID) == [*REGION_BUTTONS, "🔙 Regresar"]
     await app.click(USER_ID, "América del Norte")
     await app.click(USER_ID, "México")
     assert len(last_buttons(app, USER_ID)) == len(COUNTRIES["MX"].zones) + 1
@@ -210,6 +238,7 @@ async def test_admins_of_a_clone_set_the_clone_timezone(app: App) -> None:
     await make_admin(app, USER_ID, CLONE_ID)
     await app.click(USER_ID, "Ajustes", bot_id=CLONE_ID)
     await app.click(USER_ID, "Zona horaria", bot_id=CLONE_ID)
+    assert not has_button(app, USER_ID, "imagen")  # only super admins choose the photo of the menu
     await app.click(USER_ID, "Europa", bot_id=CLONE_ID)
     await pick_country(app, USER_ID, "Francia", bot_id=CLONE_ID)
     assert (await get_bot(app, CLONE_ID)).timezone == "Europe/Paris"
@@ -232,16 +261,22 @@ async def test_a_super_admin_managing_a_clone_changes_the_clone_timezone(app: Ap
 async def test_new_clone_asks_its_owner_for_the_timezone_first(app: App) -> None:
     await add_clone(app, timezone_set=False)
     await app.send(USER_ID, "/start", bot_id=CLONE_ID)
-    assert "Antes de empezar" not in app.last_text(USER_ID)  # only its owner is asked
+    assert "Te damos la bienvenida a tu bot" not in app.last_text(USER_ID)  # only its owner is asked
     await app.send(OWNER2_ID, "/start", bot_id=CLONE_ID)
     text = app.last_text(OWNER2_ID)
-    assert text.startswith("🗺 <b>Zona horaria</b>\n\n👋 <b>Antes de empezar</b>")
+    # A welcome with what comes next, then why the zone is asked (only once).
+    assert text.startswith(f"{ONBOARDING}1. 🗺 Elige la zona horaria.\n2. 🧭 Responde unas preguntas rápidas.\n"
+                           "3. ➕ Añade tus canales y 📝 crea tu primer mensaje.\n\n🗺 <b>Zona horaria</b>\n")
+    assert "Telegram no la comparte con los bots, así que se pregunta solo una vez" in text and text.endswith(PICK)
     assert "Actual" not in text and "Europe/Madrid" not in text  # nothing chosen yet
     assert button_texts(app, OWNER2_ID) == [*CONTINENT_BUTTONS, "✍️ Escribir zona"]  # no way back
     # Going back from a list returns to the onboarding, not to the settings.
     await app.click(OWNER2_ID, "Europa", bot_id=CLONE_ID)
     await app.click(OWNER2_ID, "Regresar", bot_id=CLONE_ID)
-    assert "Antes de empezar" in app.last_text(OWNER2_ID)
+    assert app.last_text(OWNER2_ID).startswith(ONBOARDING)
+    await app.click(OWNER2_ID, "🌎 América", bot_id=CLONE_ID)
+    await app.click(OWNER2_ID, "Regresar", bot_id=CLONE_ID)
+    assert app.last_text(OWNER2_ID).startswith(ONBOARDING)
     await app.click(OWNER2_ID, "Europa", bot_id=CLONE_ID)
     await app.click(OWNER2_ID, "España", bot_id=CLONE_ID)
     assert not any(b.startswith("✅") for b in button_texts(app, OWNER2_ID))
@@ -249,6 +284,8 @@ async def test_new_clone_asks_its_owner_for_the_timezone_first(app: App) -> None
     rec = await get_bot(app, CLONE_ID)
     assert rec.timezone == "Atlantic/Canary" and rec.timezone_set
     assert rec.rot_next_at is not None and rec.rot_next_at > utcnow()
+    # It is the owner's own zone too: reused in every bot of the platform.
+    assert (await get_bu(app, OWNER2_ID, CLONE_ID)).timezone == "Atlantic/Canary"
     text = app.last_text(OWNER2_ID)
     assert text.startswith("✅ Zona horaria de la red: <b>Atlantic/Canary</b>.\n\n"
                            "🕸 <b>Tu red de distribución</b>")  # then the home (this clone's wizard was done)
@@ -259,7 +296,7 @@ async def test_new_clone_asks_its_owner_for_the_timezone_first(app: App) -> None
 async def test_onboarding_continues_with_the_setup_wizard(app: App) -> None:
     await add_clone(app, timezone_set=False, setup_done=False)  # a brand new clone
     await app.send(OWNER2_ID, "/start", bot_id=CLONE_ID)
-    assert "Antes de empezar" in app.last_text(OWNER2_ID)  # the timezone comes first
+    assert app.last_text(OWNER2_ID).startswith(ONBOARDING)  # the timezone comes first
     await app.click(OWNER2_ID, "Asia", bot_id=CLONE_ID)
     await pick_country(app, OWNER2_ID, "Japón", bot_id=CLONE_ID)
     rec = await get_bot(app, CLONE_ID)
@@ -285,18 +322,123 @@ async def test_onboarding_with_a_typed_zone(app: App) -> None:
     await app.send(OWNER2_ID, "America/Bogota", bot_id=CLONE_ID)
     rec = await get_bot(app, CLONE_ID)
     assert rec.timezone == "America/Bogota" and rec.timezone_set
+    assert (await get_bu(app, OWNER2_ID, CLONE_ID)).timezone == "America/Bogota"
     assert "Tu red de distribución" in app.last_text(OWNER2_ID)
+
+
+async def test_new_clone_asks_the_timezone_first_whatever_the_link(app: App) -> None:
+    await add_clone(app, timezone_set=False)
+    await app.send(USER_ID, "/start join", bot_id=CLONE_ID)
+    assert not app.last_text(USER_ID).startswith(ONBOARDING)
+    for link in ("/start join", "/start c12", "/start p5"):
+        await app.send(OWNER2_ID, link, bot_id=CLONE_ID)
+        assert app.last_text(OWNER2_ID).startswith(ONBOARDING), link
 
 
 async def test_onboarding_is_not_asked_in_a_workspace_nor_in_the_main_bot(app: App) -> None:
     await add_clone(app, timezone_set=False)
     await manage(app, SUPER_ID, CLONE_ID)  # a super admin managing someone else's new clone
     await app.send(SUPER_ID, "/start")
-    assert "Tu red de distribución" in app.last_text(SUPER_ID) and "Antes de empezar" not in app.last_text(SUPER_ID)
+    assert "Tu red de distribución" in app.last_text(SUPER_ID) and ONBOARDING not in app.last_text(SUPER_ID)
     async with edit_bot(app) as rec:
         rec.timezone_set = False
     await app.send(SUPER_ID, "/start", bot_id=CLONE_ID)  # not its owner
-    assert "Antes de empezar" not in app.last_text(SUPER_ID)
+    assert ONBOARDING not in app.last_text(SUPER_ID)
+
+
+# ------------------------------------------------------------------------------------ first visit
+@pytest.mark.ask_timezone
+async def test_users_choose_their_timezone_before_the_home(app: App) -> None:
+    await app.send(USER_ID, "/start")
+    text = app.last_text(USER_ID)
+    assert text == f"{WELCOME_QUESTION}\n\n{PICK}"  # no current zone: the network's is never offered as theirs
+    assert button_texts(app, USER_ID) == [*CONTINENT_BUTTONS, "✍️ Escribir zona"]  # required: no way back
+    assert callback_of(app, USER_ID, "🌎 América") == TzCB(a="r", o=ASK_HOME).pack()
+    await app.click(USER_ID, "🌎 América")
+    assert callback_of(app, USER_ID, "Regresar") == MenuCB(screen="timezone", arg=ASK_HOME).pack()
+    await app.click(USER_ID, "Regresar")  # back to the question, still without a way out
+    assert app.last_text(USER_ID) == f"{WELCOME_QUESTION}\n\n{PICK}"
+    await app.click(USER_ID, "Europa")
+    await app.click(USER_ID, "España")
+    assert not any(b.startswith("✅") for b in button_texts(app, USER_ID))  # nothing chosen yet
+    assert callback_of(app, USER_ID, "Regresar") == TzCB(a="c", c="eur", p=0, o=ASK_HOME).pack()
+    await app.click(USER_ID, "Regresar")
+    await app.click(USER_ID, "Regresar")
+    await pick_bogota(app, USER_ID)
+    assert (await get_bu(app, USER_ID)).timezone == "America/Bogota"
+    text = app.last_text(USER_ID)
+    assert text.startswith("✅ Tu zona horaria: <b>America/Bogota</b>. Puedes cambiarla en ⚙️ Ajustes.\n\n"
+                           "👋 <b>¡Hola, Pepe!</b> Te damos la bienvenida a <b>eMesh</b>.")  # then the home, once
+    await app.send(USER_ID, "/start")
+    assert app.last_text(USER_ID).startswith("👋 <b>¡Hola, Pepe!</b>")
+    assert (await get_bot(app)).timezone == "Europe/Madrid"  # users never move the network
+
+
+@pytest.mark.ask_timezone
+async def test_a_typed_zone_on_the_first_visit(app: App) -> None:
+    await app.send(USER_ID, "/start")
+    await app.click(USER_ID, "Escribir zona")
+    assert await fsm_state(app, USER_ID) == "StartTimezoneFSM:zone"
+    assert callback_of(app, USER_ID, "Cancelar") == InputCancelCB(screen="timezone", arg=ASK_HOME).pack()
+    await app.click(USER_ID, "Cancelar")
+    assert app.last_text(USER_ID).startswith(WELCOME_QUESTION)  # back to the question
+    await app.click(USER_ID, "Escribir zona")
+    await app.send(USER_ID, "nope")
+    assert "Esa zona horaria no es válida" in app.last_text(USER_ID)
+    await app.send(USER_ID, "america/lima")
+    assert (await get_bu(app, USER_ID)).timezone == "America/Lima"
+    assert await fsm_state(app, USER_ID) is None
+    text = app.last_text(USER_ID)
+    assert text.startswith("✅ Tu zona horaria: <b>America/Lima</b>.")
+    assert "Te damos la bienvenida a <b>eMesh</b>" in text
+
+
+@pytest.mark.ask_timezone
+async def test_users_of_a_clone_are_asked_too_but_never_admins_owners_or_the_hub(
+    app: App, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    await app.send(SUPER_ID, "/start")
+    assert app.last_text(SUPER_ID).startswith("🕸 <b>Tu red de distribución</b>")
+    await add_clone(app)
+    await app.send(OWNER2_ID, "/start", bot_id=CLONE_ID)
+    assert app.last_text(OWNER2_ID).startswith("🕸 <b>Tu red de distribución</b>")
+    await app.send(USER_ID, "/start", bot_id=CLONE_ID)
+    assert app.last_text(USER_ID).startswith(WELCOME_QUESTION)
+    async with app.db() as s:
+        from app.db.models import BotUser, Role
+
+        bu = await s.get(BotUser, (CLONE_ID, USER_ID))
+        assert bu is not None
+        bu.role = Role.ADMIN  # promoted before answering: admins see the network's zone
+    await app.send(USER_ID, "/start", bot_id=CLONE_ID)
+    assert app.last_text(USER_ID).startswith("🕸 <b>Tu red de distribución</b>")
+    assert (await get_bu(app, USER_ID, CLONE_ID)).timezone is None
+    monkeypatch.setattr(app.settings, "MAIN_BOT_MODE", "hub")  # the hub runs no network: nothing to show in a zone
+    await app.send(444, "/start")
+    assert app.last_text(444).startswith("🕸 <b>eMesh · Tu propia red de distribución</b>")
+
+
+@pytest.mark.ask_timezone
+async def test_join_link_asks_the_timezone_then_opens_the_join_screen(app: App) -> None:
+    async with edit_bot(app) as rec:
+        rec.join_open = True
+    await app.send(USER_ID, "/start join")
+    assert app.last_text(USER_ID).startswith(WELCOME_QUESTION)
+    assert callback_of(app, USER_ID, "Escribir zona") == TzCB(a="w", o=ASK_JOIN).pack()
+    await pick_bogota(app, USER_ID)
+    assert (await get_bu(app, USER_ID)).timezone == "America/Bogota"
+    assert "1️⃣ Añade el bot como administrador" in app.last_text(USER_ID)  # the join screen
+    assert last_answer(app)["text"] == "✅ Tu zona horaria: America/Bogota. Puedes cambiarla en ⚙️ Ajustes."
+    await app.send(USER_ID, "/start join")
+    assert "1️⃣ Añade el bot como administrador" in app.last_text(USER_ID)
+    # A typed zone: the confirmation is a message before the join screen, which stays at the bottom.
+    await app.send(444, "/start join")
+    await app.click(444, "Escribir zona")
+    await app.send(444, "Asia/Tokyo")
+    assert (await get_bu(app, 444)).timezone == "Asia/Tokyo"
+    texts = dms_to(app, 444)
+    assert texts[-2] == "✅ Tu zona horaria: <b>Asia/Tokyo</b>. Puedes cambiarla en ⚙️ Ajustes."
+    assert "1️⃣ Añade el bot como administrador" in texts[-1]
 
 
 # ---------------------------------------------------------------------------------------- pagination
@@ -322,14 +464,28 @@ async def test_country_lists_are_sorted_paginated_and_in_two_columns(app: App) -
     assert seen == [c.code for c in countries_of("eur", "es")]  # every country exactly once, in order
 
 
+async def test_small_regions_have_a_single_page(app: App) -> None:
+    await open_timezone(app, SUPER_ID)
+    await app.click(SUPER_ID, "🌎 América")
+    await app.click(SUPER_ID, "América del Norte")
+    assert "Página" not in app.last_text(SUPER_ID)
+    assert not has_button(app, SUPER_ID, "Siguiente") and not has_button(app, SUPER_ID, "Anterior")
+    assert button_texts(app, SUPER_ID)[:3] == ["🇧🇲 Bermudas", "🇨🇦 Canadá", "🇺🇸 Estados Unidos"]
+
+
 async def test_names_follow_the_language(app: App) -> None:
     app.fake.add_user(700, "Eng", "eng", lang="en")
     await app.send(700, "/start")
     await app.click(700, "Settings")
     await app.click(700, "Timezone")
     assert "🗺 <b>Timezone</b>" in app.last_text(700)
-    assert button_texts(app, 700)[:7] == ["🌎 North America", "🌎 Central America & Caribbean", "🌎 South America",
-                                         "🌍 Europe", "🌏 Asia", "🌍 Africa", "🌏 Oceania"]
+    assert button_texts(app, 700)[:6] == ["🌎 America", "🌍 Europe", "🌏 Asia", "🌍 Africa", "🌏 Oceania",
+                                         "✍️ Type zone"]
+    await app.click(700, "America")
+    assert button_texts(app, 700) == ["🌎 North America", "🌎 Central America & Caribbean", "🌎 South America",
+                                      "🔙 Back"]
+    assert "👇 Choose your region:" in app.last_text(700)
+    await app.click(700, "Back")
     await app.click(700, "Europe")
     assert button_texts(app, 700)[:3] == ["🇦🇱 Albania", "🇦🇩 Andorra", "🇦🇹 Austria"]
     await pick_country(app, 700, "Spain", next_label="Next")
@@ -338,10 +494,37 @@ async def test_names_follow_the_language(app: App) -> None:
     assert "✅ Your timezone is now <b>Atlantic/Canary</b>." in app.last_text(700)
 
 
+async def test_every_screen_of_the_picker_renders(app: App) -> None:
+    """Walks all continent pages and all multi-zone countries: valid buttons, nothing raises."""
+    presses = 0
+
+    async def walk(data: str) -> int:
+        nonlocal presses
+        user_id = 9000 + presses // 15  # the flood control allows 30 updates per 10 s and user
+        presses += 1
+        await app.press(user_id, data)
+        return user_id
+
+    user_id = await walk(TzCB(a="r").pack())
+    assert len(last_buttons(app, user_id)) == len(REGION_BUTTONS) + 1
+    for continent, codes in CONTINENTS.items():
+        pages = -(-len(codes) // COUNTRIES_PER_PAGE)
+        for page in range(pages):
+            user_id = await walk(TzCB(a="c", c=continent, p=page).pack())
+            assert_buttons_valid(app, user_id)
+            assert len(last_buttons(app, user_id)) >= 2
+        for code in codes:
+            country = COUNTRIES[code]
+            if len(country.zones) > 1:
+                user_id = await walk(TzCB(a="k", c=continent, k=code, p=0).pack())
+                assert len(last_buttons(app, user_id)) == len(country.zones) + 1, code
+                assert_buttons_valid(app, user_id)
+
+
 async def test_forged_timezone_callbacks_fall_back_to_the_root(app: App) -> None:
     await open_timezone(app, USER_ID)
     forged = [TzCB(a="z", k="XX", i=0), TzCB(a="z", k="US", i=99), TzCB(a="z", k="US", i=-1),
-              TzCB(a="c", c="zzz"), TzCB(a="k", c="eur", k="ZZ"), TzCB(a="k", c="nope", k="ES")]
+              TzCB(a="c", c="zzz"), TzCB(a="c", c="ame"), TzCB(a="k", c="eur", k="ZZ"), TzCB(a="k", c="nope", k="ES")]
     for cb in forged:
         await app.press(USER_ID, cb.pack())
         assert app.last_text(USER_ID).startswith("🗺 <b>Zona horaria</b>"), cb
@@ -349,6 +532,10 @@ async def test_forged_timezone_callbacks_fall_back_to_the_root(app: App) -> None
     assert (await get_bot(app)).timezone == "Europe/Madrid"
     await app.press(USER_ID, TzCB(a="c", c="eur", p=99).pack())  # out of range pages are clamped
     assert "Página 3 de 3" in app.last_text(USER_ID)
+    await app.press(USER_ID, TzCB(a="c", c="eur", o=77).pack())  # an unknown origin is the normal picker
+    assert callback_of(app, USER_ID, "Regresar") == MenuCB(screen="timezone").pack()
+    await app.press(USER_ID, MenuCB(screen="timezone", arg=77).pack())
+    assert app.last_text(USER_ID).startswith("🗺 <b>Zona horaria</b>") and has_button(app, USER_ID, "Regresar")
 
 
 # ---------------------------------------------------------------------------------------- typed zone
@@ -456,6 +643,7 @@ def test_utc_offset_label_and_zone_labels() -> None:
 
 
 def test_callback_data_of_the_picker_fits_telegram_limits() -> None:
-    for cb in (TzCB(a="k", c="cam", k="VC", p=99), TzCB(a="z", k="CD", i=11), TzCB(a="c", c="eur", p=3),
-               TzCB(a="w")):
+    for cb in (TzCB(a="k", c="cam", k="VC", p=99, o=ASK_JOIN), TzCB(a="z", k="CD", i=11, o=ASK_JOIN),
+               TzCB(a="c", c="eur", p=3, o=ASK_HOME), TzCB(a="w", o=ASK_JOIN), TzCB(a="r", o=ASK_HOME),
+               TzCB(a="m"), TzCB(a="x")):
         assert len(cb.pack().encode()) <= 64

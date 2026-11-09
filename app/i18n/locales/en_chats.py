@@ -98,10 +98,8 @@ STRINGS = {
     "ch.filter.rights": "⚠️",
     "ch.btn.add_channel": "➕ Add channel ↗",
     "ch.btn.add_group": "➕ Add group ↗",
-    "ch.btn.import": "📥 Import",
     "ch.btn.partners_msg": "📢 Message the owners",
     "ch.btn.requests": "⏳ Requests ({n})",
-    "ch.btn.chats": "📣 Channels and groups",
     # --- detail of a chat ---
     "ch.d.id": "🆔 <code>{id}</code>",
     "ch.d.link": "🔗 {link}",
@@ -178,20 +176,6 @@ STRINGS = {
     "ch.paused.until_open": "until they resume it",
     "ch.paused.until_admin": "no end date",
     "ch.paused.empty": "✅ No chats are paused.",
-    # --- 📥 import ---
-    "ch.import.prompt": "📥 <b>Import channels</b>\n\nIf the bot already is an administrator in channels or groups "
-                        "(for example, you came from another bot), send their @usernames or IDs, one per line.",
-    "ch.import.invalid": "⚠️ Send between 1 and {max} @usernames or IDs.",
-    "ch.import.title": "📥 <b>Import finished</b>",
-    "ch.import.added": "✅ Added: {n}",
-    "ch.import.pending": "⏳ Waiting (missing rights or approval): {n}",
-    "ch.import.existing": "☑️ Already there: {n}",
-    "ch.import.not_admin": "⚠️ The bot isn't an admin: {n}",
-    "ch.import.not_found": "❓ Not found: {n}",
-    "ch.import.limit": "🔒 No room (the network's limit): {n}",
-    "ch.import.rejected": "🚫 Not admitted: {n}",
-    "ch.import.refs": "   └ {refs}",
-    "ch.btn.import_more": "📥 Import more",
     # --- 📢 message to the partners ---
     "ch.pm.prompt": "📢 <b>Message the owners</b>\n\nSend the message for the owners of the external channels "
                     "(<b>{n}</b> people): text, photo, video… They will get it as it is.",

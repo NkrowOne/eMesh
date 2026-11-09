@@ -51,9 +51,13 @@ never confused with a Telegram group (👥).
 * **Impersonal tone**: the bot never speaks in first person. «Se ha pausado…», «No se ha podido enviar…»,
   «Faltan permisos…», «Se avisará…» (not «He pausado», «No he podido»). English: passive voice.
 * **Name the kind of chat** in sentences: «tu canal <b>X</b>», «el grupo <b>X</b>» (`chatstate.kind_word(chat, lang)`).
+* **Wording**: Spanish says «multimedia» / «contenido multimedia», never «la media». No option is ever marked
+  «(recomendado)».
 * UI helpers (`app/ui/common.py`): `show(event, text, markup, media_id=, media_type=, new=)` renders a panel (edits
-  on callbacks, sends on messages), `prompt(event, ctx, text, cancel_screen=, cancel_arg=, extra_rows=, back=)` asks
-  for input with a Cancel button, `btn(text, cb|url=, style=, disabled=)`, `kb(*rows)`, `grid()`, `paginate()`,
+  on callbacks, sends on messages), `prompt(event, ctx, text, cancel_screen=, cancel_arg=, extra_rows=, back=,
+  media_id=, media_type=)` asks for input with a Cancel button: **a prompt is always a new message at the bottom of
+  the chat** (nothing covers it) and the message it replaces is deleted (the panel of the pressed button, or the
+  previous prompt); once answered, the next panel replaces it. `btn(text, cb|url=, style=, disabled=)`, `kb(*rows)`, `grid()`, `paginate()`,
   `nav_row()`, `back_row(lang, screen, arg)`, `toggle_label`, `choice_label`, `toast(event, text)`,
   `alert(event, text)`, `visible_len`. **Never call `callback.answer()` directly** — use `toast/alert`; a middleware
   answers the rest. Only one popup per button press.
@@ -89,7 +93,7 @@ never confused with a Telegram group (👥).
 
 | File | What |
 |---|---|
-| `app/config.py` | `Settings`: `super_admin_ids`, `MAIN_BOT_MODE` (`full`/`hub`), `SCHEDULER_TICK_SECONDS`, `LATE_SKIP_MINUTES`, `SEND_CONCURRENCY`, `MAINTENANCE_INTERVAL_HOURS`, `SUMMARY_HOUR`, `RETENTION_DAYS`, `CLONE_POLICY`, `MAX_CLONES_PER_USER`, `DEFAULT_LIMIT_CHATS/POSTS`. |
+| `app/config.py` | `Settings`: `super_admin_ids`, `MAIN_BOT_MODE` (`full`/`hub`), `EBUTTONS_DATABASE_URL` (eButtons' database to reuse the timezones chosen there; empty = eMesh's own, the tables are prefixed `em_` / `eb_` so both can share one), `SCHEDULER_TICK_SECONDS`, `LATE_SKIP_MINUTES`, `SEND_CONCURRENCY`, `MAINTENANCE_INTERVAL_HOURS`, `SUMMARY_HOUR`, `RETENTION_DAYS`, `CLONE_POLICY`, `MAX_CLONES_PER_USER`, `DEFAULT_LIMIT_CHATS/POSTS`. |
 | `app/db/models.py` | All tables + constants (`BotStatus`, `Role`, `ChatOrigin`, `ChatStatus`, `PostStatus`, `SchedMode`, `RotationOrder`, `RunKind`, `RunStatus`, `DeliveryStatus`, `EventKind`, `DEFAULT_FREQ`). `Chat.owner_pause_active(now)`, `Chat.is_paused(now)`, `Chat.is_external`, `display_title`. |
 | `app/db/session.py` | `session_scope(sm)`, `LeaderLock`. `app/db/base.py`: `utcnow()`. |
 | `app/telegram/manager.py` | `BotManager`: `get(bot_id) -> Bot`, `main_bot`, `main_bot_id`, `main_bot_ids`, `add_bot(token, owner_id, managed=, pending=)`, `validate_token`, `stop_bot(bot_id, withdraw=)`, `disable_bot(bot_id, reason)` (deletes pending auto deletes first through `Publisher.withdraw_bot`), `enable_bot`, `is_running`, `on_bot_invalid` callbacks, `cipher`, `BotTokenError(code)`: format/unauthorized/network/not_bot/is_main/taken. |
@@ -109,6 +113,7 @@ never confused with a Telegram group (👥).
 | `app/services/content.py` | Post content: `from_message(message) -> Content | None`, `content_error(c)` (i18n key), `apply(post, content, bot_id)` (**bot_id = the bot that received the message**, `ctx.bot_id`), `default_name`, `kind_label`, `plain`, buttons `parse_buttons(text)` (ButtonsError key/line), `format_buttons`, `button_line`, `clean_rows`, `count_buttons`, `build_markup`, `make_button`, `COLORS`, `COLOR_EMOJI`, `MAX_BUTTONS`, `MAX_PER_ROW`; sending `media_for(bot, post, manager)` (MediaError too_big/unavailable), `deliver(bot, chat_id, post, media=, reply_markup=, silent=, protect=)`, `send_post(bot, chat_id, post, manager, sm)` (one-off: previews), `edit_delivery(bot, chat_id, message_id, post)`, `file_id_of`, `remember_media(sm, post_id, bot_id, file_id)`. |
 | `app/services/limits.py` | Platform settings (KV `platform:settings`): `platform(session, settings) -> Platform(clone_policy, max_clones, limit_chats, limit_posts)`, `save_platform`; per bot `max_chats`, `max_posts`, `count_chats`, `count_posts`, `can_add_chat`, `can_add_post`, `unlimited`. |
 | `app/services/stats.py` | `summary(session, bot_id, hours=24) -> Summary` (chats own/external/members/sendable/pending/owner_paused/admin_paused/no_rights, groups, posts, runs/sent/failed/skipped/reach, top_posts), `chat_received(session, chat_pk, days=7)`. |
+| `app/services/brand.py` | 🖼 Platform images chosen by a super admin (KV `platform:photo:<name>` = `{"<bot id>": "<file id>"}`, file ids are per bot): `BOT` (profile photo of the main bots, given to the clones without a photo of their own) and `TZ` (photo of the 🗺 timezone picker, every bot). `photo_ids`, `has_photo`, `set_photo`, `clear_photo`, `photo_for(session, bot, name, manager)` (own file id or a downloaded upload) + `remember(..., source=source_of(photo))`, `fetch_one`, `fetch`, `set_profile_photo`, `set_main_photos`, `give_to_clone` / `give_to_clones` (background, `spawn`). |
 | `app/services/blast.py` | `copy_to_users(bot, sm, from_chat_id, message_id, user_ids, on_progress=) -> BlastResult(sent, failed, blocked)` (background, low priority). |
 | `app/services/kv.py` | `get`, `put`, `delete` JSON values. |
 | `app/services/moderation.py` | `check_chat(session, title, username, description) -> word | None` (platform blocked words: abuse of minors, non consensual content). |
@@ -185,11 +190,11 @@ visitors). Times: frequencies and dates are in the workspace timezone (`ctx.bot_
 ## 5. Screens and flows
 
 Screen names (owner module in brackets): `home`, `guide`, `settings`, `notifications`, `admins`, `lang`,
-`timezone`, `support`, `externals`, `stats`, `activity` [start]; `chats`, `chat`, `chat_groups`, `requests`,
-`paused`, `import`, `partners_msg`, `join`, `my_chats`, `my_chat` [chats]; `posts`, `post`, `post_new`,
+`timezone`, `support`, `externals`, `stats`, `activity`, `add_chat` [start]; `chats`, `chat`, `chat_groups`, `requests`,
+`paused`, `partners_msg`, `join`, `my_chats`, `my_chat` [chats]; `posts`, `post`, `post_new`,
 `post_content`, `post_buttons`, `post_targets`, `post_sched`, `post_opts`, `post_defaults` [posts]; `groups`,
 `group`, `group_chats`, `freqs`, `freq_edit`, `antispam` [groups]; `clone`, `mybots`, `panel`, `panel_bots`,
-`panel_bot`, `panel_settings`, `panel_blast` [clones].
+`panel_bot`, `panel_settings`, `panel_photo`, `panel_blast` [clones].
 
 `freq_edit` arg: `0` = global frequency, `+N` = group N, `-N` = post N (own frequency). Its back button returns to
 `freqs`, `group` (arg N) or `post_sched` (arg N).
@@ -212,31 +217,51 @@ Admin view (admins of the network, and a super admin managing a clone):
 ⚠️ Sin permisos: <b>1</b>                  (only when > 0)
 ⏸ <b>La distribución está pausada.</b> No se envía nada hasta que la reanudes.   (Bot.paused)
 ```
-Buttons: `[📝 Mensajes][📣 Canales]`, `[🗂 Grupos de canales][⏰ Frecuencias]`, `[📊 Estadísticas][📜 Actividad]`,
-`[⏳ Solicitudes (N)]` / `[⏸ Pausados (N)]` (only when > 0, screens `requests` / `paused`),
-`[➕ Añadir canal ↗][➕ Añadir grupo ↗]` (urls for `ctx.ws_rec.username`), `[⏸ Pausar todo]` /
+Buttons: first `[➕ Añadir canal o grupo]` (success, when the network's bot has a username; screen `add_chat`), then
+`[📝 Mensajes][📣 Canales]`, `[🗂 Grupos de canales][⏰ Frecuencias]`, `[📊 Estadísticas][📜 Actividad]`,
+`[⏳ Solicitudes (N)]` / `[⏸ Pausados (N)]` (only when > 0, screens `requests` / `paused`), `[⏸ Pausar todo]` /
 `[▶️ Reanudar todo]` (success) (`StCB` toggles `Bot.paused`, `events.emit(BOT_PAUSED/BOT_RESUMED)`),
 `[⚙️ Ajustes][📖 Guía]`, main bot: `[🤖 Crear mi bot]` (screen `clone`) and `[🤖 Mis bots (N)]` (`mybots`, when
 N > 0), super admin in a main bot: `[👑 Panel]`, and while managing a clone: `[🚪 Salir de @clone]` (danger;
 clears `bu.ws_bot_id`, back to the main bot's home).
+`add_chat` («➕ Añadir canal o grupo», admins, hidden in the hub): three short steps (pulsa, deja los permisos que se
+proponen, entra al momento y se te avisa) + `[➕ Añadir canal ↗][➕ Añadir grupo ↗]` (urls for `ctx.ws_rec.username`:
+the clone's while managing one), `[📣 Ver canales y grupos]` (`chats`), `[🔙]` → home.
 Partner / visitor view (role user):
+* in the main bot (while clones can be created): first a welcome «👋 <b>¡Hola, {name}!</b> Te damos la bienvenida a
+  <b>eMesh</b>…» that explains it and that **publishing needs your own bot** («🤖 Para publicar en tus canales
+  necesitas tu propio bot…»), then `[🤖 Crear mi bot]` (success, screen `clone`) first and `[🤖 Mis bots (N)]`; the
+  main bot's visitors never see «🔒 Esta red es privada» (they come to create their bot);
 * the bot accepts external chats (`join_open`): `Bot.join_text` (premium-free custom HTML, may be None) or the
-  default «🤝 <b>Únete a la red de @bot</b>\n\nAñade este bot a tu canal o grupo y recibirá las publicaciones de la
-  red.\n⏸ Puedes pausarlas cuando quieras desde 📣 Mis canales.» + `[➕ Añadir a mi canal ↗][➕ Añadir a mi grupo ↗]`;
-* it doesn't: «🔒 Esta red es privada.»;
+  default «🤝 <b>Únete a la red de @bot</b>» with three numbered steps (pulsa ➕ Añadir a mi canal, conserva los
+  permisos, se te avisa cuando esté dentro) and «⏸ Puedes pausar las publicaciones cuando quieras desde 📣 Mis
+  canales.» (when partners can pause) + `[➕ Añadir a mi canal ↗][➕ Añadir a mi grupo ↗]`;
+* it doesn't (clones): «🔒 Esta red es privada.»;
 * `[📣 Mis canales (N)]` (screen `my_chats`) when the user has external chats in this bot (any status but left);
 * `[📖 Guía][🛟 Soporte ↗]` (support url: `https://t.me/<Bot.support_username>` or the owner's @username, hidden
-  when unknown), `[⚙️ Ajustes]`, and `[🤖 Crea tu propio bot]`: main bot → screen `clone`; clone → url
+  when unknown), `[⚙️ Ajustes]`, and in a clone `[🤖 Crea tu propio bot]` → url
   `https://t.me/<main username>?start=clone` (hidden when the clone policy is `closed`).
 Hub mode (`ctx.is_hub`): informational text (what eMesh is, you own your bot) + `[✨ Crear mi bot]` (`clone`),
 `[🤖 Mis bots (N)]`, `[📖 Guía]`, `[⚙️ Ajustes]`, super admins `[👑 Panel]`. No network buttons.
 Commands (start module): `/start`, `/cancel` (clear state + home), `/id`, `/help` (guide), `/admin @user`,
 `/deladmin @user` (owner).
 
-New clone: its owner gets the `timezone` screen (onboarding, no back button) on the first `/start` when
-`bots.timezone_set` is False (port of eButtons `timezone.py` + `app/data/timezones.py`), then the **setup wizard**
-(`setup`, below) while `bots.setup_done` is False, then home. Only the bot's owner in the bot itself gets them (not
-a super admin managing it); main bots are marked done at startup.
+**Timezones are asked once in the whole ecosystem** (eMesh and eButtons; port of eButtons `timezone.py`):
+Telegram doesn't tell bots anyone's timezone, so it is asked, but a zone the person already chose anywhere
+(`services.zones.known_zone`: their `bu.timezone` in any eMesh bot, an eMesh clone of theirs with `timezone_set`
+(never a main bot), then the same in eButtons' `eb_bot_users` / `eb_bots`) is used instead.
+* New clone: on the first `/start` (whatever the link) while `bots.timezone_set` is False, a known zone becomes the
+  network's zone without asking («🗺 Zona horaria de tu red: X, la que ya elegiste. Se cambia en ⚙️ Ajustes.», with
+  a short welcome when the wizard follows); otherwise the `timezone` screen (onboarding, no back button: a welcome
+  with the three steps — zona horaria, unas preguntas, canales y primer mensaje — and why the zone is asked once).
+  The zone chosen is also stored as the owner's own `bu.timezone`. Then the **setup wizard** (`setup`, below) while
+  `bots.setup_done` is False, then home. Only the bot's owner in the bot itself gets them (not a super admin
+  managing it); main bots are marked done at startup.
+* First visit of a user (role user; admins see the network's zone) in a bot that runs a network (not the hub) without
+  `bu.timezone` (`must_choose_timezone`): a known zone is stored silently; otherwise the `timezone` screen with arg
+  `1` (`ASK_HOME`, before the home) or `2` (`ASK_JOIN`, before `join` of `/start join`): «👋 ¡Hola! Antes de
+  empezar, elige tu zona horaria… └ Solo se pregunta una vez.», required (no back button), then that screen with
+  «✅ Tu zona horaria: X. Puedes cambiarla en ⚙️ Ajustes.».
 Admin home extras: one status line always (when the network has chats): «📊 Estado: ✅ 10 reciben · ⏸ 2 pausados ·
 ⚠️ 1 sin permisos · ⏳ 1 pendiente» (from `stats.summary`), and `[⏸ Pausados (N)]` always shown to admins when the
 network accepts external chats or has any (even with 0).
@@ -244,12 +269,12 @@ network accepts external chats or has any (even with 0).
 ### 5.1b Setup wizard of a new bot (start module) — `setup` (arg = step)
 Step by step, one question per screen, the current value pre-selected (✅), `[🔙 Regresar]` to the previous step
 (the first one has `[⏭ Saltar el asistente]`: the defaults stay). Each answer is saved at once. Owner only.
-1. «🤝 <b>¿Aceptas canales de otras personas?</b>» `[✅ Sí, con mi aprobación (recomendado)]`, `[⚡ Sí, entran
+1. «🤝 <b>¿Aceptas canales de otras personas?</b>» `[✅ Sí, con mi aprobación]`, `[⚡ Sí, entran
    solos]`, `[🔒 No, solo los míos]` → `join_open` / `join_approval`.
 2. Only when they are accepted: «⏸ <b>¿Pueden pausar la distribución en sus canales?</b>» (└ «Tú siempre ves quién
    pausa y puedes reanudarlo.») `[Hasta 1 día]`, `[Hasta 3 días]`, `[Hasta 7 días]`, `[Sin límite]`,
    `[🚫 No pueden pausar]` → `partners_can_pause` / `pause_max_hours`.
-3. «⏰ <b>¿Cada cuánto recibe un mensaje cada canal?</b>» `[1 al día (12:00) (recomendado)]` (the default), then
+3. «⏰ <b>¿Cada cuánto recibe un mensaje cada canal?</b>» `[1 al día (12:00)]` (the default), then
    `[Cada 2 h][Cada 4 h][Cada 6 h][Cada 12 h]` (from 08:00 to 22:00) → `Bot.freq` + `freq.refresh_bot`.
 4. «🗑 <b>¿Cuánto tiempo siguen publicados los mensajes?</b>» `[1 h][6 h][12 h][1 día][2 días]`,
    `[♾ No se borran]` → `Bot.post_defaults["delete_after"]` (a new dict).
@@ -291,7 +316,12 @@ owner-only (admins see them read only).
   `[🗑 #2 @x]` per admin (owner). The user must have started the bot.
 * `support` (owner): current contact + `[✏️ Cambiar contacto]` (`@user`, `t.me/user`) + `[↩️ Usar mi cuenta]`.
 * `lang` (per user `bu.lang`), `timezone` (admins: the bot's, `Bot.timezone` + `timezone_set`, then
-  `freq.refresh_bot` + refresh every group and own/once post; users: their own `bu.timezone`).
+  `freq.refresh_bot` + refresh every group and own/once post; users: their own `bu.timezone`). The picker:
+  `[🌎 América]` (→ América del Norte / Centroamérica y Caribe / América del Sur), `[🌍 Europa]`, `[🌏 Asia]`,
+  `[🌍 África]`, `[🌏 Oceanía]`, `[✍️ Escribir zona]`; then country → zone. Super admins also see `[🖼 Poner imagen |
+  Cambiar imagen][🗑 Quitar imagen]` (not in the onboarding nor the first-visit question): **one photo for the whole
+  platform** (`brand.TZ`), shown on top of every step of the picker in every bot (the caption is edited while the
+  panel already is the photo; a file id Telegram refuses → the panel without it).
 
 ### 5.4 Statistics & activity (start)
 `stats` (arg 0 = 24 h, 1 = 7 días, 2 = 30 días; admins), from `stats.summary`:
@@ -331,7 +361,7 @@ first, done last. Buttons: one per post (`#1 Promo Cine`, 2 per row), `[➕ Nuev
 3. «🎯 <b>¿A quién se envía?</b> · 3/4»: toggles `[🌐 Todos]` (selected by default), `[🏠 Solo propios]`,
    `[🤝 Solo externos]`, one per group of chats `[🗂 Cine (5)]`, live count «👥 Lo recibirán: 23 chats · 👤 45,320»
    (`audience.targets_size`), `[✅ Continuar]` (needs a target).
-4. «⏰ <b>¿Cuándo se envía?</b> · 4/5»: `[🔁 En rotación (recomendado)]` (└ «Se turna con los demás mensajes según
+4. «⏰ <b>¿Cuándo se envía?</b> · 4/5»: `[🔁 En rotación]` (└ «Se turna con los demás mensajes según
    la frecuencia de cada canal (global: 1 al día a las 12:00).»), `[⏰ Con su propio horario]`,
    `[📢 Difusión puntual]` (still step 4: `[🚀 Ahora mismo]` — created with `send_at` = now, the scheduler sends it
    once at once — or a typed date: `freq.parse_datetime`), `[✋ Solo cuando lo envíe yo]`.
@@ -371,7 +401,7 @@ Mensaje guardado» + the `post` detail; own mode opens `freq_edit` (arg -id) rig
   `[🗑 Eliminar solo el mensaje]` (the copies already sent stay and their auto delete still happens), `[❌ No]`.
 * ⏸/▶️: status paused/active (a `done` post can be re-activated: once → asks a new date) + `freq.refresh_post`.
 `post_content` (arg id): `[✏️ Cambiar el mensaje]` (new text + media), `[📝 Cambiar solo el texto]` (keeps the media;
-caption limit), `[🏷 Nombre interno]` (≤ 64), `[🖼 Quitar la media]` (media posts, becomes text; needs text), `[🔙]`.
+caption limit), `[🏷 Nombre interno]` (≤ 64), `[🖼 Quitar multimedia]` (media posts, becomes text; needs text), `[🔙]`.
 After a change of a post with live copies: hint «🔄 Pulsa Actualizar publicados para aplicarlo a los ya enviados.».
 `post_buttons` (arg id, `post_buttons.py`): the current keyboard drawn with the real colors where every button is a
 callback that opens its editor (`PbCB`), then `[➕ Añadir botón]`, `[✍️ Escribirlos todos][🗑 Quitar todos]`,
@@ -385,7 +415,7 @@ the input replaces them. Max `content.MAX_BUTTONS`, `MAX_PER_ROW`.
 `[📆 Fecha: 07/11 20:00]` → date input; campaign `[📆 Desde: —][📆 Hasta: —]` (input `dd/mm/aaaa`, `0` clears);
 `[🔙]` → `post`. Every change → `freq.refresh_post` + `scheduler.wake()`.
 `post_opts` (arg id): toggles `📌 Fijar`, `🔕 Sin sonido`, `🛡 Proteger contenido`, `🔗 Vista previa de enlaces`
-(text), `🔼 Texto encima de la media` and `🫣 Spoiler` (photo/video/GIF), `♻️ Borrar su envío anterior`; auto delete
+(text), `🔼 Texto encima del multimedia` and `🫣 Spoiler` (photo/video/GIF), `♻️ Borrar su envío anterior`; auto delete
 choice `[Nunca][1 h][3 h][6 h][12 h][1 día][2 días]` + `[✏️ Otro]` (input, 15 min - 48 h, `freq.parse_every`-like).
 `post_defaults` (arg 0): the same options as defaults of new posts (`Bot.post_defaults`), `[🔙]` → `posts`.
 
@@ -402,7 +432,7 @@ choice `[Nunca][1 h][3 h][6 h][12 h][1 día][2 días]` + `[✏️ Otro]` (input,
    └👤 800 · 🤝 @pepe · hasta 08/11/2026 10:00 AM
 ```
 10 per page, one button per chat (`#1 📣 Cine HD`, 2 per row), filter row, `[➕ Añadir canal ↗][➕ Añadir grupo ↗]`,
-`[📥 Importar]`, `[📢 Avisar a los dueños]` (when there are partners), `[⏳ Solicitudes (N)]` (when > 0), nav,
+`[📢 Avisar a los dueños]` (when there are partners), `[⏳ Solicitudes (N)]` (when > 0), nav,
 `[🔙]` → home. Left, rejected and banned chats are not listed (pending ones are, with ⏳).
 `chat` (arg pk):
 ```
@@ -460,9 +490,8 @@ chats (connected with a token) finds them.
 `requests` (arg page): pending chats with `[✅][❌]` per row. `paused` (arg page): **every** paused chat, by its
 owner or by an admin: name, who paused it, since, until, and `[▶️ #n]` per row to resume it (`resume_by_admin`).
 In `chat`, a chat paused by its partner shows `[▶️ Reanudar (anula la pausa del socio)]` (confirm: «El dueño lo ha
-pausado hasta …. Se le avisará.»). `import`: «📥 <b>Importar canales</b>\n\nSi el bot ya es administrador en canales o grupos
-(por ejemplo, venías de otro bot), envía sus @usuarios o IDs, uno por línea.» → `register_existing` each →
-summary (añadidos / ya estaban / el bot no es admin / no encontrados). `partners_msg` («📢 Avisar a los dueños»):
+pausado hasta …. Se le avisará.»). There is no import screen: chats join when the bot is added to them, or by
+discovery (above). `partners_msg` («📢 Avisar a los dueños»):
 prompt the message → confirm «Se enviará a <b>N</b> personas.» → background `blast.copy_to_users` → report DM.
 Partners (`partners.py`):
 * `join` (also `/start join`): how to join (the add buttons, the rights it needs and why, that they can pause
@@ -563,9 +592,19 @@ Managed bot update (`managed_bot`, main bot): `getManagedBotToken` → `connect_
 📤 Últimas 24 h: 230 envíos · 12,345 entregas
 ⚙️ Clonación: 🌐 abierta | ⏳ con aprobación | 🔒 cerrada
 ```
-`[🤖 Clones]` (`panel_bots`), `[⏳ Pendientes (N)]`, `[⚙️ Plataforma]` (`panel_settings`), `[📢 Aviso a los dueños]`
-(`panel_blast`: copy a message to the owners of clones through the main bot, `blast.copy_to_users`),
-`[📄 Errores]` (logbook as a .txt document), `[🔙]`.
+`[🤖 Clones]` (`panel_bots`) `[⏳ Pendientes (N)]`, `[⚙️ Plataforma]` (`panel_settings`) `[🖼 Imagen del bot]`
+(`panel_photo`), `[📢 Aviso a los dueños]` (`panel_blast`: copy a message to the owners of clones through the main
+bot, `blast.copy_to_users`) `[📄 Errores]` (logbook as a .txt document), `[🔙]`.
+`panel_photo` («🖼 Imagen del bot», `brand.BOT`): the profile photo of the main bots; the image is shown on top of
+the panel. «Es la foto de perfil de @main. Los bots que se crean desde aquí la llevan también. └ Los bots que ya
+existen la reciben si no tienen una foto propia.» `[🖼 Poner imagen | Cambiar imagen]` → prompt for a photo (only
+photos; not readable → asked again) → `brand.set_main_photos` at once (Telegram refuses it → its error, nothing
+stored) → `brand.set_photo` → a background job (`give_to_clones`, after the previous job if one is still running)
+gives it to every running clone without a photo of its own and DMs the report to the super admin («Clones
+actualizados: N · Con foto propia (no se cambian): M»). No delete button. A clone gets the image (`panel.give_image`,
+background) when it starts running: connected with a token or Managed Bots, approved, or enabled / resumed again;
+`brand.give_to_clone` skips a clone whose owner put another photo and never uploads the same image twice. The clone
+screen says «🖼 Tu bot se crea con la imagen de la plataforma…» while there is an image and a new bot can be created.
 `panel_bots` (arg page; filter all/active/paused/pending/invalid; `[🔎 Buscar]` by @username or id):
 `1. ✅ @clon_bot · 👤 @owner\n   └📣 12 · 📝 5 · ⏸ 2`. `panel_bot` (arg bot id):
 ```
@@ -673,7 +712,7 @@ enforces it). Literal braces: `{{` `}}`. A duplicated key anywhere raises at sta
 | posts | `app/bot/routers/posts.py`, `post_buttons.py`, tests `tests/test_posts*.py` | `po`, `pw`, `pb` | `po.`, `pb.` |
 | chats | `app/bot/routers/chat_events.py`, `requests.py`, `chats.py`, `partners.py`, `app/services/chats.py`, tests `tests/test_chats*.py`, `tests/test_partners*.py` | `ch`, `rq`, `pa` | `ch.`, `rq.`, `pa.`, `ce.` |
 | groups | `app/bot/routers/groups.py`, `freqs.py`, tests `tests/test_groups*.py`, `tests/test_freqs*.py` | `gr`, `fq` | `gr.`, `fq.` |
-| start | `app/bot/routers/start.py`, `settings.py`, `timezone.py`, `stats.py`, `setup.py`, `app/data/timezones.py`, tests `tests/test_start*.py`, `tests/test_settings*.py`, `tests/test_stats*.py`, `tests/test_setup*.py` | `st`, `ss`, `tz`, `lg`, `ad`, `sx`, `su` | `home.`, `guide.`, `set.`, `tz.`, `lang.`, `adm.`, `stats.`, `setup.` |
+| start | `app/bot/routers/start.py`, `settings.py`, `timezone.py`, `stats.py`, `setup.py`, `app/data/timezones.py`, `app/services/zones.py`, tests `tests/test_start*.py`, `tests/test_settings*.py`, `tests/test_stats*.py`, `tests/test_setup*.py` | `st`, `ss`, `tz`, `lg`, `ad`, `sx`, `su` | `home.`, `guide.`, `set.`, `tz.`, `lang.`, `adm.`, `stats.`, `setup.` |
 | clones | `app/bot/routers/clone.py`, `panel.py`, `app/services/clones.py`, tests `tests/test_clone*.py`, `tests/test_panel*.py` | `cl`, `sa` | `cl.`, `sa.` |
 Everyone: `app/i18n/locales/{es,en}_<module>.py` for their module name. Core files (section 2) belong to the
 integrator: report needed changes.
@@ -692,6 +731,9 @@ builders `message_update`, `callback_update`, `my_chat_member_update(chat_id, us
 `app.fake.add_user(id)`, `app.fake.calls_of("sendMessage", chat_id=...)`, `app.fake.messages_to(chat_id)`,
 `app.fake.fail(method, code=, description=, retry_after=, when=lambda params: ...)`, `fake.chats[id].messages`.
 Users: `SUPER_ID` (super admin = main bot owner), `USER_ID` (a partner), `OWNER2_ID` (owns a clone in some tests).
+The first-visit timezone question is skipped by an autouse fixture (tests marked `@pytest.mark.ask_timezone` keep
+it). Tests that create `eb_` tables drop them at the end (the PostgreSQL test database persists between tests) and
+call `zones.reset()`.
 The main bot runs a network (`MAIN_BOT_MODE="full"`) in tests.
 Run: `.venv/bin/python -m pytest -q` from the worktree root (the venv of `/home/user/eMesh`).
 Modules written by other agents are stubs in your worktree: monkeypatch them in tests when needed

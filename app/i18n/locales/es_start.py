@@ -7,7 +7,7 @@ STRINGS = {
     "home.chats.split": "   └ 🏠 Propios: {own} · 🤝 Externos: {ext}",
     "home.chats.none": (
         "📣 Canales y grupos: <b>0</b>\n"
-        "   └ Añade el bot a tus canales y grupos con los botones ➕ de abajo."
+        "   └ Añade el bot a tus canales y grupos con ➕ <b>Añadir canal o grupo</b>."
     ),
     "home.posts": "📝 Mensajes activos: <b>{n}</b>",
     "home.posts.none": "   └ Crea el primero en 📝 Mensajes.",
@@ -36,6 +36,14 @@ STRINGS = {
     "home.btn.paused": "⏸ Pausados ({n})",
     "home.btn.add_channel": "➕ Añadir canal ↗",
     "home.btn.add_group": "➕ Añadir grupo ↗",
+    "home.btn.add_chat": "➕ Añadir canal o grupo",
+    "home.add.text": (
+        "➕ <b>Añadir canal o grupo</b>\n\n"
+        "1. Pulsa ➕ <b>Añadir canal</b> o ➕ <b>Añadir grupo</b> y elige el tuyo.\n"
+        "2. Deja marcados los permisos que se proponen: el bot los necesita para publicar.\n"
+        "3. Listo: entra en la red al momento y se te avisa por aquí."
+    ),
+    "home.add.btn.chats": "📣 Ver canales y grupos",
     "home.btn.pause_all": "⏸ Pausar todo",
     "home.btn.resume_all": "▶️ Reanudar todo",
     "home.btn.settings": "⚙️ Ajustes",
@@ -48,17 +56,27 @@ STRINGS = {
     "home.toast.resumed": "▶️ Distribución reanudada.",
     "home.toast.ws_left": "🚪 Has dejado de gestionar @{bot}.",
     # --- Inicio: socios y visitantes ---------------------------------------------------------------
-    "home.platform": (
-        "🕸 <b>eMesh</b> · Crea tu propio bot y publica mensajes en tus canales y grupos de forma automática."
+    "home.welcome": (
+        "👋 <b>¡Hola, {name}!</b> Te damos la bienvenida a <b>eMesh</b>.\n\n"
+        "🕸 eMesh publica mensajes en canales y grupos de Telegram de forma automática: escribes el mensaje, eliges "
+        "cada cuánto se publica y el bot lo envía solo.\n\n"
+        "🤖 <b>Para publicar en tus canales necesitas tu propio bot.</b> Créalo en un minuto con "
+        "<b>🤖 Crear mi bot</b>: es tuyo, con tu nombre, tus canales y tus reglas."
     ),
     "home.join.default": (
-        "🤝 <b>Únete a la red de @{bot}</b>\n\n"
-        "Añade este bot a tu canal o grupo y recibirá las publicaciones de la red.\n"
-        "⏸ Puedes pausarlas cuando quieras desde 📣 Mis canales."
+        "🤝 <b>Únete a la red de @{bot}</b>\n"
+        "Tu canal o grupo recibirá sus publicaciones de forma automática. Unirse lleva un minuto:\n\n"
+        "1. Pulsa ➕ <b>Añadir a mi canal</b> (o <b>a mi grupo</b>) y elige cuál.\n"
+        "2. Conserva los permisos que se proponen: sirven para publicar los mensajes y borrarlos.\n"
+        "3. Listo: se te avisará por aquí cuando ya esté dentro.\n\n"
+        "⏸ Puedes pausar las publicaciones cuando quieras desde 📣 Mis canales."
     ),
     "home.join.default_no_pause": (
-        "🤝 <b>Únete a la red de @{bot}</b>\n\n"
-        "Añade este bot a tu canal o grupo y recibirá las publicaciones de la red."
+        "🤝 <b>Únete a la red de @{bot}</b>\n"
+        "Tu canal o grupo recibirá sus publicaciones de forma automática. Unirse lleva un minuto:\n\n"
+        "1. Pulsa ➕ <b>Añadir a mi canal</b> (o <b>a mi grupo</b>) y elige cuál.\n"
+        "2. Conserva los permisos que se proponen: sirven para publicar los mensajes y borrarlos.\n"
+        "3. Listo: se te avisará por aquí cuando ya esté dentro."
     ),
     "home.join.min": "👤 Mínimo para unirse: <b>{n}</b> miembros.",
     "home.join.approval": "⏳ La administración revisa cada canal antes de aceptarlo.",
@@ -94,15 +112,14 @@ STRINGS = {
         "frecuencia.\n\n"
         "En cada turno de su frecuencia, cada canal recibe <b>un</b> mensaje; los mensajes en rotación se van "
         "turnando.\n\n"
-        "👉 <b>Primeros pasos</b>: añade el bot a un canal con ➕ <b>Añadir canal</b>, crea un mensaje en "
+        "👉 <b>Primeros pasos</b>: añade el bot a un canal con ➕ <b>Añadir canal o grupo</b>, crea un mensaje en "
         "📝 <b>Mensajes</b> y ajusta la frecuencia en ⏰ <b>Frecuencias</b>."
     ),
     "guide.admin.2": (
         "📣 <b>Canales propios y externos</b>\n\n"
         "<b>Añadir canales</b>\n"
-        "Pulsa ➕ <b>Añadir canal</b> o ➕ <b>Añadir grupo</b> y conserva los permisos que se proponen: en canales, "
-        "publicar, editar y eliminar mensajes; en grupos, eliminar y fijar mensajes. Si el bot ya era administrador "
-        "en otros chats, usa 📥 <b>Importar</b> en 📣 Canales.\n\n"
+        "Pulsa ➕ <b>Añadir canal o grupo</b>, en el inicio, y conserva los permisos que se proponen: en canales, "
+        "publicar, editar y eliminar mensajes; en grupos, eliminar y fijar mensajes.\n\n"
         "• 🏠 <b>Propios</b>: los añade un admin y entran al momento.\n"
         "• 🤝 <b>Externos</b>: los de otras personas, si se admiten en ⚙️ Ajustes › 🤝 Canales externos. Con "
         "aprobación manual llegan como ⏳ solicitudes.\n\n"
@@ -336,13 +353,25 @@ STRINGS = {
     "tz.intro.admin": "Con ella se calculan las frecuencias y las fechas de envío de la red.",
     "tz.intro.user": "Las fechas y las horas se muestran en tu zona horaria.",
     "tz.intro.onboarding": (
-        "👋 <b>Antes de empezar</b>, elige la zona horaria de tu red: con ella se calculan las frecuencias y las "
-        "fechas de envío. Telegram no la comparte con los bots, así que hay que elegirla una vez (luego se cambia "
-        "en ⚙️ Ajustes)."
+        "👋 <b>¡Te damos la bienvenida a tu bot!</b>\n"
+        "Ya funciona; déjalo listo en un minuto:\n"
+        "1. 🗺 Elige la zona horaria.\n"
+        "2. 🧭 Responde unas preguntas rápidas.\n"
+        "3. ➕ Añade tus canales y 📝 crea tu primer mensaje.\n\n"
+        "🗺 <b>Zona horaria</b>\n"
+        "Con ella se calculan las horas de envío de tu red. Telegram no la comparte con los bots, así que se "
+        "pregunta solo una vez (luego se puede cambiar en ⚙️ Ajustes)."
     ),
+    "tz.intro.welcome": (
+        "👋 <b>¡Hola!</b> Antes de empezar, elige tu <b>zona horaria</b>: así verás las fechas y las horas en tu "
+        "hora local.\n"
+        "   └ Solo se pregunta una vez."
+    ),
+    "tz.welcome": "👋 <b>¡Te damos la bienvenida a tu bot!</b> Ya funciona; déjalo listo en un minuto.",
     "tz.current": "🕐 Actual: <b>{zone}</b> ({offset}) · {time}",
     "tz.current.default": "🕐 Actual: <b>{zone}</b> ({offset}) · {time}\n   └ Es la zona de la red.",
     "tz.pick": "👇 Elige tu <b>continente</b> y luego tu <b>país</b>.",
+    "tz.cont.ame": "🌎 América",
     "tz.cont.nam": "🌎 América del Norte",
     "tz.cont.cam": "🌎 Centroamérica y Caribe",
     "tz.cont.sam": "🌎 América del Sur",
@@ -351,6 +380,14 @@ STRINGS = {
     "tz.cont.afr": "🌍 África",
     "tz.cont.oce": "🌏 Oceanía",
     "tz.btn.write": "✍️ Escribir zona",
+    "tz.btn.photo_set": "🖼 Poner imagen",
+    "tz.btn.photo_change": "🖼 Cambiar imagen",
+    "tz.btn.photo_del": "🗑 Quitar imagen",
+    "tz.photo.prompt": "🖼 Envía la <b>foto</b> que se verá al abrir este menú, en todos los bots.",
+    "tz.photo.invalid": "⚠️ Eso no es una foto.",
+    "tz.photo.saved": "✅ Imagen guardada.",
+    "tz.photo.deleted": "🗑 Imagen quitada.",
+    "tz.regions": "👇 Elige tu región:",
     "tz.countries": "👇 Elige tu país:",
     "tz.zones": "👇 Elige tu zona horaria:",
     "tz.write.prompt": (
@@ -362,7 +399,9 @@ STRINGS = {
     "tz.write.invalid": "⚠️ Esa zona horaria no es válida. Usa el formato <code>Continente/Ciudad</code>.",
     "tz.saved.admin": "✅ Zona horaria de la red: <b>{zone}</b>. Los próximos envíos se han recalculado.",
     "tz.saved.first": "✅ Zona horaria de la red: <b>{zone}</b>.",
+    "tz.saved.known": "🗺 Zona horaria de tu red: <b>{zone}</b>, la que ya elegiste. Se cambia en ⚙️ Ajustes.",
     "tz.saved.user": "✅ Tu zona horaria es ahora <b>{zone}</b>.",
+    "tz.saved.welcome": "✅ Tu zona horaria: <b>{zone}</b>. Puedes cambiarla en ⚙️ Ajustes.",
     # --- Estadísticas y actividad ------------------------------------------------------------------
     "stats.title": "📊 <b>Estadísticas</b> · {period}",
     "stats.period.0": "últimas 24 h",
