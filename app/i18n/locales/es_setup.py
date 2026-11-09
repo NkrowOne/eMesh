@@ -15,7 +15,6 @@ STRINGS = {
     "setup.join.approval": "✅ Sí, con mi aprobación",
     "setup.join.auto": "⚡ Sí, entran solos",
     "setup.join.closed": "🔒 No, solo los míos",
-    "setup.recommended": "{label} (recomendado)",
     # --- 2. Pausas de los socios -------------------------------------------------------------------
     "setup.q.2": (
         "⏸ <b>¿Pueden pausar la distribución en sus canales?</b>\n"

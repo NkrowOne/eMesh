@@ -46,7 +46,6 @@ FREQ_OPTIONS: tuple[dict[str, Any], ...] = tuple(freq.normalize(f) for f in (
 DELETE_OPTIONS = (60, 360, 720, 1440, 2880, 0)
 OPTIONS: dict[int, tuple[Any, ...]] = {1: JOIN_OPTIONS, 2: PAUSE_OPTIONS, 3: FREQ_OPTIONS, 4: DELETE_OPTIONS}
 LAYOUT = {1: (1, 1, 1), 2: (1, 1, 1, 1, 1), 3: (1, 2, 2), 4: (3, 2, 1)}  # buttons per row of each step
-RECOMMENDED = {1: 0, 3: 0}  # the option marked «(recomendado)»
 KEEP_MAX = 45  # characters of a current value shown on its «Mantener» button
 
 
@@ -130,8 +129,6 @@ def _labels(ctx: Ctx, step: int) -> list[str]:
         labels += [ctx.t("setup.freq.every", t=freq.every_text(f["every"], ctx.lang)) for f in FREQ_OPTIONS[1:]]
     else:
         labels = [duration_text(ctx, minutes) if minutes else ctx.t("setup.delete.never") for minutes in DELETE_OPTIONS]
-    if step in RECOMMENDED:
-        labels[RECOMMENDED[step]] = ctx.t("setup.recommended", label=labels[RECOMMENDED[step]])
     return labels
 
 

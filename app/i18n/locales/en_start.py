@@ -7,7 +7,7 @@ STRINGS = {
     "home.chats.split": "   └ 🏠 Own: {own} · 🤝 External: {ext}",
     "home.chats.none": (
         "📣 Channels and groups: <b>0</b>\n"
-        "   └ Add the bot to your channels and groups with the ➕ buttons below."
+        "   └ Add the bot to your channels and groups with ➕ <b>Add channel or group</b>."
     ),
     "home.posts": "📝 Active posts: <b>{n}</b>",
     "home.posts.none": "   └ Create the first one in 📝 Posts.",
@@ -36,6 +36,14 @@ STRINGS = {
     "home.btn.paused": "⏸ Paused ({n})",
     "home.btn.add_channel": "➕ Add channel ↗",
     "home.btn.add_group": "➕ Add group ↗",
+    "home.btn.add_chat": "➕ Add channel or group",
+    "home.add.text": (
+        "➕ <b>Add a channel or group</b>\n\n"
+        "1. Tap ➕ <b>Add channel</b> or ➕ <b>Add group</b> and pick yours.\n"
+        "2. Keep the suggested rights checked: the bot needs them to post.\n"
+        "3. Done: it joins the network at once and you're told here."
+    ),
+    "home.add.btn.chats": "📣 See channels and groups",
     "home.btn.pause_all": "⏸ Pause all",
     "home.btn.resume_all": "▶️ Resume all",
     "home.btn.settings": "⚙️ Settings",
@@ -48,15 +56,27 @@ STRINGS = {
     "home.toast.resumed": "▶️ Distribution resumed.",
     "home.toast.ws_left": "🚪 You no longer manage @{bot}.",
     # --- Home: partners and visitors ---------------------------------------------------------------
-    "home.platform": "🕸 <b>eMesh</b> · Create your own bot and post to your channels and groups automatically.",
+    "home.welcome": (
+        "👋 <b>Hi, {name}!</b> Welcome to <b>eMesh</b>.\n\n"
+        "🕸 eMesh posts messages to Telegram channels and groups automatically: you write the post, choose how often "
+        "it goes out and the bot sends it on its own.\n\n"
+        "🤖 <b>To post to your channels you need your own bot.</b> Create it in a minute with "
+        "<b>🤖 Create my bot</b>: it's yours, with your name, your channels and your rules."
+    ),
     "home.join.default": (
-        "🤝 <b>Join the network of @{bot}</b>\n\n"
-        "Add this bot to your channel or group and it will receive the network's posts.\n"
-        "⏸ You can pause them whenever you want from 📣 My channels."
+        "🤝 <b>Join the network of @{bot}</b>\n"
+        "Your channel or group will get its posts automatically. Joining takes a minute:\n\n"
+        "1. Tap ➕ <b>Add to my channel</b> (or <b>to my group</b>) and pick which one.\n"
+        "2. Keep the suggested rights: they are used to post the messages and delete them.\n"
+        "3. Done: you'll be told here as soon as it's in.\n\n"
+        "⏸ You can pause the posts whenever you want from 📣 My channels."
     ),
     "home.join.default_no_pause": (
-        "🤝 <b>Join the network of @{bot}</b>\n\n"
-        "Add this bot to your channel or group and it will receive the network's posts."
+        "🤝 <b>Join the network of @{bot}</b>\n"
+        "Your channel or group will get its posts automatically. Joining takes a minute:\n\n"
+        "1. Tap ➕ <b>Add to my channel</b> (or <b>to my group</b>) and pick which one.\n"
+        "2. Keep the suggested rights: they are used to post the messages and delete them.\n"
+        "3. Done: you'll be told here as soon as it's in."
     ),
     "home.join.min": "👤 Minimum to join: <b>{n}</b> members.",
     "home.join.approval": "⏳ Every channel is reviewed by the team before it is accepted.",
@@ -92,15 +112,14 @@ STRINGS = {
         "• 🗂 <b>Channel groups</b>: sets of channels to send them specific posts or give them their own "
         "frequency.\n\n"
         "On each turn of its frequency, every channel gets <b>one</b> post; the posts in rotation take turns.\n\n"
-        "👉 <b>First steps</b>: add the bot to a channel with ➕ <b>Add channel</b>, create a post in "
+        "👉 <b>First steps</b>: add the bot to a channel with ➕ <b>Add channel or group</b>, create a post in "
         "📝 <b>Posts</b> and adjust the frequency in ⏰ <b>Frequencies</b>."
     ),
     "guide.admin.2": (
         "📣 <b>Own and external channels</b>\n\n"
         "<b>Adding channels</b>\n"
-        "Tap ➕ <b>Add channel</b> or ➕ <b>Add group</b> and keep the suggested rights: in channels, post, edit "
-        "and delete messages; in groups, delete and pin messages. If the bot already was an administrator in other "
-        "chats, use 📥 <b>Import</b> in 📣 Channels.\n\n"
+        "Tap ➕ <b>Add channel or group</b> on the home screen and keep the suggested rights: in channels, post, "
+        "edit and delete messages; in groups, delete and pin messages.\n\n"
         "• 🏠 <b>Own</b>: added by an admin, they join at once.\n"
         "• 🤝 <b>External</b>: other people's, when they are accepted in ⚙️ Settings › 🤝 External channels. With "
         "manual approval they arrive as ⏳ requests.\n\n"
@@ -329,13 +348,25 @@ STRINGS = {
     "tz.intro.admin": "The network's frequencies and send dates are calculated with it.",
     "tz.intro.user": "Dates and times are shown in your timezone.",
     "tz.intro.onboarding": (
-        "👋 <b>Before you start</b>, choose your network's timezone: frequencies and send dates are calculated "
-        "with it. Telegram doesn't share it with bots, so it has to be chosen once (it can be changed later in "
-        "⚙️ Settings)."
+        "👋 <b>Welcome to your bot!</b>\n"
+        "It's already running; get it ready in a minute:\n"
+        "1. 🗺 Choose the timezone.\n"
+        "2. 🧭 Answer a few quick questions.\n"
+        "3. ➕ Add your channels and 📝 create your first post.\n\n"
+        "🗺 <b>Timezone</b>\n"
+        "Your network's send times are calculated with it. Telegram doesn't share it with bots, so it's only asked "
+        "once (it can be changed later in ⚙️ Settings)."
     ),
+    "tz.intro.welcome": (
+        "👋 <b>Hi!</b> Before you start, choose your <b>timezone</b>: you'll see dates and times in your local "
+        "time.\n"
+        "   └ It's only asked once."
+    ),
+    "tz.welcome": "👋 <b>Welcome to your bot!</b> It's already running; get it ready in a minute.",
     "tz.current": "🕐 Current: <b>{zone}</b> ({offset}) · {time}",
     "tz.current.default": "🕐 Current: <b>{zone}</b> ({offset}) · {time}\n   └ It is the network's timezone.",
     "tz.pick": "👇 Choose your <b>continent</b> and then your <b>country</b>.",
+    "tz.cont.ame": "🌎 America",
     "tz.cont.nam": "🌎 North America",
     "tz.cont.cam": "🌎 Central America & Caribbean",
     "tz.cont.sam": "🌎 South America",
@@ -344,6 +375,14 @@ STRINGS = {
     "tz.cont.afr": "🌍 Africa",
     "tz.cont.oce": "🌏 Oceania",
     "tz.btn.write": "✍️ Type zone",
+    "tz.btn.photo_set": "🖼 Set image",
+    "tz.btn.photo_change": "🖼 Change image",
+    "tz.btn.photo_del": "🗑 Remove image",
+    "tz.photo.prompt": "🖼 Send the <b>photo</b> that will be shown when this menu is opened, in every bot.",
+    "tz.photo.invalid": "⚠️ That isn't a photo.",
+    "tz.photo.saved": "✅ Image saved.",
+    "tz.photo.deleted": "🗑 Image removed.",
+    "tz.regions": "👇 Choose your region:",
     "tz.countries": "👇 Choose your country:",
     "tz.zones": "👇 Choose your timezone:",
     "tz.write.prompt": (
@@ -355,7 +394,10 @@ STRINGS = {
     "tz.write.invalid": "⚠️ That timezone is not valid. Use the format <code>Continent/City</code>.",
     "tz.saved.admin": "✅ Network timezone: <b>{zone}</b>. The next sends have been recalculated.",
     "tz.saved.first": "✅ Network timezone: <b>{zone}</b>.",
+    "tz.saved.known": "🗺 Your network's timezone: <b>{zone}</b>, the one you already chose. It can be changed in "
+                      "⚙️ Settings.",
     "tz.saved.user": "✅ Your timezone is now <b>{zone}</b>.",
+    "tz.saved.welcome": "✅ Your timezone: <b>{zone}</b>. You can change it in ⚙️ Settings.",
     # --- Statistics and activity -------------------------------------------------------------------
     "stats.title": "📊 <b>Statistics</b> · {period}",
     "stats.period.0": "last 24 h",

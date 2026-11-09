@@ -1,8 +1,10 @@
 """🏠 Home, 📖 guide and the basic commands: /start (+ deep links), /cancel, /id, /help, /admin and /deladmin.
 
 The home has three views: the network of the admins (with its summary and ⏸ Pausar todo), the partners and visitors
-(how to join, their chats, support) and the main bot in hub mode (what eMesh is, create your bot). The owner of a new
-clone goes first through the timezone and the 🧭 setup wizard.
+(how to join, their chats, support; the main bot welcomes them to eMesh and offers 🤖 Crear mi bot first) and the main
+bot in hub mode (what eMesh is, create your bot). The owner of a new clone goes first through the timezone (or the one
+they already chose somewhere) and the 🧭 setup wizard; a user is asked their timezone on the first visit, unless they
+already chose one somewhere.
 """
 from __future__ import annotations
 
@@ -33,7 +35,9 @@ from app.bot.routers.settings import (
     with_notice,
 )
 from app.bot.routers.setup import needs_setup
-from app.bot.routers.timezone import needs_timezone
+from app.bot.routers.timezone import ASK_HOME as TZ_ASK_HOME
+from app.bot.routers.timezone import ASK_JOIN as TZ_ASK_JOIN
+from app.bot.routers.timezone import adopt_known_zone, must_choose_timezone, needs_timezone
 from app.db.base import utcnow
 from app.db.models import Bot as BotRecord
 from app.db.models import Chat, ChatOrigin, ChatStatus, EventKind
@@ -41,7 +45,7 @@ from app.services import clones, events, freq, limits, stats
 from app.services.chatinfo import add_to_channel_url, add_to_group_url
 from app.ui.callbacks import MenuCB
 from app.ui.common import alert, back_row, btn, kb, nav_row, show, toast, ws_banner
-from app.ui.fmt import dt, num
+from app.ui.fmt import dt, esc, num
 from app.ui.screens import open_screen, screen
 
 log = logging.getLogger(__name__)
@@ -80,8 +84,14 @@ async def home_screen(
     event: Message | CallbackQuery, ctx: Ctx, session: AsyncSession, arg: int = 0, notice: str | None = None,
     **_: object,
 ) -> None:
-    if needs_timezone(ctx):  # a new clone: its owner chooses the timezone first
-        await open_screen("timezone", event, ctx, session)
+    if needs_timezone(ctx):  # a new clone: its owner's timezone first (one they already chose, or the question)
+        zone = await adopt_known_zone(session, ctx)
+        if zone is None:
+            await open_screen("timezone", event, ctx, session)
+            return
+        notice = with_notice(_known_zone_notice(ctx, zone), notice)
+    if await must_choose_timezone(session, ctx):  # a user's first visit: dates and times in their local time
+        await open_screen("timezone", event, ctx, session, arg=TZ_ASK_HOME)
         return
     if needs_setup(ctx):  # then the setup wizard, until it is finished or skipped
         await open_screen("setup", event, ctx, session, arg=1, notice=notice)
@@ -94,6 +104,12 @@ async def home_screen(
         await _partner_home(event, ctx, session, notice)
         return
     await show(event, with_notice(text, notice), markup)
+
+
+def _known_zone_notice(ctx: Ctx, zone: str) -> str:
+    """A new clone took the zone its owner already chose somewhere; the welcome too when the setup wizard follows."""
+    known = ctx.t("tz.saved.known", zone=esc(zone))
+    return f"{ctx.t('tz.welcome')}\n{known}" if needs_setup(ctx) else known
 
 
 def _next_turn(ws: BotRecord, tz: str, now: datetime) -> datetime | None:
@@ -146,6 +162,8 @@ async def _admin_home(ctx: Ctx, session: AsyncSession) -> tuple[str, InlineKeybo
         lines += ["", ctx.t("home.paused")]
 
     rows: list[list[InlineKeyboardButton | None]] = [
+        # ➕ first: a network starts by adding the bot to channels and groups (both links are in its submenu).
+        [btn(ctx.t("home.btn.add_chat"), MenuCB(screen="add_chat"), style="success")] if ws.username else None,
         [btn(ctx.t("home.btn.posts"), MenuCB(screen="posts")), btn(ctx.t("home.btn.chats"), MenuCB(screen="chats"))],
         [btn(ctx.t("home.btn.groups"), MenuCB(screen="groups")),
          btn(ctx.t("home.btn.freqs"), MenuCB(screen="freqs"))],
@@ -156,9 +174,6 @@ async def _admin_home(ctx: Ctx, session: AsyncSession) -> tuple[str, InlineKeybo
          btn(ctx.t("home.btn.paused", n=paused), MenuCB(screen="paused"))
          if ws.join_open or s.external or paused else None],
     ]
-    if ws.username:
-        rows.append([btn(ctx.t("home.btn.add_channel"), url=add_to_channel_url(ws.username)),
-                     btn(ctx.t("home.btn.add_group"), url=add_to_group_url(ws.username))])
     if ws.paused:
         rows.append([btn(ctx.t("home.btn.resume_all"), StCB(action="resume"), style="success")])
     else:
@@ -177,6 +192,23 @@ async def _admin_home(ctx: Ctx, session: AsyncSession) -> tuple[str, InlineKeybo
     return "\n".join(lines), kb(*rows)
 
 
+@screen("add_chat")
+async def add_chat_screen(
+    event: Message | CallbackQuery, ctx: Ctx, session: AsyncSession, arg: int = 0, **_: object
+) -> None:
+    """➕ Añadir canal o grupo (admins): how to add the network's bot to a channel or a group, with both links."""
+    if not ctx.is_admin or ctx.is_hub:
+        await alert(event, ctx.t("common.no_permission"))
+        return
+    username = ctx.ws_rec.username  # a super admin managing a clone adds the clone's bot
+    await show(event, ctx.t("home.add.text"), kb(
+        [btn(ctx.t("home.btn.add_channel"), url=add_to_channel_url(username)),
+         btn(ctx.t("home.btn.add_group"), url=add_to_group_url(username))] if username else None,
+        [btn(ctx.t("home.add.btn.chats"), MenuCB(screen="chats"))],
+        back_row(ctx.lang, "home"),
+    ))
+
+
 async def _my_chats(session: AsyncSession, bot_id: int, user_id: int) -> int:
     """External chats of the user in the network (any status but left)."""
     q = select(func.count()).select_from(Chat).where(
@@ -185,20 +217,27 @@ async def _my_chats(session: AsyncSession, bot_id: int, user_id: int) -> int:
     return int((await session.execute(q)).scalar() or 0)
 
 
+async def _clones_open(ctx: Ctx, session: AsyncSession) -> bool:
+    """The platform accepts new bots (its clone policy isn't ``closed``)."""
+    return (await limits.platform(session, ctx.settings)).clone_policy != "closed"
+
+
 async def _create_own_button(ctx: Ctx, session: AsyncSession) -> InlineKeyboardButton | None:
-    """🤖 Crea tu propio bot: the clone screen in the main bot, a link to the main bot in a clone (none when the
-    platform doesn't accept new bots)."""
-    if (await limits.platform(session, ctx.settings)).clone_policy == "closed":
+    """🤖 Crea tu propio bot in a clone: a link to the main bot (none when the platform doesn't accept new bots)."""
+    if not await _clones_open(ctx, session):
         return None
-    if ctx.is_main:
-        return btn(ctx.t("home.btn.create_own"), MenuCB(screen="clone"))
     main = await clones.main_username(session, ctx.settings)
     return btn(ctx.t("home.btn.create_own"), url=f"https://t.me/{main}?start=clone") if main else None
 
 
+def _first_name(ctx: Ctx) -> str:
+    user = ctx.user
+    return esc(user.first_name or user.full_name) if user is not None else ""
+
+
 def _partner_text(ctx: Ctx, *, platform: bool, custom: str | None) -> str:
     ws = ctx.ws_rec
-    parts = [ctx.t("home.platform")] if platform else []
+    parts = [ctx.t("home.welcome", name=_first_name(ctx))] if platform else []
     if ws.join_open:
         block = [custom or join_text_default(ctx)]
         if ws.min_members:
@@ -206,15 +245,21 @@ def _partner_text(ctx: Ctx, *, platform: bool, custom: str | None) -> str:
         if ws.join_approval:
             block.append(ctx.t("home.join.approval"))
         parts.append("\n\n".join(block))
-    else:
+    elif not platform:  # the main bot's visitors come to create their own bot, not to join its network
         parts.append(ctx.t("home.private"))
     return "\n\n".join(parts)
 
 
 async def _partner_home(event: Message | CallbackQuery, ctx: Ctx, session: AsyncSession, notice: str | None) -> None:
     ws = ctx.ws_rec
-    create = await _create_own_button(ctx, session)
+    # The platform's own bot welcomes its visitors to eMesh: publishing needs their own bot, so 🤖 Crear mi bot comes
+    # first (unless the platform doesn't accept new bots).
+    platform = ctx.is_main and await _clones_open(ctx, session)
+    bots = await clones.count_user_bots(session, ctx.user_id) if ctx.is_main else 0
+    mybots = btn(ctx.t("home.btn.mybots", n=bots), MenuCB(screen="mybots")) if bots else None
     rows: list[list[InlineKeyboardButton | None]] = []
+    if platform:
+        rows += [[btn(ctx.t("home.btn.create_mine"), MenuCB(screen="clone"), style="success")], [mybots]]
     if ws.join_open and ws.username:
         rows.append([btn(ctx.t("home.btn.join_channel"), url=add_to_channel_url(ws.username)),
                      btn(ctx.t("home.btn.join_group"), url=add_to_group_url(ws.username))])
@@ -225,10 +270,9 @@ async def _partner_home(event: Message | CallbackQuery, ctx: Ctx, session: Async
     rows.append([btn(ctx.t("home.btn.guide"), MenuCB(screen="guide")),
                  btn(ctx.t("home.btn.support"), url=support) if support else None])
     rows.append([btn(ctx.t("home.btn.settings"), MenuCB(screen="settings"))])
-    bots = await clones.count_user_bots(session, ctx.user_id) if ctx.is_main else 0
-    rows.append([create, btn(ctx.t("home.btn.mybots", n=bots), MenuCB(screen="mybots")) if bots else None])
+    if not platform:
+        rows.append([None if ctx.is_main else await _create_own_button(ctx, session), mybots])
     markup = kb(*rows)
-    platform = ctx.is_main and create is not None  # the platform's own bot introduces eMesh first
     # The owner's welcome text is Telegram HTML: custom emoji can't be used by most bots, and if Telegram still
     # refuses it the default text is shown instead.
     custom = _TG_EMOJI_RE.sub(r"\1", ws.join_text) if ws.join_open and ws.join_text else None
@@ -311,6 +355,10 @@ async def on_start(
 ) -> None:
     await state.clear()
     name, arg = deep_link_target(command.args, admin=ctx.is_admin)
+    if needs_timezone(ctx):  # a new clone: its owner goes through the timezone first, whatever the link
+        name, arg = "home", 0
+    elif name == "join" and await must_choose_timezone(session, ctx):  # a user's first visit
+        name, arg = "timezone", TZ_ASK_JOIN
     await open_screen(name, message, ctx, session, arg=arg)
 
 

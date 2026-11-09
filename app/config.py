@@ -32,6 +32,9 @@ class Settings(BaseSettings):
 
     # --- Storage ---
     DATABASE_URL: str = "sqlite+aiosqlite:///./emesh.db"
+    # eButtons' database, to reuse the timezone people already chose there. Empty: eMesh's own database (both
+    # projects prefix their tables, em_ / eb_, so they can share one).
+    EBUTTONS_DATABASE_URL: str = ""
     DB_POOL_SIZE: int = 10
     DB_MAX_OVERFLOW: int = 20
     RUN_MIGRATIONS: bool = True
@@ -70,7 +73,7 @@ class Settings(BaseSettings):
     THROTTLE_LIMIT: int = 30  # max updates per user per THROTTLE_WINDOW seconds
     THROTTLE_WINDOW: float = 10.0
 
-    @field_validator("DATABASE_URL")
+    @field_validator("DATABASE_URL", "EBUTTONS_DATABASE_URL")
     @classmethod
     def _normalize_db_url(cls, v: str) -> str:
         if v.startswith("postgres://"):
