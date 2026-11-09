@@ -266,7 +266,8 @@ async def test_managed_bot_open_policy(app: App) -> None:
     assert app.manager.is_running(new_id)
     dm = app.fake.last("sendMessage", chat_id=USER_ID)
     assert dm.token == app.settings.BOT_TOKEN
-    assert dm.params["text"] == "✅ ¡Tu bot @pepe_mesh_bot está listo! Ábrelo y pulsa /start."
+    assert dm.params["text"] == ("✅ <b>¡Tu bot @pepe_mesh_bot está listo!</b> Ábrelo y pulsa /start: en un minuto "
+                                 "lo dejas a punto (zona horaria, unas preguntas y tus canales).")
     assert dm.params["reply_markup"]["inline_keyboard"][0][0]["url"] == "https://t.me/pepe_mesh_bot"
     notice = app.fake.last("sendMessage", chat_id=SUPER_ID)
     assert "Nuevo clon" in notice.params["text"] and "Creado con Telegram" in notice.params["text"]

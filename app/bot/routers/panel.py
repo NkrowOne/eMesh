@@ -1,6 +1,7 @@
 """👑 Panel (super admins, main bots): platform numbers, the clones (list, search, detail, 🛠 Gestionar, enable /
 disable, approve / reject, limits, message to the owner, activity, delete), ⚙️ Plataforma (clone policy and default
-limits), 📢 Aviso a los dueños and 📄 Errores (.txt)."""
+limits), 🖼 Imagen del bot (profile photo of the main bots, which the clones get too), 📢 Aviso a los dueños and
+📄 Errores (.txt)."""
 from __future__ import annotations
 
 import asyncio
@@ -10,7 +11,7 @@ from datetime import datetime, timedelta
 from typing import Any
 
 from aiogram import Bot, F, Router
-from aiogram.exceptions import TelegramAPIError
+from aiogram.exceptions import TelegramAPIError, TelegramBadRequest
 from aiogram.filters.callback_data import CallbackData
 from aiogram.fsm.context import FSMContext
 from aiogram.fsm.state import State, StatesGroup
@@ -24,9 +25,11 @@ from app.db.models import Bot as BotRecord
 from app.db.models import BotStatus, BotUser, Chat, ChatStatus, Post, PostStatus, Run, User
 from app.db.session import SessionMaker
 from app.i18n import t
-from app.services import blast, clones, events, freq, limits, logbook, stats
+from app.services import blast, brand, clones, events, freq, limits, logbook, stats
 from app.services.notify import send_dm
 from app.services.users import get_lang
+from app.telegram.context import set_low_priority
+from app.telegram.errors import short
 from app.telegram.manager import BotManager
 from app.ui.callbacks import MenuCB
 from app.ui.common import (
@@ -65,6 +68,7 @@ DM_MAX = 3500  # visible characters of a message to an owner (the header must fi
 
 _tasks: set[asyncio.Task[None]] = set()  # running 📢 blasts (kept so they aren't garbage collected)
 _blasts: set[tuple[int, int, int]] = set()  # (bot, super admin, message) already sent: a double tap sends once
+_photo_job: asyncio.Task[Any] | None = None  # the latest 🖼 bot image on its way to the clones
 
 
 class PanelCB(CallbackData, prefix="sa"):
@@ -81,6 +85,7 @@ class PanelFSM(StatesGroup):
     dm = State()
     setting = State()
     blast = State()
+    photo = State()
 
 
 def _allowed(ctx: Ctx) -> bool:
@@ -123,6 +128,13 @@ def approval_markup(rec: BotRecord) -> Callable[[str], InlineKeyboardMarkup | No
                    btn(t("sa.btn.reject", lang), PanelCB(action="no", id=bot_id), style="danger")])
 
     return make
+
+
+async def give_image(session: AsyncSession, manager: BotManager, sm: SessionMaker, bot_id: int) -> None:
+    """A clone that has just started running gets the platform's bot image, unless its owner put a photo of their
+    own (background work; nothing to do while there is no image)."""
+    if await brand.has_photo(session, brand.BOT):
+        brand.spawn(brand.give_to_clone(manager, sm, bot_id))
 
 
 # --------------------------------------------------------------------------- panel
@@ -170,8 +182,9 @@ async def panel_screen(event: Message | CallbackQuery, ctx: Ctx, session: AsyncS
     markup = kb(
         first,
         [btn(ctx.t("sa.btn.settings"), MenuCB(screen="panel_settings")),
-         btn(ctx.t("sa.btn.blast"), PanelCB(action="blast"))],
-        [btn(ctx.t("sa.btn.errors"), PanelCB(action="logs"))],
+         btn(ctx.t("sa.btn.photo"), MenuCB(screen="panel_photo"))],
+        [btn(ctx.t("sa.btn.blast"), PanelCB(action="blast")),
+         btn(ctx.t("sa.btn.errors"), PanelCB(action="logs"))],
         back_row(ctx.lang, "home"),
     )
     await show(event, text, markup)
@@ -433,7 +446,7 @@ async def on_switch(call: CallbackQuery, callback_data: PanelCB, ctx: Ctx, sessi
 
 @router.callback_query(PanelCB.filter(F.action.in_({"ok", "no"})))
 async def on_decide(call: CallbackQuery, callback_data: PanelCB, ctx: Ctx, session: AsyncSession, bot: Bot,
-                    manager: BotManager) -> None:
+                    manager: BotManager, sm: SessionMaker) -> None:
     """✅ Aprobar / ❌ Rechazar a pending clone (from its detail or from the notice of the new clone)."""
     rec = await _load(call, ctx, session, callback_data.id)
     if rec is None:
@@ -449,6 +462,7 @@ async def on_decide(call: CallbackQuery, callback_data: PanelCB, ctx: Ctx, sessi
                 markup = kb([btn(t("cl.btn.open", lang, username=username), url=f"https://t.me/{username}",
                                  style="success")])
                 await send_dm(bot, session, rec.owner_id, t("cl.approved_dm", lang, username=esc(username)), markup)
+                await give_image(session, manager, sm, rec.id)
                 log.info("Clone %s (@%s) approved by %s", rec.id, username, ctx.user_id)
             else:
                 await alert(call, ctx.t("sa.enable_failed"))
@@ -714,6 +728,121 @@ async def on_setting_input(message: Message, ctx: Ctx, session: AsyncSession, st
     await state.clear()
     log.info("Platform setting %s set to %s by %s", field, text, ctx.user_id)
     await panel_settings_screen(message, ctx, session, notice=ctx.t("common.saved"))
+
+
+# --------------------------------------------------------------- 🖼 Imagen del bot
+def _main_name(ctx: Ctx) -> str:
+    return esc(ctx.bot_rec.username or ctx.bot_id)
+
+
+async def _show_with_photo(event: Message | CallbackQuery, session: AsyncSession, text: str,
+                           markup: InlineKeyboardMarkup, photo: str | BufferedInputFile | None) -> None:
+    """A panel with the bot image on top (without it when Telegram refuses it). An image uploaded to this bot is
+    remembered, so next time it sends its own file id."""
+    if photo is None:
+        await show(event, text, markup)
+        return
+    try:
+        sent = await show(event, text, markup, media_id=photo, media_type="photo")
+    except TelegramBadRequest as exc:
+        log.warning("The bot image could not be shown: %s", short(exc))
+        await show(event, text, markup, new=True)
+        return
+    bot = event.bot
+    if isinstance(photo, BufferedInputFile) and sent is not None and sent.photo and bot is not None:
+        await brand.remember(session, brand.BOT, bot.id, sent.photo[-1].file_id, source=brand.source_of(photo))
+
+
+@screen("panel_photo")
+async def panel_photo_screen(event: Message | CallbackQuery, ctx: Ctx, session: AsyncSession, arg: int = 0,
+                             notice: str | None = None, **_: object) -> None:
+    """🖼 Imagen del bot: the profile photo of the main bots, which the clones get too (shown on top)."""
+    if not _allowed(ctx):
+        await alert(event, ctx.t("common.no_permission"))
+        return
+    has = await brand.has_photo(session, brand.BOT)
+    lines = [ctx.t("sa.photo", main=_main_name(ctx))]
+    if not has:
+        lines.append(ctx.t("sa.photo.none"))
+    if notice:
+        lines.insert(0, notice)
+    markup = kb([btn(ctx.t("sa.btn.photo_change" if has else "sa.btn.photo_set"), PanelCB(action="photo"),
+                     style="primary")],
+                back_row(ctx.lang, "panel"))
+    bot = event.bot
+    photo = await brand.photo_for(session, bot, brand.BOT, ctx.manager) if has and bot is not None else None
+    await _show_with_photo(event, session, "\n\n".join(lines), markup, photo)
+
+
+async def _ask_photo(event: Message | CallbackQuery, ctx: Ctx, error: str | None = None) -> None:
+    text = ctx.t("sa.photo.ask")
+    await prompt(event, ctx, f"{error}\n\n{text}" if error else text, cancel_screen="panel_photo")
+
+
+@router.callback_query(PanelCB.filter(F.action == "photo"))
+async def on_photo(call: CallbackQuery, ctx: Ctx, state: FSMContext) -> None:
+    if not _allowed(ctx):
+        await alert(call, ctx.t("common.no_permission"))
+        return
+    await state.set_state(PanelFSM.photo)
+    await _ask_photo(call, ctx)
+
+
+@router.message(PanelFSM.photo, F.chat.type == "private", ~F.text.startswith("/"))
+async def on_photo_input(message: Message, ctx: Ctx, session: AsyncSession, state: FSMContext, bot: Bot,
+                         manager: BotManager, sm: SessionMaker) -> None:
+    """The new bot image: Telegram puts it on the main bots at once (or refuses it), then it is stored; the clones
+    get it in the background and the super admin gets a report."""
+    if not _allowed(ctx):
+        await state.clear()
+        return
+    if not message.photo:
+        await _ask_photo(message, ctx, ctx.t("sa.photo.err_type"))
+        return
+    file_id = message.photo[-1].file_id
+    raw = await brand.fetch_one(bot, file_id)
+    if raw is None:
+        await _ask_photo(message, ctx, ctx.t("sa.photo.err_read"))
+        return
+    try:
+        await brand.set_main_photos(manager, raw)
+    except TelegramAPIError as exc:
+        log.info("Telegram refused the bot image sent by %s: %s", ctx.user_id, short(exc))
+        error = esc(truncate(getattr(exc, "message", "") or str(exc), 120))
+        await _ask_photo(message, ctx, ctx.t("sa.photo.err_refused", error=error))
+        return
+    await brand.set_photo(session, brand.BOT, bot.id, file_id)
+    await session.commit()  # the main bots already show it; the clones' job writes through its own sessions
+    await state.clear()
+    log.info("Bot image changed by super admin %s", ctx.user_id)
+    notice = ctx.t("sa.photo.saved", main=_main_name(ctx))
+    if await _scalar(session, select(func.count()).select_from(BotRecord).where(
+            BotRecord.is_main.is_(False), BotRecord.status == BotStatus.ACTIVE)):
+        _queue_photo_job(manager, sm, bot, raw, ctx.user_id, ctx.lang)
+        notice += " " + ctx.t("sa.photo.saved_clones")
+    await panel_photo_screen(message, ctx, session, notice=notice)
+
+
+def _queue_photo_job(manager: BotManager, sm: SessionMaker, bot: Bot, raw: bytes, admin_id: int, lang: str) -> None:
+    """The new image goes to the clones in the background, after the previous one if it is still on its way."""
+    global _photo_job
+    _photo_job = brand.spawn(_give_to_clones(manager, sm, bot, raw, admin_id, lang, _photo_job))
+
+
+async def _give_to_clones(manager: BotManager, sm: SessionMaker, bot: Bot, raw: bytes, admin_id: int, lang: str,
+                          previous: asyncio.Task[Any] | None) -> None:
+    """Background: the new bot image on every clone without a photo of its own, then a report to the super admin
+    through the main bot. A previous image still on its way goes first (else it could end up on some clones)."""
+    if previous is not None and not previous.done():
+        await asyncio.wait([previous])
+    set_low_priority()
+    given = await brand.give_to_clones(manager, sm, raw)
+    log.info("Bot image given to the clones: %d set, %d with a photo of their own, %d failed", given.set, given.own,
+             given.failed)
+    text = t("sa.photo.done", lang, set=num(given.set), own=num(given.own))
+    if given.failed:
+        text += "\n" + t("sa.photo.done_failed", lang, failed=num(given.failed))
+    await send_dm(bot, None, admin_id, text)
 
 
 # ------------------------------------------------------------ 📢 Aviso a los dueños

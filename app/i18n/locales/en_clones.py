@@ -13,6 +13,9 @@ STRINGS = {
     "cl.how.reconnect": (
         "🔑 <b>Use token</b>: if the token of one of your bots changed, paste the new one here to connect it again."
     ),
+    "cl.photo": (
+        "🖼 Your bot is created with the platform's image; you can change it whenever you want in @BotFather."
+    ),
     "cl.count": "🤖 Your bots: <b>{count}</b>/{limit}",
     "cl.limit_reached": "⚠️ The maximum number of bots was reached. Disconnect one in «🤖 My bots» to add another.",
     "cl.closed": "🔒 New bots can't be created right now.",
@@ -49,13 +52,19 @@ STRINGS = {
     "cl.err.admin_locked": "🔒 That bot was disabled by the administration. Contact them to enable it again.",
     "cl.err.closed": "🔒 New bots can't be created right now.",
     # --- connected ---
-    "cl.ready": "✅ Your bot @{username} is ready! Open it and press /start.",
+    "cl.ready": (
+        "✅ <b>Your bot @{username} is ready!</b> Open it and press /start: it is set up in a minute (timezone, a few "
+        "questions and your channels)."
+    ),
     "cl.pending": (
         "⏳ Your bot @{username} is connected and waiting for approval. You will be told as soon as the "
         "administration reviews it."
     ),
     "cl.managed_failed": "⚠️ Your new bot @{username} couldn't be connected.",
-    "cl.approved_dm": "✅ <b>Your bot @{username} was approved!</b> It is running now: open it and press /start.",
+    "cl.approved_dm": (
+        "✅ <b>Your bot @{username} was approved!</b> It is running now: open it and press /start; it is set up in a "
+        "minute (timezone, a few questions and your channels)."
+    ),
     "cl.rejected_dm": (
         "❌ Your bot @{username} was not approved. If this looks like a mistake, contact the administration."
     ),
@@ -126,6 +135,7 @@ STRINGS = {
     "sa.btn.settings": "⚙️ Platform",
     "sa.btn.blast": "📢 Notice to owners",
     "sa.btn.errors": "📄 Errors",
+    "sa.btn.photo": "🖼 Bot image",
     "sa.main_locked": "ℹ️ The main bot isn't managed from here.",
     # --- clones list ---
     "sa.bots.title": "🤖 <b>Clones</b> · {filter}: <b>{count}</b>",
@@ -235,6 +245,30 @@ STRINGS = {
     "sa.set.ask.limit_posts": (
         "📝 <b>Posts per clone</b>\nNow: {value}\n\nSend how many posts each bot may have (<code>0</code> = no limit)."
     ),
+    # --- 🖼 Bot image ---
+    "sa.photo": (
+        "🖼 <b>Bot image</b>\n\n"
+        "It is the profile photo of @{main}. The bots created from here get it too.\n"
+        "   └ Existing bots get it unless they have a photo of their own."
+    ),
+    "sa.photo.none": "📌 There is no image right now.",
+    "sa.btn.photo_set": "🖼 Set image",
+    "sa.btn.photo_change": "🖼 Change image",
+    "sa.photo.ask": (
+        "🖼 Send the <b>photo</b> of the bot (as a photo, not as a file).\n"
+        "   └ Square works best: Telegram crops it into a circle."
+    ),
+    "sa.photo.err_type": "⚠️ That is not a photo. Send it as a photo, not as a file.",
+    "sa.photo.err_read": "⚠️ The photo couldn't be read. Try another one.",
+    "sa.photo.err_refused": "⚠️ Telegram didn't accept the photo ({error}). Try another one.",
+    "sa.photo.saved": "✅ Image set on @{main}.",
+    "sa.photo.saved_clones": "The clones are being updated now; a report will follow when it is done.",
+    "sa.photo.done": (
+        "🖼 <b>Bot image set</b>\n"
+        "🤖 Clones updated: <b>{set}</b>\n"
+        "🖼 With a photo of their own (not changed): <b>{own}</b>"
+    ),
+    "sa.photo.done_failed": "⚠️ With errors: <b>{failed}</b>",
     # --- 📢 Notice to owners ---
     "sa.blast.intro": (
         "📢 <b>Notice to owners</b>\n\nA message for the owners of the platform's bots (<b>{n}</b> people), sent "

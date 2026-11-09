@@ -1,5 +1,6 @@
 """🤖 Crear mi bot (main bot): a clone created with Telegram Managed Bots or a @BotFather token, the platform's
-clone policy (open / approval / closed) and limits, and 🤖 Mis bots (pause, resume, disconnect)."""
+clone policy (open / approval / closed) and limits, and 🤖 Mis bots (pause, resume, disconnect). A clone that starts
+running gets the platform's bot image (👑 › 🖼 Imagen del bot) unless it has a photo of its own."""
 from __future__ import annotations
 
 import logging
@@ -14,11 +15,12 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.bot.context import Ctx
 from app.bot.filters import MainBotFilter
-from app.bot.routers.panel import approval_markup
+from app.bot.routers.panel import approval_markup, give_image
 from app.config import Settings
 from app.db.models import Bot as BotRecord
 from app.db.models import BotStatus
-from app.services import clones, limits
+from app.db.session import SessionMaker
+from app.services import brand, clones, limits
 from app.services.notify import send_dm
 from app.telegram.manager import BotManager, BotTokenError
 from app.ui.callbacks import MenuCB
@@ -108,6 +110,8 @@ async def clone_screen(event: Message | CallbackQuery, ctx: Ctx, session: AsyncS
         how.append(ctx.t("cl.how.create"))
     if room.token_ok:
         how.append(ctx.t("cl.how.token" if room.new_ok else "cl.how.reconnect"))
+    if room.new_ok and await brand.has_photo(session, brand.BOT):
+        how.append(ctx.t("cl.photo"))
     if how:
         parts.append("\n".join(how))
     status = [ctx.t("cl.count", count=count, limit=await _limit_text(ctx, session))]
@@ -192,7 +196,7 @@ async def on_token_start(call: CallbackQuery, ctx: Ctx, session: AsyncSession, s
 
 @router.message(CloneFSM.token, F.chat.type == "private", ~F.text.startswith("/"))
 async def on_token(message: Message, ctx: Ctx, session: AsyncSession, state: FSMContext, bot: Bot,
-                   manager: BotManager, settings: Settings) -> None:
+                   manager: BotManager, settings: Settings, sm: SessionMaker) -> None:
     # The token is a secret: it leaves the chat before anything else (it is never logged nor shown).
     try:
         await message.delete()
@@ -218,6 +222,8 @@ async def on_token(message: Message, ctx: Ctx, session: AsyncSession, state: FSM
         return
     await state.clear()
     await show(message, *_result_view(ctx, rec))
+    if rec.status == BotStatus.ACTIVE:
+        await give_image(session, manager, sm, rec.id)
     if is_new and ctx.user is not None:
         await clones.notify_new_clone(bot, session, settings, rec, owner_name=ctx.user.full_name,
                                       owner_username=ctx.user.username, managed=False,
@@ -227,7 +233,7 @@ async def on_token(message: Message, ctx: Ctx, session: AsyncSession, state: FSM
 # ---------------------------------------------------------------- Managed Bots
 @router.managed_bot(MainBotFilter())
 async def on_managed_bot(event: ManagedBotUpdated, bot: Bot, ctx: Ctx, session: AsyncSession,
-                         manager: BotManager, settings: Settings) -> None:
+                         manager: BotManager, settings: Settings, sm: SessionMaker) -> None:
     """A user created (or got a new token for) a bot through our ``t.me/newbot/...`` link."""
     creator, new_bot = event.user, event.bot_user
     username = new_bot.username or str(new_bot.id)
@@ -248,6 +254,8 @@ async def on_managed_bot(event: ManagedBotUpdated, bot: Bot, ctx: Ctx, session: 
         await send_dm(bot, session, creator.id, text, kb([btn(ctx.t("cl.btn.clone"), MenuCB(screen="clone"))]))
         return
     await send_dm(bot, session, creator.id, *_result_view(ctx, rec))
+    if rec.status == BotStatus.ACTIVE:
+        await give_image(session, manager, sm, rec.id)
     if is_new:
         await clones.notify_new_clone(bot, session, settings, rec, owner_name=creator.full_name,
                                       owner_username=creator.username, managed=True, markup=approval_markup(rec))
