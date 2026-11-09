@@ -48,12 +48,12 @@ def photo_panel(app: App, user_id: int, file_id: str = "TZPHOTO") -> bool:
     return call.method == "sendPhoto" and call.params["photo"] == file_id
 
 
-def on_a_photo(app: App, user_id: int, data: str, message_id: int) -> dict:
-    """A button press on a panel that is a photo (the fake's callbacks come from text panels)."""
+def on_a_photo(app: App, user_id: int, data: str, message_id: int, file_id: str = "TZPHOTO") -> dict:
+    """A button press on a panel that is the photo ``file_id`` (the fake's callbacks come from text panels)."""
     update = app.callback_update(user_id, data, message_id)
     message = update["callback_query"]["message"]
     del message["text"]
-    message["photo"] = [{"file_id": "TZPHOTO", "file_unique_id": "uTZ", "width": 10, "height": 10}]
+    message["photo"] = [{"file_id": file_id, "file_unique_id": f"u{file_id}", "width": 10, "height": 10}]
     message["caption"] = "panel"
     return update
 
@@ -205,7 +205,7 @@ async def test_while_managing_a_clone_the_photo_belongs_to_the_bot_that_received
     banner = f"🛠 Gestionando <b>@{CLONE_USERNAME}</b>\n\n"
     assert app.last_text(SUPER_ID).startswith(f"{banner}✅ Imagen guardada.")
     # On the photo, the caption keeps the banner too.
-    await app.feed(on_a_photo(app, SUPER_ID, TzCB(a="r").pack(), 88), MAIN_BOT_ID)
+    await app.feed(on_a_photo(app, SUPER_ID, TzCB(a="r").pack(), 88, "WSPHOTO"), MAIN_BOT_ID)
     call = app.last_panel(SUPER_ID)
     assert call.method == "editMessageCaption" and call.params["caption"].startswith(f"{banner}<b>🌎 América</b>")
 

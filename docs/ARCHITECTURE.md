@@ -113,6 +113,7 @@ never confused with a Telegram group (👥).
 | `app/services/content.py` | Post content: `from_message(message) -> Content | None`, `content_error(c)` (i18n key), `apply(post, content, bot_id)` (**bot_id = the bot that received the message**, `ctx.bot_id`), `default_name`, `kind_label`, `plain`, buttons `parse_buttons(text)` (ButtonsError key/line), `format_buttons`, `button_line`, `clean_rows`, `count_buttons`, `build_markup`, `make_button`, `COLORS`, `COLOR_EMOJI`, `MAX_BUTTONS`, `MAX_PER_ROW`; sending `media_for(bot, post, manager)` (MediaError too_big/unavailable), `deliver(bot, chat_id, post, media=, reply_markup=, silent=, protect=)`, `send_post(bot, chat_id, post, manager, sm)` (one-off: previews), `edit_delivery(bot, chat_id, message_id, post)`, `file_id_of`, `remember_media(sm, post_id, bot_id, file_id)`. |
 | `app/services/limits.py` | Platform settings (KV `platform:settings`): `platform(session, settings) -> Platform(clone_policy, max_clones, limit_chats, limit_posts)`, `save_platform`; per bot `max_chats`, `max_posts`, `count_chats`, `count_posts`, `can_add_chat`, `can_add_post`, `unlimited`. |
 | `app/services/stats.py` | `summary(session, bot_id, hours=24) -> Summary` (chats own/external/members/sendable/pending/owner_paused/admin_paused/no_rights, groups, posts, runs/sent/failed/skipped/reach, top_posts), `chat_received(session, chat_pk, days=7)`. |
+| `app/ui/photos.py` | `show_with_photo(event, ctx, session, name, text, markup)`: `show` with a platform image (`brand.BOT` / `brand.TZ`) on top; edits only the caption while the pressed panel already is that photo, uploads it once to a bot without its own file id (then remembers it), leaves out a photo Telegram refuses. |
 | `app/services/brand.py` | 🖼 Platform images chosen by a super admin (KV `platform:photo:<name>` = `{"<bot id>": "<file id>"}`, file ids are per bot): `BOT` (profile photo of the main bots, given to the clones without a photo of their own) and `TZ` (photo of the 🗺 timezone picker, every bot). `photo_ids`, `has_photo`, `set_photo`, `clear_photo`, `photo_for(session, bot, name, manager)` (own file id or a downloaded upload) + `remember(..., source=source_of(photo))`, `fetch_one`, `fetch`, `set_profile_photo`, `set_main_photos`, `give_to_clone` / `give_to_clones` (background, `spawn`). |
 | `app/services/blast.py` | `copy_to_users(bot, sm, from_chat_id, message_id, user_ids, on_progress=) -> BlastResult(sent, failed, blocked)` (background, low priority). |
 | `app/services/kv.py` | `get`, `put`, `delete` JSON values. |
@@ -203,6 +204,9 @@ Deep links (`/start <payload>`, start module): `join` → `join`; `c<pk>` → `c
 `p<id>` → `post` (admins); `clone` → `clone`; anything else → `home`.
 
 ### 5.1 Home (start) — `home`
+🖼 The bot image (`brand.BOT`, 👑 › 🖼 Imagen del bot) goes on top of the home (a photo with the text as caption,
+`ui.photos.show_with_photo`): in a main bot for everyone, in a clone for its admins (its visitors see the owner's
+welcome alone). A button on that photo only edits its caption.
 Admin view (admins of the network, and a super admin managing a clone):
 ```
 🕸 <b>Tu red de distribución</b>
@@ -596,9 +600,9 @@ Managed bot update (`managed_bot`, main bot): `getManagedBotToken` → `connect_
 `[🤖 Clones]` (`panel_bots`) `[⏳ Pendientes (N)]`, `[⚙️ Plataforma]` (`panel_settings`) `[🖼 Imagen del bot]`
 (`panel_photo`), `[📢 Aviso a los dueños]` (`panel_blast`: copy a message to the owners of clones through the main
 bot, `blast.copy_to_users`) `[📄 Errores]` (logbook as a .txt document), `[🔙]`.
-`panel_photo` («🖼 Imagen del bot», `brand.BOT`): the profile photo of the main bots; the image is shown on top of
-the panel. «Es la foto de perfil de @main. Los bots que se crean desde aquí la llevan también. └ Los bots que ya
-existen la reciben si no tienen una foto propia.» `[🖼 Poner imagen | Cambiar imagen]` → prompt for a photo (only
+`panel_photo` («🖼 Imagen del bot», `brand.BOT`): the image on top of the home (above) and the profile photo of the
+main bots; the image is shown on top of the panel. «Sale arriba del mensaje de inicio de @main y es su foto de
+perfil. └ Los clones también la llevan: en el inicio de sus admins y como foto de perfil, si no tienen una propia.» `[🖼 Poner imagen | Cambiar imagen]` → prompt for a photo (only
 photos; not readable → asked again) → `brand.set_main_photos` at once (Telegram refuses it → its error, nothing
 stored) → `brand.set_photo` → a background job (`give_to_clones`, after the previous job if one is still running)
 gives it to every running clone without a photo of its own and DMs the report to the super admin («Clones

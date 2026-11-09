@@ -248,8 +248,9 @@ STRINGS = {
     # --- 🖼 Bot image ---
     "sa.photo": (
         "🖼 <b>Bot image</b>\n\n"
-        "It is the profile photo of @{main}. The bots created from here get it too.\n"
-        "   └ Existing bots get it unless they have a photo of their own."
+        "It is shown on top of the start message of @{main} and it is its profile photo.\n"
+        "   └ The clones get it too: on the start message of their admins and as their profile photo, unless they "
+        "have one of their own."
     ),
     "sa.photo.none": "📌 There is no image right now.",
     "sa.btn.photo_set": "🖼 Set image",

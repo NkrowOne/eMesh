@@ -252,8 +252,9 @@ STRINGS = {
     # --- 🖼 Imagen del bot ---
     "sa.photo": (
         "🖼 <b>Imagen del bot</b>\n\n"
-        "Es la foto de perfil de @{main}. Los bots que se crean desde aquí la llevan también.\n"
-        "   └ Los bots que ya existen la reciben si no tienen una foto propia."
+        "Sale arriba del mensaje de inicio de @{main} y es su foto de perfil.\n"
+        "   └ Los clones también la llevan: en el inicio de sus admins y como foto de perfil, si no tienen una "
+        "propia."
     ),
     "sa.photo.none": "📌 Ahora no hay ninguna imagen.",
     "sa.btn.photo_set": "🖼 Poner imagen",
