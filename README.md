@@ -91,7 +91,8 @@ Para saber tu ID de Telegram: arranca el bot y escribe `/id`.
 ## Variables de entorno
 
 Todas están explicadas en [`.env.example`](.env.example). Obligatorias: `BOT_TOKEN`, `SUPER_ADMIN_IDS`,
-`DATABASE_URL` (en producción) y `ENCRYPTION_KEY` (si usas clones).
+`DATABASE_URL` (en producción) y `ENCRYPTION_KEY` (si usas clones). Opcional: `EBUTTONS_DATABASE_URL`, la base de
+datos de eButtons si no es la misma que la de eMesh (así nadie elige dos veces su zona horaria).
 
 ## Desarrollo
 
