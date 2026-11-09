@@ -38,6 +38,28 @@ _msg_ids = itertools.count(10_000)
 _cb_ids = itertools.count(1)
 
 
+@pytest.fixture(autouse=True)
+def _skip_user_timezone_question(request: pytest.FixtureRequest, monkeypatch: pytest.MonkeyPatch) -> None:
+    """Users are asked their timezone before the menu; most tests are about other screens, so they skip it
+    (tests marked ``ask_timezone`` keep it)."""
+    if request.node.get_closest_marker("ask_timezone"):
+        return
+    from app.bot.routers import start
+
+    async def never(session: object, ctx: object, **_: object) -> bool:
+        return False
+
+    monkeypatch.setattr(start, "must_choose_timezone", never, raising=False)
+
+
+@pytest.fixture(autouse=True)
+def _no_waiting_prompts() -> None:
+    """The input prompts waiting in each chat are kept in memory: every test starts without any."""
+    from app.ui import common
+
+    common._prompts.clear()
+
+
 @pytest.fixture
 async def fake() -> AsyncIterator[FakeTelegram]:
     f = FakeTelegram()
