@@ -13,7 +13,8 @@ Hecho con la **última API de Telegram (Bot API 10.3)** y aiogram 3.31. Misma ba
 ## Qué hace
 
 - **📣 Canales y grupos**: añades el bot como admin con un botón (los permisos salen ya marcados). Los tuyos entran
-  al momento; si el bot pierde permisos o lo quitan, recibes un aviso. 📥 Importar canales donde el bot ya era admin.
+  al momento; si el bot pierde permisos o lo quitan, recibes un aviso. Si el bot ya era admin en un canal, este
+  se añade solo con su siguiente publicación.
 - **🤝 Canales externos (socios)**: actívalo y cualquiera puede añadir el bot a su canal o grupo (con o sin tu
   aprobación, con mínimo de miembros). Desde **📣 Mis canales** pueden **pausar** la distribución, elegir
   categorías y salir de la red.

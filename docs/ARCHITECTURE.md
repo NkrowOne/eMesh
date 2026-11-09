@@ -51,9 +51,13 @@ never confused with a Telegram group (👥).
 * **Impersonal tone**: the bot never speaks in first person. «Se ha pausado…», «No se ha podido enviar…»,
   «Faltan permisos…», «Se avisará…» (not «He pausado», «No he podido»). English: passive voice.
 * **Name the kind of chat** in sentences: «tu canal <b>X</b>», «el grupo <b>X</b>» (`chatstate.kind_word(chat, lang)`).
+* **Wording**: Spanish says «multimedia» / «contenido multimedia», never «la media». No option is ever marked
+  «(recomendado)».
 * UI helpers (`app/ui/common.py`): `show(event, text, markup, media_id=, media_type=, new=)` renders a panel (edits
-  on callbacks, sends on messages), `prompt(event, ctx, text, cancel_screen=, cancel_arg=, extra_rows=, back=)` asks
-  for input with a Cancel button, `btn(text, cb|url=, style=, disabled=)`, `kb(*rows)`, `grid()`, `paginate()`,
+  on callbacks, sends on messages), `prompt(event, ctx, text, cancel_screen=, cancel_arg=, extra_rows=, back=,
+  media_id=, media_type=)` asks for input with a Cancel button: **a prompt is always a new message at the bottom of
+  the chat** (nothing covers it) and the message it replaces is deleted (the panel of the pressed button, or the
+  previous prompt); once answered, the next panel replaces it. `btn(text, cb|url=, style=, disabled=)`, `kb(*rows)`, `grid()`, `paginate()`,
   `nav_row()`, `back_row(lang, screen, arg)`, `toggle_label`, `choice_label`, `toast(event, text)`,
   `alert(event, text)`, `visible_len`. **Never call `callback.answer()` directly** — use `toast/alert`; a middleware
   answers the rest. Only one popup per button press.
@@ -109,6 +113,7 @@ never confused with a Telegram group (👥).
 | `app/services/content.py` | Post content: `from_message(message) -> Content | None`, `content_error(c)` (i18n key), `apply(post, content, bot_id)` (**bot_id = the bot that received the message**, `ctx.bot_id`), `default_name`, `kind_label`, `plain`, buttons `parse_buttons(text)` (ButtonsError key/line), `format_buttons`, `button_line`, `clean_rows`, `count_buttons`, `build_markup`, `make_button`, `COLORS`, `COLOR_EMOJI`, `MAX_BUTTONS`, `MAX_PER_ROW`; sending `media_for(bot, post, manager)` (MediaError too_big/unavailable), `deliver(bot, chat_id, post, media=, reply_markup=, silent=, protect=)`, `send_post(bot, chat_id, post, manager, sm)` (one-off: previews), `edit_delivery(bot, chat_id, message_id, post)`, `file_id_of`, `remember_media(sm, post_id, bot_id, file_id)`. |
 | `app/services/limits.py` | Platform settings (KV `platform:settings`): `platform(session, settings) -> Platform(clone_policy, max_clones, limit_chats, limit_posts)`, `save_platform`; per bot `max_chats`, `max_posts`, `count_chats`, `count_posts`, `can_add_chat`, `can_add_post`, `unlimited`. |
 | `app/services/stats.py` | `summary(session, bot_id, hours=24) -> Summary` (chats own/external/members/sendable/pending/owner_paused/admin_paused/no_rights, groups, posts, runs/sent/failed/skipped/reach, top_posts), `chat_received(session, chat_pk, days=7)`. |
+| `app/services/brand.py` | 🖼 Platform images chosen by a super admin (KV `platform:photo:<name>` = `{"<bot id>": "<file id>"}`, file ids are per bot): `BOT` (profile photo of the main bots, given to the clones without a photo of their own) and `TZ` (photo of the 🗺 timezone picker, every bot). `photo_ids`, `has_photo`, `set_photo`, `clear_photo`, `photo_for(session, bot, name, manager)` (own file id or a downloaded upload) + `remember(..., source=source_of(photo))`, `fetch_one`, `fetch`, `set_profile_photo`, `set_main_photos`, `give_to_clone` / `give_to_clones` (background, `spawn`). |
 | `app/services/blast.py` | `copy_to_users(bot, sm, from_chat_id, message_id, user_ids, on_progress=) -> BlastResult(sent, failed, blocked)` (background, low priority). |
 | `app/services/kv.py` | `get`, `put`, `delete` JSON values. |
 | `app/services/moderation.py` | `check_chat(session, title, username, description) -> word | None` (platform blocked words: abuse of minors, non consensual content). |
@@ -186,7 +191,7 @@ visitors). Times: frequencies and dates are in the workspace timezone (`ctx.bot_
 
 Screen names (owner module in brackets): `home`, `guide`, `settings`, `notifications`, `admins`, `lang`,
 `timezone`, `support`, `externals`, `stats`, `activity` [start]; `chats`, `chat`, `chat_groups`, `requests`,
-`paused`, `import`, `partners_msg`, `join`, `my_chats`, `my_chat` [chats]; `posts`, `post`, `post_new`,
+`paused`, `partners_msg`, `join`, `my_chats`, `my_chat` [chats]; `posts`, `post`, `post_new`,
 `post_content`, `post_buttons`, `post_targets`, `post_sched`, `post_opts`, `post_defaults` [posts]; `groups`,
 `group`, `group_chats`, `freqs`, `freq_edit`, `antispam` [groups]; `clone`, `mybots`, `panel`, `panel_bots`,
 `panel_bot`, `panel_settings`, `panel_blast` [clones].
@@ -244,12 +249,12 @@ network accepts external chats or has any (even with 0).
 ### 5.1b Setup wizard of a new bot (start module) — `setup` (arg = step)
 Step by step, one question per screen, the current value pre-selected (✅), `[🔙 Regresar]` to the previous step
 (the first one has `[⏭ Saltar el asistente]`: the defaults stay). Each answer is saved at once. Owner only.
-1. «🤝 <b>¿Aceptas canales de otras personas?</b>» `[✅ Sí, con mi aprobación (recomendado)]`, `[⚡ Sí, entran
+1. «🤝 <b>¿Aceptas canales de otras personas?</b>» `[✅ Sí, con mi aprobación]`, `[⚡ Sí, entran
    solos]`, `[🔒 No, solo los míos]` → `join_open` / `join_approval`.
 2. Only when they are accepted: «⏸ <b>¿Pueden pausar la distribución en sus canales?</b>» (└ «Tú siempre ves quién
    pausa y puedes reanudarlo.») `[Hasta 1 día]`, `[Hasta 3 días]`, `[Hasta 7 días]`, `[Sin límite]`,
    `[🚫 No pueden pausar]` → `partners_can_pause` / `pause_max_hours`.
-3. «⏰ <b>¿Cada cuánto recibe un mensaje cada canal?</b>» `[1 al día (12:00) (recomendado)]` (the default), then
+3. «⏰ <b>¿Cada cuánto recibe un mensaje cada canal?</b>» `[1 al día (12:00)]` (the default), then
    `[Cada 2 h][Cada 4 h][Cada 6 h][Cada 12 h]` (from 08:00 to 22:00) → `Bot.freq` + `freq.refresh_bot`.
 4. «🗑 <b>¿Cuánto tiempo siguen publicados los mensajes?</b>» `[1 h][6 h][12 h][1 día][2 días]`,
    `[♾ No se borran]` → `Bot.post_defaults["delete_after"]` (a new dict).
@@ -331,7 +336,7 @@ first, done last. Buttons: one per post (`#1 Promo Cine`, 2 per row), `[➕ Nuev
 3. «🎯 <b>¿A quién se envía?</b> · 3/4»: toggles `[🌐 Todos]` (selected by default), `[🏠 Solo propios]`,
    `[🤝 Solo externos]`, one per group of chats `[🗂 Cine (5)]`, live count «👥 Lo recibirán: 23 chats · 👤 45,320»
    (`audience.targets_size`), `[✅ Continuar]` (needs a target).
-4. «⏰ <b>¿Cuándo se envía?</b> · 4/5»: `[🔁 En rotación (recomendado)]` (└ «Se turna con los demás mensajes según
+4. «⏰ <b>¿Cuándo se envía?</b> · 4/5»: `[🔁 En rotación]` (└ «Se turna con los demás mensajes según
    la frecuencia de cada canal (global: 1 al día a las 12:00).»), `[⏰ Con su propio horario]`,
    `[📢 Difusión puntual]` (still step 4: `[🚀 Ahora mismo]` — created with `send_at` = now, the scheduler sends it
    once at once — or a typed date: `freq.parse_datetime`), `[✋ Solo cuando lo envíe yo]`.
@@ -371,7 +376,7 @@ Mensaje guardado» + the `post` detail; own mode opens `freq_edit` (arg -id) rig
   `[🗑 Eliminar solo el mensaje]` (the copies already sent stay and their auto delete still happens), `[❌ No]`.
 * ⏸/▶️: status paused/active (a `done` post can be re-activated: once → asks a new date) + `freq.refresh_post`.
 `post_content` (arg id): `[✏️ Cambiar el mensaje]` (new text + media), `[📝 Cambiar solo el texto]` (keeps the media;
-caption limit), `[🏷 Nombre interno]` (≤ 64), `[🖼 Quitar la media]` (media posts, becomes text; needs text), `[🔙]`.
+caption limit), `[🏷 Nombre interno]` (≤ 64), `[🖼 Quitar multimedia]` (media posts, becomes text; needs text), `[🔙]`.
 After a change of a post with live copies: hint «🔄 Pulsa Actualizar publicados para aplicarlo a los ya enviados.».
 `post_buttons` (arg id, `post_buttons.py`): the current keyboard drawn with the real colors where every button is a
 callback that opens its editor (`PbCB`), then `[➕ Añadir botón]`, `[✍️ Escribirlos todos][🗑 Quitar todos]`,
@@ -385,7 +390,7 @@ the input replaces them. Max `content.MAX_BUTTONS`, `MAX_PER_ROW`.
 `[📆 Fecha: 07/11 20:00]` → date input; campaign `[📆 Desde: —][📆 Hasta: —]` (input `dd/mm/aaaa`, `0` clears);
 `[🔙]` → `post`. Every change → `freq.refresh_post` + `scheduler.wake()`.
 `post_opts` (arg id): toggles `📌 Fijar`, `🔕 Sin sonido`, `🛡 Proteger contenido`, `🔗 Vista previa de enlaces`
-(text), `🔼 Texto encima de la media` and `🫣 Spoiler` (photo/video/GIF), `♻️ Borrar su envío anterior`; auto delete
+(text), `🔼 Texto encima del multimedia` and `🫣 Spoiler` (photo/video/GIF), `♻️ Borrar su envío anterior`; auto delete
 choice `[Nunca][1 h][3 h][6 h][12 h][1 día][2 días]` + `[✏️ Otro]` (input, 15 min - 48 h, `freq.parse_every`-like).
 `post_defaults` (arg 0): the same options as defaults of new posts (`Bot.post_defaults`), `[🔙]` → `posts`.
 
@@ -402,7 +407,7 @@ choice `[Nunca][1 h][3 h][6 h][12 h][1 día][2 días]` + `[✏️ Otro]` (input,
    └👤 800 · 🤝 @pepe · hasta 08/11/2026 10:00 AM
 ```
 10 per page, one button per chat (`#1 📣 Cine HD`, 2 per row), filter row, `[➕ Añadir canal ↗][➕ Añadir grupo ↗]`,
-`[📥 Importar]`, `[📢 Avisar a los dueños]` (when there are partners), `[⏳ Solicitudes (N)]` (when > 0), nav,
+`[📢 Avisar a los dueños]` (when there are partners), `[⏳ Solicitudes (N)]` (when > 0), nav,
 `[🔙]` → home. Left, rejected and banned chats are not listed (pending ones are, with ⏳).
 `chat` (arg pk):
 ```
@@ -460,9 +465,8 @@ chats (connected with a token) finds them.
 `requests` (arg page): pending chats with `[✅][❌]` per row. `paused` (arg page): **every** paused chat, by its
 owner or by an admin: name, who paused it, since, until, and `[▶️ #n]` per row to resume it (`resume_by_admin`).
 In `chat`, a chat paused by its partner shows `[▶️ Reanudar (anula la pausa del socio)]` (confirm: «El dueño lo ha
-pausado hasta …. Se le avisará.»). `import`: «📥 <b>Importar canales</b>\n\nSi el bot ya es administrador en canales o grupos
-(por ejemplo, venías de otro bot), envía sus @usuarios o IDs, uno por línea.» → `register_existing` each →
-summary (añadidos / ya estaban / el bot no es admin / no encontrados). `partners_msg` («📢 Avisar a los dueños»):
+pausado hasta …. Se le avisará.»). There is no import screen: chats join when the bot is added to them, or by
+discovery (above). `partners_msg` («📢 Avisar a los dueños»):
 prompt the message → confirm «Se enviará a <b>N</b> personas.» → background `blast.copy_to_users` → report DM.
 Partners (`partners.py`):
 * `join` (also `/start join`): how to join (the add buttons, the rights it needs and why, that they can pause
