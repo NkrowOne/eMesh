@@ -426,7 +426,7 @@ async def on_manage(call: CallbackQuery, callback_data: PanelCB, ctx: Ctx, sessi
 
 @router.callback_query(PanelCB.filter(F.action.in_({"off", "on"})))
 async def on_switch(call: CallbackQuery, callback_data: PanelCB, ctx: Ctx, session: AsyncSession,
-                    manager: BotManager) -> None:
+                    manager: BotManager, sm: SessionMaker) -> None:
     rec = await _load(call, ctx, session, callback_data.id)
     if rec is None:
         return
@@ -438,6 +438,7 @@ async def on_switch(call: CallbackQuery, callback_data: PanelCB, ctx: Ctx, sessi
     elif rec.status not in (BotStatus.ACTIVE, BotStatus.PENDING):  # pending bots are approved instead
         if await manager.enable_bot(rec.id):
             await toast(call, ctx.t("sa.enabled"))
+            await give_image(session, manager, sm, rec.id)  # the image may have changed while it was stopped
             log.info("Bot %s (@%s) enabled by super admin %s", rec.id, rec.username, ctx.user_id)
         else:
             await alert(call, ctx.t("sa.enable_failed"))
@@ -818,25 +819,26 @@ async def on_photo_input(message: Message, ctx: Ctx, session: AsyncSession, stat
     notice = ctx.t("sa.photo.saved", main=_main_name(ctx))
     if await _scalar(session, select(func.count()).select_from(BotRecord).where(
             BotRecord.is_main.is_(False), BotRecord.status == BotStatus.ACTIVE)):
-        _queue_photo_job(manager, sm, bot, raw, ctx.user_id, ctx.lang)
+        _queue_photo_job(manager, sm, bot, raw, file_id, ctx.user_id, ctx.lang)
         notice += " " + ctx.t("sa.photo.saved_clones")
     await panel_photo_screen(message, ctx, session, notice=notice)
 
 
-def _queue_photo_job(manager: BotManager, sm: SessionMaker, bot: Bot, raw: bytes, admin_id: int, lang: str) -> None:
+def _queue_photo_job(manager: BotManager, sm: SessionMaker, bot: Bot, raw: bytes, file_id: str, admin_id: int,
+                     lang: str) -> None:
     """The new image goes to the clones in the background, after the previous one if it is still on its way."""
     global _photo_job
-    _photo_job = brand.spawn(_give_to_clones(manager, sm, bot, raw, admin_id, lang, _photo_job))
+    _photo_job = brand.spawn(_give_to_clones(manager, sm, bot, raw, file_id, admin_id, lang, _photo_job))
 
 
-async def _give_to_clones(manager: BotManager, sm: SessionMaker, bot: Bot, raw: bytes, admin_id: int, lang: str,
-                          previous: asyncio.Task[Any] | None) -> None:
+async def _give_to_clones(manager: BotManager, sm: SessionMaker, bot: Bot, raw: bytes, file_id: str, admin_id: int,
+                          lang: str, previous: asyncio.Task[Any] | None) -> None:
     """Background: the new bot image on every clone without a photo of its own, then a report to the super admin
     through the main bot. A previous image still on its way goes first (else it could end up on some clones)."""
     if previous is not None and not previous.done():
         await asyncio.wait([previous])
     set_low_priority()
-    given = await brand.give_to_clones(manager, sm, raw)
+    given = await brand.give_to_clones(manager, sm, raw, file_id)
     log.info("Bot image given to the clones: %d set, %d with a photo of their own, %d failed", given.set, given.own,
              given.failed)
     text = t("sa.photo.done", lang, set=num(given.set), own=num(given.own))

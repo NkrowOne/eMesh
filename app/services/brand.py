@@ -182,32 +182,39 @@ async def set_main_photos(manager: BotManager, raw: bytes) -> int:
     return done
 
 
-async def give_to_clone(manager: BotManager, sm: SessionMaker, bot_id: int, *, raw: bytes | None = None) -> str:
-    """Gives the bot image to the clone ``bot_id`` unless its owner put a photo of their own. ``raw``: the image
-    (downloaded when None). Returns ``set``, ``own`` (it keeps its photo), ``none`` (no image, not running, a main
-    bot) or ``failed``. Background work (low priority): run it with :func:`spawn`."""
+async def give_to_clone(manager: BotManager, sm: SessionMaker, bot_id: int, *, raw: bytes | None = None,
+                        source: str | None = None) -> str:
+    """Gives the bot image to the clone ``bot_id`` unless its owner put a photo of their own. ``raw``: the image and
+    ``source`` the file id it comes from (downloaded when None). Returns ``set``, ``same`` (it already shows this
+    image: nothing is uploaded again), ``own`` (it keeps its photo), ``none`` (no image, or a newer one replaced
+    ``source``; not running; a main bot) or ``failed``. Background work (low priority): run it with :func:`spawn`."""
     set_low_priority()
     bot = manager.get(bot_id)
     if bot is None or bot_id in manager.main_bot_ids:
         return "none"
     async with session_scope(sm) as s:
         given = await kv.get(s, _given_key(bot_id))
-        ids = {} if raw is not None else await photo_ids(s, BOT)
-    if raw is None:
-        got = await fetch(ids, manager)
-        if got is None:
-            return "none"
-        raw = got[0]
+        ids = await photo_ids(s, BOT)
+    if not ids or (source is not None and source not in ids.values()):
+        return "none"
+    given_uid, given_src = (given.get("uid"), given.get("src")) if isinstance(given, dict) else (None, None)
     try:
         current = await current_photo(bot)
-        if current is not None and current != given:
+        if current is not None and current != given_uid:
             return "own"
+        if current is not None and given_src in ids.values():
+            return "same"
+        if raw is None or source is None:
+            got = await fetch(ids, manager)
+            if got is None:
+                return "none"
+            raw, source = got
         uid = await set_profile_photo(bot, raw)
     except TelegramAPIError as exc:
         log.warning("The bot image could not be given to bot %s: %s", bot_id, short(exc))
         return "failed"
     async with session_scope(sm) as s:
-        await kv.put(s, _given_key(bot_id), uid)
+        await kv.put(s, _given_key(bot_id), {"uid": uid, "src": source})
     log.info("Bot %s got the platform's bot image", bot_id)
     return "set"
 
@@ -216,13 +223,14 @@ async def give_to_clone(manager: BotManager, sm: SessionMaker, bot_id: int, *, r
 class Given:
     """What :func:`give_to_clones` did."""
 
-    set: int = 0  # clones that got the image
+    set: int = 0  # clones that show the image (they got it now or already had it)
     own: int = 0  # clones that keep a photo of their own
     failed: int = 0
 
 
-async def give_to_clones(manager: BotManager, sm: SessionMaker, raw: bytes) -> Given:
-    """The new bot image on every running clone without a photo of its own. Background work (low priority): run it
+async def give_to_clones(manager: BotManager, sm: SessionMaker, raw: bytes, source: str) -> Given:
+    """The new bot image (``raw``, from the file id ``source``) on every running clone without a photo of its own
+    (the clones left are skipped when a newer image replaces it meanwhile). Background work (low priority): run it
     with :func:`spawn`."""
     set_low_priority()
     async with session_scope(sm) as s:
@@ -231,8 +239,8 @@ async def give_to_clones(manager: BotManager, sm: SessionMaker, raw: bytes) -> G
             .order_by(BotRecord.id))).scalars())
     result = Given()
     for bot_id in ids:
-        outcome = await give_to_clone(manager, sm, int(bot_id), raw=raw)
-        if outcome == "set":
+        outcome = await give_to_clone(manager, sm, int(bot_id), raw=raw, source=source)
+        if outcome in ("set", "same"):
             result.set += 1
         elif outcome == "own":
             result.own += 1

@@ -71,22 +71,41 @@ async def test_a_clone_gets_the_image_unless_it_has_its_own(app: App) -> None:
     assert CLONE2_ID not in app.fake.profile_uploads
     assert await brand.give_to_clone(app.manager, app.sm, MAIN_BOT_ID) == "none"
     async with app.db() as s:
-        assert await kv.get(s, f"photo:bot:{CLONE_ID}") == app.fake.profile_photos[CLONE_ID]
+        assert await kv.get(s, f"photo:bot:{CLONE_ID}") == {"uid": app.fake.profile_photos[CLONE_ID],
+                                                            "src": "main_photo"}
+
+
+async def test_a_clone_that_already_shows_the_image_gets_nothing_again(app: App) -> None:
+    await app.add_clone(CLONE_ID, "clon_bot", OWNER2_ID)
+    await put_photo(app, brand.BOT)
+    assert await brand.give_to_clone(app.manager, app.sm, CLONE_ID) == "set"
+    uploads = len(app.fake.calls_of("setMyProfilePhoto"))
+    assert await brand.give_to_clone(app.manager, app.sm, CLONE_ID) == "same"  # e.g. it was paused and resumed
+    assert len(app.fake.calls_of("setMyProfilePhoto")) == uploads
 
 
 async def test_a_new_image_reaches_the_clones_that_still_follow_the_platform(app: App) -> None:
     await app.add_clone(CLONE_ID, "clon_bot", OWNER2_ID)
     await app.add_clone(CLONE2_ID, "clon2_bot", OWNER2_ID)
     await put_photo(app, brand.BOT)
-    assert await brand.give_to_clones(app.manager, app.sm, PHOTO) == brand.Given(set=2)
+    assert await brand.give_to_clones(app.manager, app.sm, PHOTO, "main_photo") == brand.Given(set=2)
     app.fake.profile_photos[CLONE2_ID] = "owner_photo"  # later its owner changed it
     newer = b"\xff\xd8JPEG-NEWER"
-    assert await brand.give_to_clones(app.manager, app.sm, newer) == brand.Given(set=1, own=1)
+    await put_photo(app, brand.BOT, file_id="newer_photo")
+    assert await brand.give_to_clones(app.manager, app.sm, newer, "newer_photo") == brand.Given(set=1, own=1)
     assert app.fake.profile_uploads[CLONE_ID] == newer
     assert app.fake.profile_uploads[CLONE2_ID] == PHOTO
 
 
+async def test_an_image_replaced_meanwhile_is_not_given(app: App) -> None:
+    await app.add_clone(CLONE_ID, "clon_bot", OWNER2_ID)
+    await put_photo(app, brand.BOT, file_id="newer_photo")
+    assert await brand.give_to_clones(app.manager, app.sm, PHOTO, "main_photo") == brand.Given()
+    assert CLONE_ID not in app.fake.profile_uploads
+
+
 async def test_a_refused_photo_counts_as_failed(app: App) -> None:
     await app.add_clone(CLONE_ID, "clon_bot", OWNER2_ID)
+    await put_photo(app, brand.BOT)
     app.fake.fail("setMyProfilePhoto", description="Bad Request: PHOTO_INVALID_DIMENSIONS")
-    assert await brand.give_to_clones(app.manager, app.sm, PHOTO) == brand.Given(failed=1)
+    assert await brand.give_to_clones(app.manager, app.sm, PHOTO, "main_photo") == brand.Given(failed=1)

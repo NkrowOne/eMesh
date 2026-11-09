@@ -299,13 +299,14 @@ async def on_pause(call: CallbackQuery, callback_data: CloneCB, ctx: Ctx, sessio
 
 @router.callback_query(CloneCB.filter(F.action == "resume"))
 async def on_resume(call: CallbackQuery, callback_data: CloneCB, ctx: Ctx, session: AsyncSession,
-                    manager: BotManager) -> None:
+                    manager: BotManager, sm: SessionMaker) -> None:
     rec = await _own_bot(call, ctx, session, callback_data.id, callback_data.page)
     if rec is None or await _admin_locked(call, ctx, session, rec, callback_data.page):
         return
     if clones.status_key(rec) == "paused":
         if await manager.enable_bot(rec.id):
             await toast(call, ctx.t("cl.resumed"))
+            await give_image(session, manager, sm, rec.id)  # the image may have changed while it was paused
         else:
             await alert(call, ctx.t("cl.resume_failed"))
     await open_screen("mybots", call, ctx, session, arg=callback_data.page)

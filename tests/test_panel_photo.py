@@ -213,11 +213,11 @@ async def test_a_newer_image_waits_for_the_previous_one(app: App, monkeypatch: p
     give = brand.give_to_clones
     started: list[bytes] = []
 
-    async def slow_first(manager: Any, sm: Any, raw: bytes) -> brand.Given:
+    async def slow_first(manager: Any, sm: Any, raw: bytes, source: str) -> brand.Given:
         started.append(raw)
         if len(started) == 1:
             await release.wait()  # the first image is still on its way when the second one arrives
-        return await give(manager, sm, raw)
+        return await give(manager, sm, raw, source)
 
     monkeypatch.setattr(brand, "give_to_clones", slow_first)
     newer = b"\xff\xd8JPEG-NEWER"
@@ -282,6 +282,29 @@ async def test_a_pending_clone_gets_the_image_when_approved(app: App) -> None:
     assert "en un minuto lo dejas a punto" in dms(app, USER_ID)[-1]
     await app.wait_for(lambda: app.fake.profile_uploads.get(CLONE_ID) == PHOTO)
     await idle(app)
+
+
+async def test_a_clone_started_again_gets_the_image_it_missed(app: App) -> None:
+    """A clone that was stopped when the image changed gets it when it runs again (owner or super admin), and one
+    that already shows it isn't sent it again."""
+    from app.bot.routers.clone import CloneCB
+
+    await app.add_clone(CLONE_ID, CLONE_USERNAME, USER_ID)
+    await app.send(USER_ID, "/start")
+    await app.press(USER_ID, CloneCB(action="pause", id=CLONE_ID).pack())
+    await app.wait_for(lambda: not app.manager.is_running(CLONE_ID))
+    await put_image(app)  # set while it was paused: nothing reaches it
+    await app.press(USER_ID, CloneCB(action="resume", id=CLONE_ID).pack())
+    await app.wait_for(lambda: app.fake.profile_uploads.get(CLONE_ID) == PHOTO)
+    await idle(app)
+
+    uploads = len(app.fake.calls_of("setMyProfilePhoto"))
+    await app.press(SUPER_ID, PanelCB(action="off", id=CLONE_ID).pack())
+    await app.wait_for(lambda: not app.manager.is_running(CLONE_ID))
+    await app.press(SUPER_ID, PanelCB(action="on", id=CLONE_ID).pack())
+    assert app.manager.is_running(CLONE_ID)
+    await idle(app)
+    assert len(app.fake.calls_of("setMyProfilePhoto")) == uploads  # it already shows this image
 
 
 async def test_the_clone_screen_tells_new_bots_get_the_image(app: App) -> None:
