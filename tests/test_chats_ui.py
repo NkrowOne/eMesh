@@ -68,7 +68,7 @@ async def test_list_totals_rows_and_buttons(app: App) -> None:
     assert button(panel, "#1 📣 Cine HD")["callback_data"] == ChCB(a="op", id=own).pack()
     assert "startchannel" in button(panel, "Añadir canal")["url"]
     assert "startgroup" in button(panel, "Añadir grupo")["url"]
-    assert button(panel, "Importar")["callback_data"] == MenuCB(screen="import").pack()
+    assert not [label for label in labels(panel) if "Importar" in label]
     assert button(panel, "Avisar a los dueños")["callback_data"] == MenuCB(screen="partners_msg").pack()
     assert button(panel, "Solicitudes (1)")["callback_data"] == MenuCB(screen="requests").pack()
     assert labels(panel)[-1] == "🔙 Regresar"
@@ -402,45 +402,13 @@ async def test_paused_screen(app: App) -> None:
     assert app.last_text(SUPER_ID) == "⏸ <b>Pausados</b> (0)\n\n✅ No hay chats pausados."
 
 
-# --------------------------------------------------------------------------- 📥 import
-async def test_import(app: App) -> None:
+# --------------------------------------------------------------------------- 📥 import (removed)
+async def test_there_is_no_import_any_more(app: App) -> None:
+    """Nothing is imported: chats join when the bot is added to them (or when it sees a post of a chat where it
+    already was an admin)."""
     await start(app, SUPER_ID)
-    app.fake.add_chat(-1003, "Canal Antiguo", username="canal_antiguo", admin_bots={MAIN_BOT_ID: "full"},
-                      creator=USER_ID)
-    app.fake.add_chat(-1004, "Solo miembro", type="supergroup", admin_bots={MAIN_BOT_ID: None})
-    app.fake.add_chat(-1005, "Sin el bot")
-    await db_chat(app, -1006, "Ya estaba")
-    app.fake.add_chat(-1006, "Ya estaba", admin_bots={MAIN_BOT_ID: "full"})
-    from tests.test_chats_support import full_rights
-
-    app.fake.add_chat(-1007, "Faltan permisos", admin_bots={MAIN_BOT_ID: full_rights(can_post_messages=False)})
-
-    await app.press(SUPER_ID, "m:import:0")
-    assert "📥 <b>Importar canales</b>" in app.last_text(SUPER_ID)
-    await app.send(SUPER_ID, "@canal_antiguo\n-1004\nhttps://t.me/noexiste\n-1005\n-1006\n-1007\n???")
-    text = app.last_text(SUPER_ID)
-    assert text.startswith("📥 <b>Importación terminada</b>")
-    assert "✅ Añadidos: 1" in text and "⏳ Pendientes (faltan permisos o aprobación): 1\n   └ -1007" in text
-    assert "☑️ Ya estaban: 1" in text and "⚠️ El bot no es admin: 1\n   └ -1004" in text
-    assert "❓ No encontrados: 3\n   └ https://t.me/noexiste, -1005, ???" in text
-
-    chat = await get_chat(app, -1003)
-    assert chat.status == ChatStatus.APPROVED and chat.origin == ChatOrigin.OWN and chat.owner_user_id == SUPER_ID
-    assert chat.username == "canal_antiguo"
-    assert (await get_chat(app, -1007)).status == ChatStatus.PENDING
-    assert len(await events_of(app, EventKind.CHAT_ADDED)) == 1
-    assert not any("se ha añadido a la red" in t for t in dms(app, SUPER_ID)), "the summary is enough"
-
-    # The input is done: the next message is not imported.
-    calls = len(app.fake.calls_of("getChat"))
-    await app.send(SUPER_ID, "@canal_antiguo")
-    assert len(app.fake.calls_of("getChat")) == calls
-
-
-async def test_import_is_for_admins(app: App) -> None:
-    await start(app, USER_ID)
-    await app.press(USER_ID, "m:import:0")
-    assert "No tienes permiso" in app.last_text(USER_ID)
+    await app.press(SUPER_ID, "m:import:0")  # a button of an old panel
+    assert "Tu red de distribución" in app.last_text(SUPER_ID)
 
 
 # --------------------------------------------------------------------------- 📢 message to the partners
