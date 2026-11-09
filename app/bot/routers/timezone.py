@@ -2,7 +2,7 @@
 
 Admins change the timezone of the network (its frequencies and dates are in it, so every next time is recalculated);
 users change their own (dates are shown in it). Telegram doesn't tell bots anyone's timezone, so it is asked once, and
-a zone the person already chose anywhere (eMesh or eButtons: ``services.zones``) is used instead of asking again:
+a zone the person already chose anywhere (eButtons, which rules, or eMesh: ``services.zones``) is used instead:
 
 * the owner of a new clone, on the first /start, before the setup wizard and the home (``needs_timezone``);
 * a user (partner or visitor) of a bot that runs a network, on the first visit, before the home or the join screen of

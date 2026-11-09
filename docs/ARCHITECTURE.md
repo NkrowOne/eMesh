@@ -248,8 +248,9 @@ Commands (start module): `/start`, `/cancel` (clear state + home), `/id`, `/help
 
 **Timezones are asked once in the whole ecosystem** (eMesh and eButtons; port of eButtons `timezone.py`):
 Telegram doesn't tell bots anyone's timezone, so it is asked, but a zone the person already chose anywhere
-(`services.zones.known_zone`: their `bu.timezone` in any eMesh bot, an eMesh clone of theirs with `timezone_set`
-(never a main bot), then the same in eButtons' `eb_bot_users` / `eb_bots`) is used instead.
+(`services.zones.known_zone`) is used instead and stored here. **eButtons' zones rule** (eButtons applies the same
+rule): first their zone in any eButtons bot (`eb_bot_users`, most recently seen first) or an eButtons bot of theirs
+(`eb_bots.timezone_set`, never a main bot), then the same in eMesh (`bu.timezone` in any bot, a clone of theirs).
 * New clone: on the first `/start` (whatever the link) while `bots.timezone_set` is False, a known zone becomes the
   network's zone without asking («🗺 Zona horaria de tu red: X, la que ya elegiste. Se cambia en ⚙️ Ajustes.», with
   a short welcome when the wizard follows); otherwise the `timezone` screen (onboarding, no back button: a welcome

@@ -52,7 +52,7 @@ Hecho con la **última API de Telegram (Bot API 10.3)** y aiogram 3.31. Misma ba
 - **Límites de Telegram respetados siempre**: ~30 mensajes/segundo, 1/segundo por chat privado, 20/minuto por grupo
   o canal, y reintentos automáticos si Telegram pide esperar (429).
 - **🗺 Zona horaria**: por continente y país, con la imagen que elijas para ese menú. Se pregunta **una sola vez**:
-  si alguien ya la eligió en eMesh o en eButtons, no se le vuelve a preguntar.
+  si alguien ya la eligió en eButtons o en eMesh, no se le vuelve a preguntar (la de eButtons manda).
 - **Fácil de usar**: cuando el bot te pide un texto, el mensaje sale siempre abajo del todo (el anterior se borra).
 - Español 🇪🇸 e inglés 🇬🇧.
 

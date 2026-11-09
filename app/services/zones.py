@@ -1,12 +1,11 @@
 """🗺 The timezone a person already chose, in eMesh or in eButtons: it is asked once in the whole ecosystem.
 
 Telegram doesn't tell bots the timezone of a user, so the bots ask it; a zone chosen anywhere is reused
-(:func:`known_zone`), in this order:
+(:func:`known_zone`) and then stored in eMesh, in this order (eButtons' zones rule, as they do in eButtons too):
 
-1. eMesh: their own zone in any bot (``em_bot_users.timezone``), the most recently seen first;
-2. eMesh: the zone of a clone of theirs (``em_bots.timezone_set``; never a main bot: main bots get the default zone
-   at startup, nobody chose it);
-3. eButtons: the same two (``eb_bot_users``, ``eb_bots``).
+1. eButtons: their own zone in any bot (``eb_bot_users.timezone``), the most recently seen first;
+2. eButtons: the zone of a bot of theirs (``eb_bots.timezone_set``; never a main bot: nobody chose its zone);
+3. eMesh: the same two (``em_bot_users``, ``em_bots``).
 
 eButtons' tables are in eMesh's database by default (both projects prefix their tables, ``em_`` / ``eb_``, so they can
 share one) or in the database of ``EBUTTONS_DATABASE_URL``. They are read with plain SQL on a connection of their
@@ -55,8 +54,8 @@ _tables: weakref.WeakKeyDictionary[AsyncEngine, tuple[float, frozenset[str]]] = 
 
 
 async def known_zone(session: AsyncSession, settings: Settings, user_id: int) -> str | None:
-    """The timezone ``user_id`` already chose somewhere (eMesh first, then eButtons), or None."""
-    return await _emesh_zone(session, user_id) or await _ebuttons_zone(session, settings, user_id)
+    """The timezone ``user_id`` already chose somewhere (eButtons first: its zones rule; then eMesh), or None."""
+    return await _ebuttons_zone(session, settings, user_id) or await _emesh_zone(session, user_id)
 
 
 async def reset() -> None:
