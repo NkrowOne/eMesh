@@ -170,7 +170,7 @@ async def _edit_caption(call: CallbackQuery, msg: Message, text: str, markup: In
         if not is_not_modified(exc):
             log.debug("edit_caption failed, sending the panel again: %s", exc)
             return False
-    await common._release_prompt(call, False)  # noqa: SLF001 - as show() does: a prompt pressed here is the panel now
+    await common.release_prompt(call)  # as show() does: a prompt pressed here is the panel now
     return True
 
 

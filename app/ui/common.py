@@ -174,9 +174,10 @@ async def _delete(bot: Bot, chat_id: int, message_id: int) -> None:
         log.debug("Message %s of chat %s could not be deleted: %s", message_id, chat_id, exc)
 
 
-async def _release_prompt(event: Message | CallbackQuery, new: bool) -> None:
+async def release_prompt(event: Message | CallbackQuery, new: bool = False) -> None:
     """A panel is about to be shown: the prompt it replaces stops waiting. A typed answer (or a command) deletes the
-    prompt, as the new panel takes its place below; on its own buttons the prompt itself becomes the panel."""
+    prompt, as the new panel takes its place below; on its own buttons the prompt itself becomes the panel. ``show``
+    calls it; call it yourself only when you edit a panel without ``show`` (``new``: the pressed message stays)."""
     where = _where(event)
     if where is None:
         return
@@ -240,7 +241,7 @@ async def show(
       sends a new one (media changes, too old to edit...).
     * Message: always sends a new panel (and deletes the input prompt it answers).
     """
-    await _release_prompt(event, new)
+    await release_prompt(event, new)
     banner = ws_banner.get()
     if banner and not text.startswith(banner):
         text = f"{banner}\n\n{text}"
