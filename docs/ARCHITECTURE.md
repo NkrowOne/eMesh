@@ -194,7 +194,7 @@ Screen names (owner module in brackets): `home`, `guide`, `settings`, `notificat
 `paused`, `partners_msg`, `join`, `my_chats`, `my_chat` [chats]; `posts`, `post`, `post_new`,
 `post_content`, `post_buttons`, `post_targets`, `post_sched`, `post_opts`, `post_defaults` [posts]; `groups`,
 `group`, `group_chats`, `freqs`, `freq_edit`, `antispam` [groups]; `clone`, `mybots`, `panel`, `panel_bots`,
-`panel_bot`, `panel_settings`, `panel_blast` [clones].
+`panel_bot`, `panel_settings`, `panel_photo`, `panel_blast` [clones].
 
 `freq_edit` arg: `0` = global frequency, `+N` = group N, `-N` = post N (own frequency). Its back button returns to
 `freqs`, `group` (arg N) or `post_sched` (arg N).
@@ -567,9 +567,19 @@ Managed bot update (`managed_bot`, main bot): `getManagedBotToken` → `connect_
 📤 Últimas 24 h: 230 envíos · 12,345 entregas
 ⚙️ Clonación: 🌐 abierta | ⏳ con aprobación | 🔒 cerrada
 ```
-`[🤖 Clones]` (`panel_bots`), `[⏳ Pendientes (N)]`, `[⚙️ Plataforma]` (`panel_settings`), `[📢 Aviso a los dueños]`
-(`panel_blast`: copy a message to the owners of clones through the main bot, `blast.copy_to_users`),
-`[📄 Errores]` (logbook as a .txt document), `[🔙]`.
+`[🤖 Clones]` (`panel_bots`) `[⏳ Pendientes (N)]`, `[⚙️ Plataforma]` (`panel_settings`) `[🖼 Imagen del bot]`
+(`panel_photo`), `[📢 Aviso a los dueños]` (`panel_blast`: copy a message to the owners of clones through the main
+bot, `blast.copy_to_users`) `[📄 Errores]` (logbook as a .txt document), `[🔙]`.
+`panel_photo` («🖼 Imagen del bot», `brand.BOT`): the profile photo of the main bots; the image is shown on top of
+the panel. «Es la foto de perfil de @main. Los bots que se crean desde aquí la llevan también. └ Los bots que ya
+existen la reciben si no tienen una foto propia.» `[🖼 Poner imagen | Cambiar imagen]` → prompt for a photo (only
+photos; not readable → asked again) → `brand.set_main_photos` at once (Telegram refuses it → its error, nothing
+stored) → `brand.set_photo` → a background job (`give_to_clones`, after the previous job if one is still running)
+gives it to every running clone without a photo of its own and DMs the report to the super admin («Clones
+actualizados: N · Con foto propia (no se cambian): M»). No delete button. A clone gets the image (`panel.give_image`,
+background) when it starts running: connected with a token or Managed Bots, approved, or enabled / resumed again;
+`brand.give_to_clone` skips a clone whose owner put another photo and never uploads the same image twice. The clone
+screen says «🖼 Tu bot se crea con la imagen de la plataforma…» while there is an image and a new bot can be created.
 `panel_bots` (arg page; filter all/active/paused/pending/invalid; `[🔎 Buscar]` by @username or id):
 `1. ✅ @clon_bot · 👤 @owner\n   └📣 12 · 📝 5 · ⏸ 2`. `panel_bot` (arg bot id):
 ```
