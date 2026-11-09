@@ -2,7 +2,7 @@
 
 Admins change the timezone of the network (its frequencies and dates are in it, so every next time is recalculated);
 users change their own (dates are shown in it). Telegram doesn't tell bots anyone's timezone, so it is asked once, and
-a zone the person already chose anywhere (eMesh or eButtons: ``services.zones``) is used instead of asking again:
+a zone the person already chose anywhere (eButtons, which rules, or eMesh: ``services.zones``) is used instead:
 
 * the owner of a new clone, on the first /start, before the setup wizard and the home (``needs_timezone``);
 * a user (partner or visitor) of a bot that runs a network, on the first visit, before the home or the join screen of
@@ -32,10 +32,9 @@ from app.db.base import utcnow
 from app.db.models import Bot as BotRecord
 from app.db.models import Post
 from app.services import audience, brand, freq, zones
-from app.telegram.errors import is_not_modified
-from app.ui import common
-from app.ui.common import alert, back_row, btn, grid, kb, nav_row, paginate, prompt, show, toast, ws_banner
+from app.ui.common import alert, back_row, btn, grid, kb, nav_row, paginate, prompt, toast
 from app.ui.fmt import esc, hm
+from app.ui.photos import show_with_photo
 from app.ui.screens import open_screen, screen
 
 log = logging.getLogger(__name__)
@@ -159,39 +158,10 @@ async def _remember(session: AsyncSession, event: Message | CallbackQuery, photo
     await brand.remember(session, brand.TZ, event.bot.id, sent.photo[-1].file_id, source=brand.source_of(photo))
 
 
-async def _edit_caption(call: CallbackQuery, msg: Message, text: str, markup: InlineKeyboardMarkup) -> bool:
-    """The pressed panel already is the photo: only its caption and buttons change. False when it can't be edited."""
-    banner = ws_banner.get()  # on top of every panel while managing a clone, as show() does
-    if banner and not text.startswith(banner):
-        text = f"{banner}\n\n{text}"
-    try:
-        await msg.edit_caption(caption=text, reply_markup=markup)
-    except TelegramBadRequest as exc:
-        if not is_not_modified(exc):
-            log.debug("edit_caption failed, sending the panel again: %s", exc)
-            return False
-    await common.release_prompt(call)  # as show() does: a prompt pressed here is the panel now
-    return True
-
-
 async def _show(event: Message | CallbackQuery, ctx: Ctx, session: AsyncSession, text: str,
                 markup: InlineKeyboardMarkup) -> None:
     """Every step of the picker, with the photo of the menu when there is one."""
-    photo = await _photo(event, ctx, session)
-    if photo is None:
-        await show(event, text, markup)
-        return
-    msg = event.message if isinstance(event, CallbackQuery) else None
-    if isinstance(event, CallbackQuery) and isinstance(msg, Message) and msg.photo:
-        if await _edit_caption(event, msg, text, markup):
-            return
-    try:
-        sent = await show(event, text, markup, media_id=photo, media_type="photo")
-    except TelegramBadRequest as exc:  # a file id Telegram no longer takes: the menu still works without it
-        log.warning("The photo of the timezone menu was refused through bot %s: %s", ctx.bot_id, exc)
-        await show(event, text, markup, new=isinstance(event, CallbackQuery))
-        return
-    await _remember(session, event, photo, sent)
+    await show_with_photo(event, ctx, session, brand.TZ, text, markup)
 
 
 async def _prompt(event: Message | CallbackQuery, ctx: Ctx, session: AsyncSession, text: str,

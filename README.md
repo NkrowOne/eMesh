@@ -47,12 +47,13 @@ Hecho con la **última API de Telegram (Bot API 10.3)** y aiogram 3.31. Misma ba
   por persona y límites de chats/mensajes por clon.
 - **👑 Panel**: estadísticas de la plataforma, lista de clones con búsqueda, activar/desactivar, aprobar, límites,
   escribir al dueño, actividad, eliminar, **🛠 Gestionar** su red desde el bot principal, aviso a todos los dueños y
-  descarga de errores. **🖼 Imagen del bot**: la foto de perfil del bot principal; los clones la llevan también (salvo
-  los que tienen una foto propia).
+  descarga de errores. **🖼 Imagen del bot**: sale arriba del mensaje de inicio y es la foto de perfil del bot
+  principal; los clones la llevan también (en el inicio de sus admins y como foto de perfil, salvo los que tienen una
+  propia).
 - **Límites de Telegram respetados siempre**: ~30 mensajes/segundo, 1/segundo por chat privado, 20/minuto por grupo
   o canal, y reintentos automáticos si Telegram pide esperar (429).
 - **🗺 Zona horaria**: por continente y país, con la imagen que elijas para ese menú. Se pregunta **una sola vez**:
-  si alguien ya la eligió en eMesh o en eButtons, no se le vuelve a preguntar.
+  si alguien ya la eligió en eButtons o en eMesh, no se le vuelve a preguntar (la de eButtons manda).
 - **Fácil de usar**: cuando el bot te pide un texto, el mensaje sale siempre abajo del todo (el anterior se borra).
 - Español 🇪🇸 e inglés 🇬🇧.
 

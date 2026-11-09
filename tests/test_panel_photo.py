@@ -89,8 +89,9 @@ async def test_the_screen_without_an_image(app: App) -> None:
     text = app.last_text(SUPER_ID)
     assert text == (
         "🖼 <b>Imagen del bot</b>\n\n"
-        f"Es la foto de perfil de @{MAIN_BOT_USERNAME}. Los bots que se crean desde aquí la llevan también.\n"
-        "   └ Los bots que ya existen la reciben si no tienen una foto propia.\n\n"
+        f"Sale arriba del mensaje de inicio de @{MAIN_BOT_USERNAME} y es su foto de perfil.\n"
+        "   └ Los clones también la llevan: en el inicio de sus admins y como foto de perfil, si no tienen una "
+        "propia.\n\n"
         "📌 Ahora no hay ninguna imagen."
     )
     assert button_texts(app) == ["🖼 Poner imagen", "🔙 Regresar"]  # nothing to delete
@@ -155,7 +156,7 @@ async def test_setting_the_image(app: App) -> None:
     assert panel.method == "sendPhoto" and panel.params["photo"] == FILE_ID
     assert panel.params["caption"].startswith(
         f"✅ Imagen puesta en @{MAIN_BOT_USERNAME}.\n\n🖼 <b>Imagen del bot</b>")
-    assert "clones" not in panel.params["caption"]  # there are none: no job
+    assert "se actualizan ahora" not in panel.params["caption"]  # there are no clones: no job
     assert not brand._tasks  # noqa: SLF001
     assert button_texts(app) == ["🖼 Cambiar imagen", "🔙 Regresar"]
 

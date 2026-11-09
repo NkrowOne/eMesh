@@ -41,11 +41,12 @@ from app.bot.routers.timezone import adopt_known_zone, must_choose_timezone, nee
 from app.db.base import utcnow
 from app.db.models import Bot as BotRecord
 from app.db.models import Chat, ChatOrigin, ChatStatus, EventKind
-from app.services import clones, events, freq, limits, stats
+from app.services import brand, clones, events, freq, limits, stats
 from app.services.chatinfo import add_to_channel_url, add_to_group_url
 from app.ui.callbacks import MenuCB
 from app.ui.common import alert, back_row, btn, kb, nav_row, show, toast, ws_banner
 from app.ui.fmt import dt, esc, num
+from app.ui.photos import show_with_photo
 from app.ui.screens import open_screen, screen
 
 log = logging.getLogger(__name__)
@@ -103,7 +104,17 @@ async def home_screen(
     else:
         await _partner_home(event, ctx, session, notice)
         return
-    await show(event, with_notice(text, notice), markup)
+    await _show_home(event, ctx, session, with_notice(text, notice), markup)
+
+
+async def _show_home(event: Message | CallbackQuery, ctx: Ctx, session: AsyncSession, text: str,
+                     markup: InlineKeyboardMarkup) -> None:
+    """The home, with the 🖼 bot image on top (👑 › 🖼 Imagen del bot): in a main bot for everyone, in a clone for its
+    admins."""
+    if ctx.is_main or ctx.is_admin:
+        await show_with_photo(event, ctx, session, brand.BOT, text, markup)
+    else:
+        await show(event, text, markup)
 
 
 def _known_zone_notice(ctx: Ctx, zone: str) -> str:
@@ -278,11 +289,13 @@ async def _partner_home(event: Message | CallbackQuery, ctx: Ctx, session: Async
     custom = _TG_EMOJI_RE.sub(r"\1", ws.join_text) if ws.join_open and ws.join_text else None
     if custom:
         try:
-            await show(event, with_notice(_partner_text(ctx, platform=platform, custom=custom), notice), markup)
+            await _show_home(event, ctx, session, with_notice(_partner_text(ctx, platform=platform, custom=custom),
+                                                              notice), markup)
             return
         except TelegramBadRequest as exc:
             log.warning("The welcome text of bot %s was refused by Telegram: %s", ws.id, exc)
-    await show(event, with_notice(_partner_text(ctx, platform=platform, custom=None), notice), markup)
+    await _show_home(event, ctx, session, with_notice(_partner_text(ctx, platform=platform, custom=None), notice),
+                     markup)
 
 
 async def _hub_home(ctx: Ctx, session: AsyncSession) -> tuple[str, InlineKeyboardMarkup]:

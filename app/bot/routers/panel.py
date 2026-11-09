@@ -11,7 +11,7 @@ from datetime import datetime, timedelta
 from typing import Any
 
 from aiogram import Bot, F, Router
-from aiogram.exceptions import TelegramAPIError, TelegramBadRequest
+from aiogram.exceptions import TelegramAPIError
 from aiogram.filters.callback_data import CallbackData
 from aiogram.fsm.context import FSMContext
 from aiogram.fsm.state import State, StatesGroup
@@ -47,6 +47,7 @@ from app.ui.common import (
     ws_banner,
 )
 from app.ui.fmt import esc, num, to_local, truncate, user_link
+from app.ui.photos import show_with_photo
 from app.ui.screens import open_screen, screen
 
 log = logging.getLogger(__name__)
@@ -736,24 +737,6 @@ def _main_name(ctx: Ctx) -> str:
     return esc(ctx.bot_rec.username or ctx.bot_id)
 
 
-async def _show_with_photo(event: Message | CallbackQuery, session: AsyncSession, text: str,
-                           markup: InlineKeyboardMarkup, photo: str | BufferedInputFile | None) -> None:
-    """A panel with the bot image on top (without it when Telegram refuses it). An image uploaded to this bot is
-    remembered, so next time it sends its own file id."""
-    if photo is None:
-        await show(event, text, markup)
-        return
-    try:
-        sent = await show(event, text, markup, media_id=photo, media_type="photo")
-    except TelegramBadRequest as exc:
-        log.warning("The bot image could not be shown: %s", short(exc))
-        await show(event, text, markup, new=True)
-        return
-    bot = event.bot
-    if isinstance(photo, BufferedInputFile) and sent is not None and sent.photo and bot is not None:
-        await brand.remember(session, brand.BOT, bot.id, sent.photo[-1].file_id, source=brand.source_of(photo))
-
-
 @screen("panel_photo")
 async def panel_photo_screen(event: Message | CallbackQuery, ctx: Ctx, session: AsyncSession, arg: int = 0,
                              notice: str | None = None, **_: object) -> None:
@@ -770,9 +753,7 @@ async def panel_photo_screen(event: Message | CallbackQuery, ctx: Ctx, session: 
     markup = kb([btn(ctx.t("sa.btn.photo_change" if has else "sa.btn.photo_set"), PanelCB(action="photo"),
                      style="primary")],
                 back_row(ctx.lang, "panel"))
-    bot = event.bot
-    photo = await brand.photo_for(session, bot, brand.BOT, ctx.manager) if has and bot is not None else None
-    await _show_with_photo(event, session, "\n\n".join(lines), markup, photo)
+    await show_with_photo(event, ctx, session, brand.BOT, "\n\n".join(lines), markup)
 
 
 async def _ask_photo(event: Message | CallbackQuery, ctx: Ctx, error: str | None = None) -> None:

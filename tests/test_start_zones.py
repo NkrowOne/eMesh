@@ -162,10 +162,10 @@ async def test_zones_chosen_in_ebuttons(app: App, eb: AsyncEngine) -> None:
     assert await known(app, OWNER2_ID) == "America/Lima"
     await eb_user(eb, 1, OWNER2_ID, "Africa/Cairo")  # their own zone comes first
     assert await known(app, OWNER2_ID) == "Africa/Cairo"
-    # eMesh comes before eButtons.
+    # eButtons rules: its zone comes before the one chosen in eMesh.
     await app.send(USER_ID, "/start")
     await own_zone(app, USER_ID, MAIN_BOT_ID, "Asia/Kolkata")
-    assert await known(app, USER_ID) == "Asia/Kolkata"
+    assert await known(app, USER_ID) == "Europe/Paris"
 
 
 async def test_ebuttons_in_a_database_of_its_own(app: App, tmp_path, monkeypatch: pytest.MonkeyPatch) -> None:
