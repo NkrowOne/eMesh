@@ -90,7 +90,7 @@ async def test_the_whole_wizard(app: App, monkeypatch: pytest.MonkeyPatch) -> No
     assert app.last_text(OWNER2_ID) == (
         f"{INTRO}\n\n{STEP_1}\nPodrán añadir el bot a sus canales y grupos para recibir los mensajes de la red.\n"
         "   └ Con aprobación, cada canal nuevo llega como solicitud a los admins.")
-    assert button_rows(app, OWNER2_ID) == [["⚪ Sí, con mi aprobación (recomendado)"], ["⚪ Sí, entran solos"],
+    assert button_rows(app, OWNER2_ID) == [["⚪ Sí, con mi aprobación"], ["⚪ Sí, entran solos"],
                                            ["✅ No, solo los míos"], ["⏭ Saltar el asistente"]]
     assert callback_of(app, OWNER2_ID, "Saltar el asistente") == SuCB(s=0).pack()
     assert_buttons_valid(app)
@@ -111,7 +111,7 @@ async def test_the_whole_wizard(app: App, monkeypatch: pytest.MonkeyPatch) -> No
     # 3. The global frequency: once a day at 12:00 by default.
     assert app.last_text(OWNER2_ID).startswith(f"{STEP_3}\nCada canal recibe un mensaje en cada turno de su frecuencia")
     assert app.last_text(OWNER2_ID).endswith("Luego se puede afinar en ⏰ Frecuencias.")
-    assert button_rows(app, OWNER2_ID) == [["✅ 1 al día (12:00) (recomendado)"], ["⚪ Cada 2 h", "⚪ Cada 4 h"],
+    assert button_rows(app, OWNER2_ID) == [["✅ 1 al día (12:00)"], ["⚪ Cada 2 h", "⚪ Cada 4 h"],
                                            ["⚪ Cada 6 h", "⚪ Cada 12 h"], ["🔙 Regresar"]]
     assert callback_of(app, OWNER2_ID, "Regresar") == MenuCB(screen="setup", arg=2).pack()
     before = utcnow()
@@ -161,7 +161,7 @@ async def test_every_choice_is_saved_and_then_ticked(app: App) -> None:
         assert (rec.join_open, rec.join_approval) == expected, index
         assert app.last_text(OWNER2_ID).startswith(STEP_2 if expected[0] else STEP_3)
         assert len(await ticked(app, 1)) == 1
-    labels_1 = ["✅ Sí, con mi aprobación (recomendado)", "✅ Sí, entran solos", "✅ No, solo los míos"]
+    labels_1 = ["✅ Sí, con mi aprobación", "✅ Sí, entran solos", "✅ No, solo los míos"]
     await answer(app, 1, 1)
     assert await ticked(app, 1) == [labels_1[1]]
     # 2. (partners_can_pause, pause_max_hours): «No pueden pausar» keeps the longest pause for later.
@@ -174,7 +174,7 @@ async def test_every_choice_is_saved_and_then_ticked(app: App) -> None:
         assert app.last_text(OWNER2_ID).startswith(STEP_3)
         assert await ticked(app, 2) == [labels_2[index]]
     # 3. The global frequency, with its next slot refreshed.
-    labels_3 = ["✅ 1 al día (12:00) (recomendado)", "✅ Cada 2 h", "✅ Cada 4 h", "✅ Cada 6 h", "✅ Cada 12 h"]
+    labels_3 = ["✅ 1 al día (12:00)", "✅ Cada 2 h", "✅ Cada 4 h", "✅ Cada 6 h", "✅ Cada 12 h"]
     expected_freqs = [{"mode": "times", "times": "12:00", "days": "0123456"}] + [
         {"mode": "interval", "every": hours * 60, "window": "08:00-22:00", "days": "0123456"}
         for hours in (2, 4, 6, 12)]
@@ -412,14 +412,14 @@ async def test_the_wizard_in_english(app: App) -> None:
     await new_clone(app)
     await start(app)
     assert "🤝 <b>Do you accept other people's channels?</b>" in app.last_text(OWNER2_ID)
-    assert button_rows(app, OWNER2_ID) == [["⚪ Yes, with my approval (recommended)"],
+    assert button_rows(app, OWNER2_ID) == [["⚪ Yes, with my approval"],
                                            ["⚪ Yes, they join on their own"], ["✅ No, only mine"],
                                            ["⏭ Skip the wizard"]]
     await click(app, "Yes, they join")
     assert button_texts(app, OWNER2_ID) == ["⚪ Up to 1 day", "⚪ Up to 3 days", "⚪ Up to 7 days",
                                             "✅ No limit", "⚪ They can't pause", "🔙 Back"]
     await click(app, "Up to 1 day")
-    assert button_rows(app, OWNER2_ID)[:3] == [["✅ Once a day (12:00) (recommended)"], ["⚪ Every 2 h", "⚪ Every 4 h"],
+    assert button_rows(app, OWNER2_ID)[:3] == [["✅ Once a day (12:00)"], ["⚪ Every 2 h", "⚪ Every 4 h"],
                                                ["⚪ Every 6 h", "⚪ Every 12 h"]]
     await click(app, "Every 4 h")
     assert button_rows(app, OWNER2_ID)[:3] == [["⚪ 1 h", "⚪ 6 h", "⚪ 12 h"], ["⚪ 1 day", "⚪ 2 days"],
