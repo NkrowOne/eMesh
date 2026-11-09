@@ -859,7 +859,7 @@ async def wizard_prompt(event: Event, ctx: Ctx, session: AsyncSession, step: Sta
         rows.append([btn(ctx.t("po.w.continue"), PwCB(a="tgok"), style="success")])
     elif step == PostsFSM.new_when:
         text = ctx.t("po.w.when", freq=freq.describe(ctx.ws_rec.freq, ctx.lang))
-        rows = [[btn(ctx.t("po.mode.rotation_rec" if mode == SchedMode.ROTATION else f"po.mode.{mode}"),
+        rows = [[btn(ctx.t(f"po.mode.{mode}"),
                      PwCB(a="mode", v=i))] for i, mode in enumerate(MODES)]
     elif step == PostsFSM.new_delete:
         text = ctx.t("po.w.delete")

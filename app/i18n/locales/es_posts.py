@@ -54,7 +54,7 @@ STRINGS = {
     "po.w.continue": "✅ Continuar",
     "po.w.when": (
         "⏰ <b>¿Cuándo se envía?</b> · 4/5\n\n"
-        "🔁 <b>En rotación</b> (recomendado)\n"
+        "🔁 <b>En rotación</b>\n"
         "   └ Se turna con los demás mensajes según la frecuencia de cada canal (global: {freq}).\n"
         "⏰ <b>Con su propio horario</b>\n"
         "   └ Tiene su propia frecuencia; en cada turno se envía a todos sus chats.\n"
@@ -81,7 +81,6 @@ STRINGS = {
         "Código - copiar: PROMO10 🔵</pre>"
     ),
     "po.mode.rotation": "🔁 En rotación",
-    "po.mode.rotation_rec": "🔁 En rotación (recomendado)",
     "po.mode.own": "⏰ Con su propio horario",
     "po.mode.once": "📢 Difusión puntual",
     "po.w.now": "🚀 Ahora mismo",
@@ -185,10 +184,10 @@ STRINGS = {
     "po.c.b.change": "✏️ Cambiar el mensaje",
     "po.c.b.text": "📝 Cambiar solo el texto",
     "po.c.b.name": "🏷 Nombre interno",
-    "po.c.b.nomedia": "🖼 Quitar la media",
+    "po.c.b.nomedia": "🖼 Quitar multimedia",
     "po.c.ask_content": (
         "✏️ <b>Cambiar el mensaje</b> · {name}\n\n"
-        "Envía el mensaje nuevo tal como quieres que se publique (texto, o media con su texto). Sustituye al actual; "
+        "Envía el mensaje nuevo tal como quieres que se publique (texto, o contenido multimedia con su texto). Sustituye al actual; "
         "los botones y las opciones se mantienen."
     ),
     "po.c.ask_text": (
@@ -196,14 +195,14 @@ STRINGS = {
     ),
     "po.c.ask_caption": (
         "📝 <b>Cambiar solo el texto</b> · {name}\n\n"
-        "Envía el texto nuevo con su formato. La media se mantiene; con media, el texto puede tener como máximo "
-        "1024 caracteres."
+        "Envía el texto nuevo con su formato. El contenido multimedia se mantiene, así que el texto puede tener "
+        "como máximo 1024 caracteres."
     ),
     "po.c.ask_name": "🏷 <b>Nombre interno</b>\n\nActual: {name}\nEnvía el nombre nuevo (máximo 64 caracteres).",
-    "po.c.nomedia.confirm": "🖼 ¿Quitar la media de <b>{name}</b>? Quedará solo el texto.",
-    "po.c.nomedia.yes": "🖼 Quitar la media",
-    "po.c.nomedia.no_text": "⚠️ Sin la media quedaría vacío: primero añade un texto con 📝 Cambiar solo el texto.",
-    "po.c.nomedia.done": "🖼 Media quitada",
+    "po.c.nomedia.confirm": "🖼 ¿Quitar el contenido multimedia de <b>{name}</b>? Quedará solo el texto.",
+    "po.c.nomedia.yes": "🖼 Quitar multimedia",
+    "po.c.nomedia.no_text": "⚠️ Sin el contenido multimedia quedaría vacío: primero añade un texto con 📝 Cambiar solo el texto.",
+    "po.c.nomedia.done": "🖼 Multimedia quitado",
     "po.c.live_hint": "🔄 Pulsa Actualizar publicados para aplicarlo a los ya enviados.",
     # --- schedule ---
     "po.s.title": "⏰ <b>Programación</b> · {name}",
@@ -246,7 +245,7 @@ STRINGS = {
     "po.o.silent": "🔕 Sin sonido: {v}",
     "po.o.protect": "🛡 Proteger contenido: {v}",
     "po.o.link_preview": "🔗 Vista previa de enlaces: {v}",
-    "po.o.caption_above": "🔼 Texto encima de la media: {v}",
+    "po.o.caption_above": "🔼 Texto encima del multimedia: {v}",
     "po.o.spoiler": "🫣 Spoiler: {v}",
     "po.o.delete_previous": "♻️ Borrar su envío anterior: {v}",
     "po.o.delete_after": "🗑 Borrado automático: {v}",
@@ -254,7 +253,7 @@ STRINGS = {
     "po.ob.silent": "🔕 Sin sonido",
     "po.ob.protect": "🛡 Proteger contenido",
     "po.ob.link_preview": "🔗 Vista previa de enlaces",
-    "po.ob.caption_above": "🔼 Texto encima de la media",
+    "po.ob.caption_above": "🔼 Texto encima del multimedia",
     "po.ob.spoiler": "🫣 Spoiler",
     "po.ob.delete_previous": "♻️ Borrar su envío anterior",
     "po.oh.pin": "   └ Se fija en el chat sin avisar a los miembros.",
@@ -262,7 +261,7 @@ STRINGS = {
     "po.oh.protect": "   └ No se puede reenviar ni guardar.",
     "po.oh.link_preview": "   └ Muestra la vista previa del primer enlace del texto.",
     "po.oh.caption_above": "   └ El texto aparece encima de la foto, el vídeo o el GIF.",
-    "po.oh.spoiler": "   └ La media se ve borrosa hasta que se toca.",
+    "po.oh.spoiler": "   └ Contenido multimedia borroso hasta que se pulsa.",
     "po.oh.delete_previous": "   └ Al enviarlo de nuevo a un chat, se borra la copia anterior de ese chat.",
     "po.oh.delete_after": (
         "   └ Cada copia se borra sola pasado ese tiempo (máximo 48 h: Telegram no deja borrar mensajes más antiguos)."
