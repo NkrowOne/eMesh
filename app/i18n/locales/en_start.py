@@ -11,9 +11,6 @@ STRINGS = {
     ),
     "home.posts": "📝 Active posts: <b>{n}</b>",
     "home.posts.none": "   └ Create the first one in 📝 Posts.",
-    "home.freq": "⏰ Global frequency: {freq}",
-    "home.next": "📅 Next turn: <b>{date}</b>",
-    "home.rot_off": "🔁 No rotation: each post goes out on its own schedule",
     "home.next_send": "📅 Next send: <b>{date}</b>",
     "home.owner_paused": "⏸ Paused by their owner: <b>{n}</b>",
     "home.pending": "⏳ Pending requests: <b>{n}</b>",
@@ -31,7 +28,7 @@ STRINGS = {
     "home.btn.posts": "📝 Posts",
     "home.btn.chats": "📣 Channels",
     "home.btn.groups": "🗂 Channel groups",
-    "home.btn.freqs": "⏰ Frequencies",
+    "home.btn.freqs": "⏰ Schedules",
     "home.btn.stats": "📊 Statistics",
     "home.btn.activity": "📜 Activity",
     "home.btn.requests": "⏳ Requests ({n})",
@@ -91,11 +88,11 @@ STRINGS = {
     # --- Home: main bot in hub mode ----------------------------------------------------------------
     "home.hub": (
         "🕸 <b>eMesh · Your own distribution network</b>\n\n"
-        "Create your own bot and post to your channels and groups automatically: every channel gets one post on "
-        "each turn of its frequency and the posts take turns.\n\n"
+        "Create your own bot and post to your channels and groups automatically: each post goes out at the times "
+        "you choose.\n\n"
         "✨ <b>With your bot you can:</b>\n"
         "• Post text, photos and videos with colored buttons.\n"
-        "• Choose how often it posts, for every channel or per channel group.\n"
+        "• Choose at what times each post goes out and in which channels.\n"
         "• Let other people add their channels to your network, if you want.\n"
         "• See the statistics and the activity of the network.\n\n"
         "👑 <b>The bot is yours</b>: your name, your channels and your rules. The platform keeps it running.\n\n"
@@ -110,12 +107,11 @@ STRINGS = {
         "• 📣 <b>Channels and groups</b>: the chats where the bot is an administrator. Together they are your "
         "<b>network</b>.\n"
         "• 📝 <b>Posts</b>: what gets published: text, photo, video… with buttons.\n"
-        "• ⏰ <b>Frequencies</b>: how often each channel gets a post.\n"
-        "• 🗂 <b>Channel groups</b>: sets of channels to send them specific posts or give them their own "
-        "frequency.\n\n"
-        "On each turn of its frequency, every channel gets <b>one</b> post; the posts in rotation take turns.\n\n"
-        "👉 <b>First steps</b>: add the bot to a channel with ➕ <b>Add channel or group</b>, create a post in "
-        "📝 <b>Posts</b> and adjust the frequency in ⏰ <b>Frequencies</b>."
+        "• ⏰ <b>Schedules</b>: each post goes out at its own times; here are the schedule new posts start with "
+        "and the anti-spam.\n"
+        "• 🗂 <b>Channel groups</b>: sets of channels to send them specific posts.\n\n"
+        "👉 <b>First steps</b>: add the bot to a channel with ➕ <b>Add channel or group</b> and create a post in "
+        "📝 <b>Posts</b> with its times."
     ),
     "guide.admin.2": (
         "📣 <b>Own and external channels</b>\n\n"
@@ -142,24 +138,21 @@ STRINGS = {
         "<code>&amp;&amp;</code>, a color at the end (🔵 🟢 🔴) or a text to copy: "
         "<code>Code - copy: PROMO10</code>.\n"
         "3. 🎯 <b>Target</b>: 🌐 everyone, 🏠 own only, 🤝 external only or a 🗂 channel group.\n"
-        "4. ⏰ <b>When</b>: 🔁 in rotation, ⏰ on its own schedule, 📢 one-off broadcast (just once: right now or on "
-        "a date) or ✋ only when you send it.\n"
+        "4. ⏰ <b>When</b>: ⏰ at its own times, 📢 one-off broadcast (just once: right now or on a date) or "
+        "✋ only when you send it.\n"
         "5. 🗑 <b>How long it stays published</b>: from 1 h to 2 days, or it isn't deleted.\n\n"
         "⚙️ <b>Options</b>: 📌 pin, 🔕 silent, 🛡 protect content, 🗑 delete after a while (max. 48 h), ♻️ delete "
         "its previous copy…\n"
         "👁 <b>Preview</b> shows it as is; 🚀 <b>Send now</b> publishes it right away."
     ),
     "guide.admin.4": (
-        "⏰ <b>Frequencies, rotation and anti-spam</b>\n\n"
-        "• 🌐 <b>Global frequency</b>: every channel follows it. By default, once a day (at 12:00); also every so "
-        "often (for example, every 4 h from 08:00 to 22:00) or at fixed times, on the days you choose.\n"
-        "• 🗂 A <b>channel group</b> can have its own frequency: its channels follow it instead of the global one.\n"
-        "• 🔁 <b>Rotation</b>: on each turn, every channel gets its next post, in order or at random, never the "
-        "same one twice in a row.\n"
-        "• 🚫 <b>No rotation</b>: if you turn it off there are no turns and each post goes out on its own schedule.\n"
-        "• ⏰ A post with <b>its own schedule</b> goes to its whole target at its own times, outside the rotation.\n"
+        "⏰ <b>Schedules and anti-spam</b>\n\n"
+        "• ⏰ Each post goes to its whole target <b>at its own times</b>: for example, at 10:00 and 18:00, or "
+        "every 4 h from 08:00 to 22:00, on the days you choose.\n"
+        "• 🕐 The <b>default schedule</b> (⏰ Schedules) is the one every new post starts with; then it is changed "
+        "in its ⏰ Schedule.\n"
         "• 📆 <b>Campaign dates</b> limit when a post is sent.\n\n"
-        "🛡 <b>Anti-spam</b> (⏰ Frequencies › 🛡 Anti-spam): maximum posts a day per channel, minimum gap between "
+        "🛡 <b>Anti-spam</b> (⏰ Schedules › 🛡 Anti-spam): maximum posts a day per channel, minimum gap between "
         "two posts and 🧹 one at a time (the previous one is deleted before posting)."
     ),
     "guide.admin.5": (
@@ -169,7 +162,7 @@ STRINGS = {
         "support and admins are changed by the owner only.\n"
         "• 🔔 <b>My notifications</b>: network alerts, daily summary and a report of every send. Each admin chooses "
         "their own.\n"
-        "• 🗺 <b>Timezone</b>: frequencies and dates are calculated with it.\n"
+        "• 🗺 <b>Timezone</b>: schedules and dates are calculated with it.\n"
         "• 🤝 <b>External channels</b>: accept them or not, manual approval, minimum members, welcome text, the "
         "partners' pauses and the invite link.\n"
         "• 🧭 <b>Setup wizard</b>: goes through the main settings of the network step by step.\n"
@@ -205,7 +198,7 @@ STRINGS = {
         "eMesh creates <b>your own bot</b> to post to your channels and groups automatically.\n\n"
         "1. You add your bot to your channels and groups (and, if you want, other people add theirs).\n"
         "2. You write the posts: text, photo or video, with colored buttons.\n"
-        "3. You choose how often it posts: every channel gets one post on each turn and the posts take turns.\n\n"
+        "3. You choose at what times each post goes out.\n\n"
         "👑 <b>The bot is yours</b>: your name, your channels and your rules."
     ),
     "guide.hub.2": (
@@ -348,7 +341,7 @@ STRINGS = {
     "adm.dm.demoted": "ℹ️ You are no longer an admin of @{bot}.",
     # --- Timezone ----------------------------------------------------------------------------------
     "tz.title": "🗺 <b>Timezone</b>",
-    "tz.intro.admin": "The network's frequencies and send dates are calculated with it.",
+    "tz.intro.admin": "The network's schedules and send dates are calculated with it.",
     "tz.intro.user": "Dates and times are shown in your timezone.",
     "tz.intro.onboarding": (
         "👋 <b>Welcome to your bot!</b>\n"

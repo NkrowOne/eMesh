@@ -23,28 +23,16 @@ STRINGS = {
     ),
     "setup.pause.upto": "Hasta {t}",
     "setup.pause.no": "🚫 No pueden pausar",
-    # --- 3. Rotación -------------------------------------------------------------------------------
+    # --- 3. Horario por defecto --------------------------------------------------------------------
     "setup.q.3": (
-        "🔁 <b>¿Quieres que los mensajes se turnen?</b>\n\n"
-        "🔁 <b>Con rotación</b>: los mensajes forman una cola. A cada hora que elijas, cada canal recibe "
-        "<b>uno</b>: el siguiente de la cola, en orden o al azar.\n"
-        "   └ Ej.: mensajes A, B y C a las 10:00 y 18:00 → hoy A y B, mañana C y A…\n\n"
-        "🕐 <b>Sin rotación</b>: no hay cola. Cada mensaje tiene su propio horario y se envía a todas sus horas.\n"
-        "   └ Ej.: A a las 10:00 y B a las 18:00, todos los días.\n\n"
-        "Se puede cambiar luego en ⏰ Frecuencias."
-    ),
-    "setup.rot.seq": "🔁 Sí, en orden",
-    "setup.rot.random": "🎲 Sí, al azar",
-    "setup.rot.off": "🕐 No, cada mensaje con su horario",
-    # --- 4. Horas de la rotación -------------------------------------------------------------------
-    "setup.q.4": (
-        "⏰ <b>¿A qué horas recibe un mensaje cada canal?</b>\n"
-        "Toca una hora para marcarla o quitarla, o elige una opción rápida. En cada hora marcada, cada canal recibe "
-        "el siguiente mensaje de la rotación."
+        "⏰ <b>¿A qué horas se publican tus mensajes?</b>\n"
+        "Cada mensaje se envía a sus horas a todo su destino. Elige las horas con las que empieza cada mensaje "
+        "nuevo; luego cada uno se puede cambiar en su ⏰ Programación.\n"
+        "   └ Toca una hora para marcarla o quitarla, o elige una opción rápida."
     ),
     "setup.freq.now": "🕐 <b>{n} al día</b>: {times}",
     "setup.freq.days": "📅 Días: {days}",
-    "setup.freq.tz": "   └ Hora de {tz}. Luego se puede afinar en ⏰ Frecuencias.",
+    "setup.freq.tz": "   └ Hora de {tz}.",
     "setup.freq.n": "{n} al día",
     "setup.freq.every": "Cada {t}",
     "setup.freq.hourly": "Cada hora",
@@ -60,8 +48,8 @@ STRINGS = {
     ),
     "setup.freq.saved": "✅ Guardado: {freq}",
     "setup.btn.next": "Continuar ➡️",
-    # --- 5. Borrado automático ---------------------------------------------------------------------
-    "setup.q.5": (
+    # --- 4. Borrado automático ---------------------------------------------------------------------
+    "setup.q.4": (
         "🗑 <b>¿Cuánto tiempo siguen publicados los mensajes?</b>\n"
         "Pasado ese tiempo se borran solos de los canales.\n"
         "   └ Es lo que toman los mensajes nuevos; cada uno se puede cambiar en sus ⚙️ Opciones."
@@ -69,22 +57,19 @@ STRINGS = {
     "setup.delete.never": "♾ No se borran",
     "setup.keep": "Mantener: {v}",
     "setup.btn.skip": "⏭ Saltar el asistente",
-    # --- 6. Resumen --------------------------------------------------------------------------------
+    # --- 5. Resumen --------------------------------------------------------------------------------
     "setup.done": "✅ <b>Todo listo</b>\nAsí queda la red:",
     "setup.sum.pause": "⏸ Pausas de los socios: {v}",
     "setup.sum.pause.upto": "hasta {t}",
     "setup.sum.pause.free": "sin límite",
     "setup.sum.pause.no": "no pueden pausar",
-    "setup.sum.rot": "🔁 Rotación: {v}",
-    "setup.sum.rot.seq": "sí, en orden",
-    "setup.sum.rot.random": "sí, al azar",
-    "setup.sum.rot.off": "no, cada mensaje con su horario",
+    "setup.sum.freq": "🕐 Horario por defecto: {freq}",
     "setup.sum.delete": "🗑 Borrado automático: {v}",
     "setup.sum.after": "al cabo de {t}",
     "setup.sum.never": "no se borran",
     "setup.done.next": (
         "👇 Ahora añade el bot a tus canales y grupos y crea un mensaje.\n"
-        "   └ Todo se puede cambiar en ⚙️ Ajustes, ⏰ Frecuencias y 📝 Mensajes."
+        "   └ Todo se puede cambiar en ⚙️ Ajustes, ⏰ Horarios y 📝 Mensajes."
     ),
     "setup.btn.first_post": "📝 Crear el primer mensaje",
     "setup.btn.new_post": "📝 Crear un mensaje",
