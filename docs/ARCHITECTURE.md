@@ -163,6 +163,12 @@ visitors). Times: frequencies and dates are in the workspace timezone (`ctx.bot_
   campaign dates, in order of creation — or random when `Bot.rotation == "random"`; never the same twice in a row
   when there are more). `Chat.rot_last_post_id` remembers the last one. UI text: «Cada canal recibe un mensaje en
   cada turno de su frecuencia; los mensajes en rotación se van turnando.»
+* **Rotation on or off** (`Bot.rotation`: `seq` en orden, `random` al azar, `off` sin rotación; `rotation_on()` in
+  models). Asked in the setup wizard (step 3) and changed in ⏰ Frecuencias. With `off` there is **no pool**: the
+  global and groups' slots still move on (`rot_next_at`, nothing stale when it is turned on again) but send nothing,
+  and every post goes out on its own schedule (⏰ own, 📢 once, ✋ manual). «🔁 En rotación» is not offered for new
+  posts nor in ⏰ Programación; posts already in rotation are kept as they are, **unsent** (never converted), with a
+  warning in the list, the detail and ⏰ Programación, until their mode changes or the rotation is on again.
 * **Schedule modes of a post** (`Post.mode`): 🔁 `rotation` (default, above), ⏰ `own` (its own frequency
   `Post.freq`: at each of its slots it goes to its whole audience, outside the rotation), 📢 `once` («Difusión
   puntual»: `Post.send_at`, right now or a date, then status `done`), ✋ `manual` (only with 🚀 Enviar ahora). Campaign dates (`starts_on`, `ends_on`, optional,
@@ -280,7 +286,11 @@ Step by step, one question per screen, the current value pre-selected (✅), `[�
 2. Only when they are accepted: «⏸ <b>¿Pueden pausar la distribución en sus canales?</b>» (└ «Tú siempre ves quién
    pausa y puedes reanudarlo.») `[Hasta 1 día]`, `[Hasta 3 días]`, `[Hasta 7 días]`, `[Sin límite]`,
    `[🚫 No pueden pausar]` → `partners_can_pause` / `pause_max_hours`.
-3. «⏰ <b>¿A qué horas recibe un mensaje cada canal?</b>» + «🕐 <b>3 al día</b>: 09:00, 14:00 y 20:00», «📅 Días:
+3. «🔁 <b>¿Quieres que los mensajes se turnen?</b>», explained with an example of each («🔁 Con rotación: los
+   mensajes forman una cola… └ Ej.: mensajes A, B y C a las 10:00 y 18:00 → hoy A y B, mañana C y A…», «🕐 Sin
+   rotación: no hay cola. Cada mensaje tiene su propio horario… └ Ej.: A a las 10:00 y B a las 18:00»):
+   `[🔁 Sí, en orden]` (the default), `[🎲 Sí, al azar]`, `[🕐 No, cada mensaje con su horario]` → `Bot.rotation`.
+4. Only with rotation: «⏰ <b>¿A qué horas recibe un mensaje cada canal?</b>» + «🕐 <b>3 al día</b>: 09:00, 14:00 y 20:00», «📅 Días:
    …», «└ Hora de <zone>…». Not a single choice: every change is saved at once (`Bot.freq` + `freq.refresh_bot` +
    wake the scheduler) and the step is shown again, until `[Continuar ➡️]` (success). Quick options (they set the
    hours, the days stay) `[1 al día][2 al día][3 al día]` `[4 al día][Cada 2 h][Cada hora]` (12:00 the default;
@@ -289,9 +299,9 @@ Step by step, one question per screen, the current value pre-selected (✅), `[�
    times; never fewer than 1 or more than 24), `[Todos][L-V][S-D]` (the days), `[✏️ Escribir otras horas (9:30…)]`
    (`freq.parse_times`, the days stay). A frequency made in ⏰ Frecuencias shows its hours ticked: `Continuar` keeps
    it.
-4. «🗑 <b>¿Cuánto tiempo siguen publicados los mensajes?</b>» `[1 h][6 h][12 h][1 día][2 días]`,
+5. «🗑 <b>¿Cuánto tiempo siguen publicados los mensajes?</b>» `[1 h][6 h][12 h][1 día][2 días]`,
    `[♾ No se borran]` → `Bot.post_defaults["delete_after"]` (a new dict).
-5. «✅ <b>Todo listo</b>» + a summary of the answers + `[➕ Añadir canal ↗][➕ Añadir grupo ↗]`,
+6. «✅ <b>Todo listo</b>» + a summary of the answers (with «🔁 Rotación: …»; «⏰ Frecuencia global» only with rotation) + `[➕ Añadir canal ↗][➕ Añadir grupo ↗]`,
    `[📝 Crear el primer mensaje]` (`post_new`), `[🏠 Ir al inicio]`. `setup_done` becomes True.
 It can be run again from ⚙️ Ajustes › `[🧭 Asistente de configuración]` (owner).
 
@@ -677,8 +687,8 @@ default), `[💬 Escribir al dueño]` (prompt → DM via the main bot), `[📜 A
   bot never delays the others, `bot_scope(bot_id)`, low priority): for every running bot that runs a network (not a
   hub main bot) and isn't `paused`:
   1. Global slot due (`rot_next_at <= now`): if more than `LATE_SKIP_MINUTES` late, skip it; else
-     `audience.plan_slot(source=None)` → one `run(kind=rotation, source="global")` per post. Then
-     `freq.refresh_bot`. A missing `rot_next_at` is just computed.
+     `audience.plan_slot(source=None)` → one `run(kind=rotation, source="global")` per post (nothing when
+     `Bot.rotation == "off"`). Then `freq.refresh_bot`. A missing `rot_next_at` is just computed.
   2. The same for every group with its own frequency (`source="g<id>"`, `freq.refresh_group`).
   3. Own / once posts with `next_send_at <= now` (late → skip and refresh) → `run(kind=schedule|once)` to
      `audience.audience(post)`; then `freq.refresh_post` (once → `done` after its run). Posts past `ends_on` → `done`.

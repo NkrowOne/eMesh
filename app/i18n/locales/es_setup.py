@@ -23,11 +23,24 @@ STRINGS = {
     ),
     "setup.pause.upto": "Hasta {t}",
     "setup.pause.no": "🚫 No pueden pausar",
-    # --- 3. Frecuencia global ----------------------------------------------------------------------
+    # --- 3. Rotación -------------------------------------------------------------------------------
     "setup.q.3": (
+        "🔁 <b>¿Quieres que los mensajes se turnen?</b>\n\n"
+        "🔁 <b>Con rotación</b>: los mensajes forman una cola. A cada hora que elijas, cada canal recibe "
+        "<b>uno</b>: el siguiente de la cola, en orden o al azar.\n"
+        "   └ Ej.: mensajes A, B y C a las 10:00 y 18:00 → hoy A y B, mañana C y A…\n\n"
+        "🕐 <b>Sin rotación</b>: no hay cola. Cada mensaje tiene su propio horario y se envía a todas sus horas.\n"
+        "   └ Ej.: A a las 10:00 y B a las 18:00, todos los días.\n\n"
+        "Se puede cambiar luego en ⏰ Frecuencias."
+    ),
+    "setup.rot.seq": "🔁 Sí, en orden",
+    "setup.rot.random": "🎲 Sí, al azar",
+    "setup.rot.off": "🕐 No, cada mensaje con su horario",
+    # --- 4. Horas de la rotación -------------------------------------------------------------------
+    "setup.q.4": (
         "⏰ <b>¿A qué horas recibe un mensaje cada canal?</b>\n"
         "Toca una hora para marcarla o quitarla, o elige una opción rápida. En cada hora marcada, cada canal recibe "
-        "un mensaje; los mensajes en rotación se van turnando."
+        "el siguiente mensaje de la rotación."
     ),
     "setup.freq.now": "🕐 <b>{n} al día</b>: {times}",
     "setup.freq.days": "📅 Días: {days}",
@@ -47,8 +60,8 @@ STRINGS = {
     ),
     "setup.freq.saved": "✅ Guardado: {freq}",
     "setup.btn.next": "Continuar ➡️",
-    # --- 4. Borrado automático ---------------------------------------------------------------------
-    "setup.q.4": (
+    # --- 5. Borrado automático ---------------------------------------------------------------------
+    "setup.q.5": (
         "🗑 <b>¿Cuánto tiempo siguen publicados los mensajes?</b>\n"
         "Pasado ese tiempo se borran solos de los canales.\n"
         "   └ Es lo que toman los mensajes nuevos; cada uno se puede cambiar en sus ⚙️ Opciones."
@@ -56,12 +69,16 @@ STRINGS = {
     "setup.delete.never": "♾ No se borran",
     "setup.keep": "Mantener: {v}",
     "setup.btn.skip": "⏭ Saltar el asistente",
-    # --- 5. Resumen --------------------------------------------------------------------------------
+    # --- 6. Resumen --------------------------------------------------------------------------------
     "setup.done": "✅ <b>Todo listo</b>\nAsí queda la red:",
     "setup.sum.pause": "⏸ Pausas de los socios: {v}",
     "setup.sum.pause.upto": "hasta {t}",
     "setup.sum.pause.free": "sin límite",
     "setup.sum.pause.no": "no pueden pausar",
+    "setup.sum.rot": "🔁 Rotación: {v}",
+    "setup.sum.rot.seq": "sí, en orden",
+    "setup.sum.rot.random": "sí, al azar",
+    "setup.sum.rot.off": "no, cada mensaje con su horario",
     "setup.sum.delete": "🗑 Borrado automático: {v}",
     "setup.sum.after": "al cabo de {t}",
     "setup.sum.never": "no se borran",

@@ -23,11 +23,24 @@ STRINGS = {
     ),
     "setup.pause.upto": "Up to {t}",
     "setup.pause.no": "🚫 They can't pause",
-    # --- 3. Global frequency -----------------------------------------------------------------------
+    # --- 3. Rotation -------------------------------------------------------------------------------
     "setup.q.3": (
+        "🔁 <b>Do you want the posts to take turns?</b>\n\n"
+        "🔁 <b>With rotation</b>: the posts make a queue. At each time you choose, every channel gets <b>one</b>: "
+        "the next in the queue, in order or at random.\n"
+        "   └ E.g.: posts A, B and C at 10:00 and 18:00 → today A and B, tomorrow C and A…\n\n"
+        "🕐 <b>No rotation</b>: no queue. Each post has its own schedule and goes out at all its times.\n"
+        "   └ E.g.: A at 10:00 and B at 18:00, every day.\n\n"
+        "It can be changed later in ⏰ Frequencies."
+    ),
+    "setup.rot.seq": "🔁 Yes, in order",
+    "setup.rot.random": "🎲 Yes, at random",
+    "setup.rot.off": "🕐 No, each post on its own schedule",
+    # --- 4. Rotation times -------------------------------------------------------------------------
+    "setup.q.4": (
         "⏰ <b>At what times does each channel get a post?</b>\n"
-        "Tap an hour to tick or untick it, or pick a quick option. On each ticked hour every channel gets one post; "
-        "the posts in rotation take turns."
+        "Tap an hour to tick or untick it, or pick a quick option. On each ticked hour every channel gets the next "
+        "post of the rotation."
     ),
     "setup.freq.now": "🕐 <b>{n} a day</b>: {times}",
     "setup.freq.days": "📅 Days: {days}",
@@ -47,8 +60,8 @@ STRINGS = {
     ),
     "setup.freq.saved": "✅ Saved: {freq}",
     "setup.btn.next": "Continue ➡️",
-    # --- 4. Auto delete ----------------------------------------------------------------------------
-    "setup.q.4": (
+    # --- 5. Auto delete ----------------------------------------------------------------------------
+    "setup.q.5": (
         "🗑 <b>How long do the posts stay published?</b>\n"
         "After that time they are deleted from the channels on their own.\n"
         "   └ New posts take this value; each one can be changed in its ⚙️ Options."
@@ -56,12 +69,16 @@ STRINGS = {
     "setup.delete.never": "♾ Never deleted",
     "setup.keep": "Keep: {v}",
     "setup.btn.skip": "⏭ Skip the wizard",
-    # --- 5. Summary --------------------------------------------------------------------------------
+    # --- 6. Summary --------------------------------------------------------------------------------
     "setup.done": "✅ <b>All set</b>\nThe network is set up like this:",
     "setup.sum.pause": "⏸ Partners' pauses: {v}",
     "setup.sum.pause.upto": "up to {t}",
     "setup.sum.pause.free": "no limit",
     "setup.sum.pause.no": "they can't pause",
+    "setup.sum.rot": "🔁 Rotation: {v}",
+    "setup.sum.rot.seq": "yes, in order",
+    "setup.sum.rot.random": "yes, at random",
+    "setup.sum.rot.off": "no, each post on its own schedule",
     "setup.sum.delete": "🗑 Auto delete: {v}",
     "setup.sum.after": "after {t}",
     "setup.sum.never": "never",

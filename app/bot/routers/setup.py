@@ -2,9 +2,10 @@
 
 The owner of a new clone goes through it on the first /start, right after choosing the timezone (``needs_setup``),
 and can run it again from ⚙️ Ajustes. ``setup`` arg = step: 1 external chats, 2 the partners' pauses (only when
-external chats are accepted), 3 the global frequency, 4 how long posts stay published, 5 the summary (done).
+external chats are accepted), 3 the rotation (posts take turns, or each one has its own schedule), 4 the hours of the
+rotation (only with rotation), 5 how long posts stay published, 6 the summary (done).
 
-Step 3 is not a single choice: the hours it publishes at stay on screen and are changed there (quick options, the 24
+Step 4 is not a single choice: the hours it publishes at stay on screen and are changed there (quick options, the 24
 hours to tick, the days, or typed times) until ``Continuar``.
 """
 from __future__ import annotations
@@ -23,7 +24,7 @@ from app.bot.context import Ctx
 from app.bot.routers.settings import PAUSE_MAX_CHOICES, duration_text, externals_line, pause_max_text, with_notice
 from app.data.timezones import utc_offset_label
 from app.db.base import utcnow
-from app.db.models import DEFAULT_DELETE_AFTER, Post
+from app.db.models import DEFAULT_DELETE_AFTER, Post, RotationOrder, rotation_on
 from app.db.models import Bot as BotRecord
 from app.services import freq
 from app.services.chatinfo import add_to_channel_url, add_to_group_url
@@ -35,14 +36,15 @@ from app.ui.screens import open_screen, screen
 
 router = Router(name="setup")
 
-SUMMARY = 5  # the last step: «✅ Todo listo»
+JOIN_STEP, PAUSE_STEP, ROTATION_STEP, FREQ_STEP, DELETE_STEP, SUMMARY = range(1, 7)  # SUMMARY: «✅ Todo listo»
 WINDOW = "08:00-22:00"
 # Step 1: (join_open, join_approval); None leaves the approval as it is (it doesn't matter while closed).
 JOIN_OPTIONS: tuple[tuple[bool, bool | None], ...] = ((True, True), (True, False), (False, None))
 # Step 2: the longest pause of a partner in hours (0 = until they resume it); None: partners can't pause.
 PAUSE_OPTIONS: tuple[int | None, ...] = (*PAUSE_MAX_CHOICES, None)
-FREQ_STEP = 3
-# Step 3: quick options of the global frequency (they set the hours; the days stay): 1 a day at 12:00 (the default),
+# Step 3: ``Bot.rotation``: the posts take turns in order or at random, or no rotation (each post has its own schedule).
+ROTATION_OPTIONS = (RotationOrder.SEQUENTIAL, RotationOrder.RANDOM, RotationOrder.OFF)
+# Step 4: quick options of the global frequency (they set the hours; the days stay): 1 a day at 12:00 (the default),
 # 2, 3 or 4 a day, every 2 h or every hour from 08:00 to 22:00.
 FREQ_PRESETS: tuple[dict[str, Any], ...] = tuple(freq.normalize(f) for f in (
     {"mode": "times", "times": "12:00"},
@@ -54,10 +56,12 @@ FREQ_PRESETS: tuple[dict[str, Any], ...] = tuple(freq.normalize(f) for f in (
 ))
 DAY_PRESETS = (freq.ALL_DAYS, freq.WEEKDAYS, freq.WEEKEND)
 HOUR_COLS = 6  # the 24 hours in 4 rows
-# Step 4: how long new posts stay published, in minutes (0 = never deleted).
+# Step 5: how long new posts stay published, in minutes (0 = never deleted).
 DELETE_OPTIONS = (60, 360, 720, 1440, 2880, 0)
-OPTIONS: dict[int, tuple[Any, ...]] = {1: JOIN_OPTIONS, 2: PAUSE_OPTIONS, 4: DELETE_OPTIONS}
-LAYOUT = {1: (1, 1, 1), 2: (1, 1, 1, 1, 1), 4: (3, 2, 1)}  # buttons per row of each step
+OPTIONS: dict[int, tuple[Any, ...]] = {JOIN_STEP: JOIN_OPTIONS, PAUSE_STEP: PAUSE_OPTIONS,
+                                       ROTATION_STEP: ROTATION_OPTIONS, DELETE_STEP: DELETE_OPTIONS}
+# Buttons per row of each step.
+LAYOUT = {JOIN_STEP: (1, 1, 1), PAUSE_STEP: (1, 1, 1, 1, 1), ROTATION_STEP: (1, 1, 1), DELETE_STEP: (3, 2, 1)}
 KEEP_MAX = 45  # characters of a current value shown on its «Mantener» button
 
 
@@ -69,7 +73,7 @@ class SuCB(CallbackData, prefix="su"):
 
 
 class SuFqCB(CallbackData, prefix="suf"):
-    """Step 3 (the global frequency): ``a`` = ``p`` quick option ``v``, ``h`` tick/untick the hour ``v``,
+    """Step 4 (the hours of the rotation): ``a`` = ``p`` quick option ``v``, ``h`` tick/untick the hour ``v``,
     ``d`` days preset ``v``, ``w`` type the times."""
 
     a: str
@@ -99,35 +103,49 @@ def delete_after_of(ws: BotRecord) -> int:
 
 def _current(ws: BotRecord, step: int) -> int | None:
     """The option that is the current value of the network (None: a value set somewhere else)."""
-    if step == 1:
+    if step == JOIN_STEP:
         return (0 if ws.join_approval else 1) if ws.join_open else 2
     value: Any
-    if step == 2:
+    if step == PAUSE_STEP:
         value = ws.pause_max_hours if ws.partners_can_pause else None
+    elif step == ROTATION_STEP:  # an unknown value works as «en orden» (⏰ Frecuencias does the same)
+        value = ws.rotation if ws.rotation in ROTATION_OPTIONS else RotationOrder.SEQUENTIAL
     else:
         value = delete_after_of(ws)
     return OPTIONS[step].index(value) if value in OPTIONS[step] else None
 
 
+def _skipped(ws: BotRecord, step: int) -> bool:
+    """The partners' step only when external chats are accepted; the hours only with rotation."""
+    return (step == PAUSE_STEP and not ws.join_open) or (step == FREQ_STEP and not rotation_on(ws.rotation))
+
+
 def _next(ws: BotRecord, step: int) -> int:
-    """The step after ``step``: the partners' one only when external chats are accepted."""
-    return 2 if step == 1 and ws.join_open else max(step + 1, 3)
+    step += 1
+    while _skipped(ws, step):
+        step += 1
+    return step
 
 
 def _previous(ws: BotRecord, step: int) -> int:
-    return 1 if step == 3 and not ws.join_open else step - 1
+    step -= 1
+    while _skipped(ws, step):
+        step -= 1
+    return step
 
 
 def _save(ws: BotRecord, step: int, index: int) -> None:
-    if step == 1:
+    if step == JOIN_STEP:
         ws.join_open, approval = JOIN_OPTIONS[index]
         if approval is not None:
             ws.join_approval = approval
-    elif step == 2:
+    elif step == PAUSE_STEP:
         hours = PAUSE_OPTIONS[index]
         ws.partners_can_pause = hours is not None
         if hours is not None:
             ws.pause_max_hours = hours
+    elif step == ROTATION_STEP:
+        ws.rotation = ROTATION_OPTIONS[index]
     else:
         stored = ws.post_defaults if isinstance(ws.post_defaults, dict) else {}
         ws.post_defaults = {**stored, "delete_after": DELETE_OPTIONS[index]}  # a new dict: JSON column
@@ -137,12 +155,14 @@ def _save(ws: BotRecord, step: int, index: int) -> None:
 # Screens
 # ---------------------------------------------------------------------------------------------------
 def _labels(ctx: Ctx, step: int) -> list[str]:
-    if step == 1:
+    if step == JOIN_STEP:
         labels = [ctx.t("setup.join.approval"), ctx.t("setup.join.auto"), ctx.t("setup.join.closed")]
-    elif step == 2:
+    elif step == PAUSE_STEP:
         labels = [ctx.t("setup.pause.upto", t=pause_max_text(ctx, hours)) if hours else pause_max_text(ctx, 0)
                   for hours in PAUSE_MAX_CHOICES]
         labels.append(ctx.t("setup.pause.no"))
+    elif step == ROTATION_STEP:
+        labels = [ctx.t(f"setup.rot.{order}") for order in ROTATION_OPTIONS]
     else:
         labels = [duration_text(ctx, minutes) if minutes else ctx.t("setup.delete.never") for minutes in DELETE_OPTIONS]
     return labels
@@ -151,7 +171,7 @@ def _labels(ctx: Ctx, step: int) -> list[str]:
 def _value_text(ctx: Ctx, step: int) -> str:
     """The current value of a step when it isn't one of its options (set in ⏰ Frecuencias, ⚙️ Opciones…)."""
     ws = ctx.ws_rec
-    if step == 2:
+    if step == PAUSE_STEP:
         return ctx.t("setup.sum.pause.upto", t=pause_max_text(ctx, ws.pause_max_hours))
     return duration_text(ctx, delete_after_of(ws))
 
@@ -167,14 +187,14 @@ def _question(ctx: Ctx, step: int) -> tuple[str, InlineKeyboardMarkup]:
     if current is None:  # a value chosen elsewhere is pre-selected too: keeping it goes on to the next step
         keep = ctx.t("setup.keep", v=truncate(_value_text(ctx, step), KEEP_MAX))
         rows.insert(0, [btn(choice_label(keep, True), MenuCB(screen="setup", arg=_next(ws, step)))])
-    if step == 1:
+    if step == JOIN_STEP:
         rows.append([btn(ctx.t("setup.btn.skip"), SuCB(s=0))])
         return f"{ctx.t('setup.intro')}\n\n{ctx.t('setup.q.1')}", kb(*rows)
     rows.append(back_row(ctx.lang, "setup", _previous(ws, step)))
     return ctx.t(f"setup.q.{step}"), kb(*rows)
 
 
-# --- step 3: the global frequency --------------------------------------------------------------
+# --- step 4: the hours of the rotation (the global frequency) -------------------------------------------
 def _save_freq(ws: BotRecord, new: dict[str, Any]) -> None:
     ws.freq = freq.normalize(new)  # a new dict: JSON column
     freq.refresh_bot(ws, utcnow())
@@ -211,7 +231,7 @@ def _freq_question(ctx: Ctx) -> tuple[str, InlineKeyboardMarkup]:
     f = freq.normalize(ws.freq)
     ticked = {h for h, _ in freq.day_times(f)}
     text = "\n".join([
-        ctx.t("setup.q.3"),
+        ctx.t(f"setup.q.{FREQ_STEP}"),
         "",
         ctx.t("setup.freq.now", n=freq.per_day(f), times=_hours_text(ctx, f)),
         ctx.t("setup.freq.days", days=freq.days_text(f["days"], ctx.lang)),
@@ -267,8 +287,11 @@ async def _summary(ctx: Ctx, session: AsyncSession) -> tuple[str, InlineKeyboard
     lines = [ctx.t("setup.done"), "", externals_line(ctx)]
     if ws.join_open:
         lines.append(ctx.t("setup.sum.pause", v=_pause_rule(ctx)))
+    order = OPTIONS[ROTATION_STEP][_current(ws, ROTATION_STEP) or 0]
+    lines.append(ctx.t("setup.sum.rot", v=ctx.t(f"setup.sum.rot.{order}")))
+    if rotation_on(order):
+        lines.append(ctx.t("home.freq", freq=freq.describe(ws.freq, ctx.lang)))
     lines += [
-        ctx.t("home.freq", freq=freq.describe(ws.freq, ctx.lang)),
         ctx.t("setup.sum.delete", v=ctx.t("setup.sum.after", t=duration_text(ctx, minutes)) if minutes
               else ctx.t("setup.sum.never")),
         ctx.t("set.tz", tz=esc(ctx.bot_tz), offset=utc_offset_label(ctx.bot_tz)),
@@ -295,13 +318,13 @@ async def setup_screen(
     event: Message | CallbackQuery, ctx: Ctx, session: AsyncSession, arg: int = 0, notice: str | None = None,
     **_: object,
 ) -> None:
-    """``arg``: the step, 1-5."""
+    """``arg``: the step, 1-6 (a skipped one shows the next)."""
     if not can_setup(ctx):
         await alert(event, ctx.t("common.no_permission"))
         return
     step = min(max(arg, 1), SUMMARY)
-    if step == 2 and not ctx.ws_rec.join_open:  # the partners' step only when external chats are accepted
-        step = 3
+    if _skipped(ctx.ws_rec, step):
+        step = _next(ctx.ws_rec, step)
     if step == SUMMARY:
         text, markup = await _summary(ctx, session)
     else:
@@ -336,7 +359,7 @@ async def on_freq(
     call: CallbackQuery, callback_data: SuFqCB, ctx: Ctx, session: AsyncSession, state: FSMContext,
     scheduler: Scheduler,
 ) -> None:
-    """Step 3: each change is saved at once and the same step is shown again, with the hours it publishes at."""
+    """Step 4: each change is saved at once and the same step is shown again, with the hours it publishes at."""
     if not can_setup(ctx):
         await alert(call, ctx.t("common.no_permission"))
         return
