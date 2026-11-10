@@ -4,7 +4,7 @@ the picker."""
 from __future__ import annotations
 
 import re
-from datetime import datetime, timedelta, timezone
+from datetime import datetime, timezone
 from zoneinfo import ZoneInfo, available_timezones
 
 import pytest
@@ -20,13 +20,12 @@ from app.data.timezones import (
     zone_label,
 )
 from app.db.base import utcnow
-from app.db.models import ChatGroup, Post, PostStatus, SchedMode
+from app.db.models import Post, PostStatus, SchedMode
 from app.ui.callbacks import InputCancelCB, MenuCB
 from tests.conftest import MAIN_BOT_ID, OWNER2_ID, SUPER_ID, USER_ID, App
 from tests.test_start_helpers import (
     CLONE_ID,
     add_clone,
-    add_group,
     add_post,
     button_texts,
     callback_of,
@@ -86,28 +85,33 @@ def local(when: datetime | None, zone: str) -> str:
 
 
 async def schedules(app: App) -> dict[str, int]:
-    """A global frequency at 10:00 and, at 12:00, 15:00 and 18:00, a group, an own-schedule post and a one-time post
-    (plus a rotation post, which has no next time)."""
+    """A default schedule at 10:00 and, at 10:00, 15:00 and 18:00, two own-schedule posts and a one-time post (plus a
+    paused post and a manual one, which have no next time)."""
     send_at = datetime(2031, 3, 3, 18, 0, tzinfo=timezone.utc)
     async with edit_bot(app) as rec:
         rec.freq = TEN
-        rec.rot_next_at = utcnow() - timedelta(days=2)
     return {
-        "group": await add_group(app, freq={"mode": "times", "times": "12:00", "days": "0123456"}),
-        "global_group": await add_group(app, name="Sin frecuencia"),
+        "ten": await add_post(app, mode=SchedMode.OWN, freq=TEN),
         "own": await add_post(app, mode=SchedMode.OWN, freq={"mode": "times", "times": "15:00", "days": "0123456"}),
         "once": await add_post(app, mode=SchedMode.ONCE, send_at=send_at),
         "paused": await add_post(app, mode=SchedMode.OWN, freq=TEN, status=PostStatus.PAUSED),
-        "rotation": await add_post(app),
+        "manual": await add_post(app, mode=SchedMode.MANUAL),
     }
+
+
+async def next_send(app: App, post_id: int) -> datetime | None:
+    async with app.db() as s:
+        post = await s.get(Post, post_id)
+        assert post is not None
+        return post.next_send_at
 
 
 # ------------------------------------------------------------------------------------------ the flows
 async def test_timezone_root_for_admins(app: App) -> None:
     await open_timezone(app, SUPER_ID)
     text = app.last_text(SUPER_ID)
-    assert text.startswith("🗺 <b>Zona horaria</b>\n\nCon ella se calculan las frecuencias y las fechas de envío de "
-                           "la red.")
+    assert text.startswith("🗺 <b>Zona horaria</b>\n\nCon ella se calculan los horarios y las fechas de envío de la "
+                           "red.")
     assert re.search(r"🕐 Actual: <b>Europe/Madrid</b> \(UTC\+[12]\) · \d{2}:\d{2}", text)
     assert "Es la zona de la red" not in text  # admins always see the network's timezone
     assert text.endswith(PICK)
@@ -140,26 +144,21 @@ async def test_admin_change_recalculates_every_next_time(app: App) -> None:
     text = app.last_text(SUPER_ID)
     assert text.startswith("✅ Zona horaria de la red: <b>Asia/Tokyo</b>. Los próximos envíos se han recalculado.")
     assert "🗺 Zona horaria: Asia/Tokyo (UTC+9)" in text  # back on the settings screen
-    now = utcnow()
-    assert rec.rot_next_at is not None and rec.rot_next_at > now and local(rec.rot_next_at, "Asia/Tokyo") == "10:00"
+    assert rec.freq == TEN  # the default schedule is wall-clock hours: it stays as it is
+    ten = await next_send(app, ids["ten"])
+    assert ten is not None and ten > utcnow() and local(ten, "Asia/Tokyo") == "10:00"
     async with app.db() as s:
-        group = await s.get(ChatGroup, ids["group"])
-        no_freq = await s.get(ChatGroup, ids["global_group"])
-        posts = {key: await s.get(Post, ids[key]) for key in ("own", "once", "paused", "rotation")}
-    assert group is not None and local(group.rot_next_at, "Asia/Tokyo") == "12:00"
-    assert no_freq is not None and no_freq.rot_next_at is None  # it follows the global frequency
+        posts = {key: await s.get(Post, ids[key]) for key in ("own", "once", "paused", "manual")}
     assert local(posts["own"].next_send_at, "Asia/Tokyo") == "15:00"
     assert posts["once"].next_send_at == posts["once"].send_at  # a fixed moment doesn't move
-    assert posts["paused"].next_send_at is None and posts["rotation"].next_send_at is None
+    assert posts["paused"].next_send_at is None and posts["manual"].next_send_at is None
     # Another zone moves them again.
     await app.click(SUPER_ID, "Zona horaria")
     await app.click(SUPER_ID, "Europa")
     await pick_country(app, SUPER_ID, "Francia")
-    rec = await get_bot(app)
-    assert rec.timezone == "Europe/Paris" and local(rec.rot_next_at, "Europe/Paris") == "10:00"
-    async with app.db() as s:
-        own = await s.get(Post, ids["own"])
-    assert own is not None and local(own.next_send_at, "Europe/Paris") == "15:00"
+    assert (await get_bot(app)).timezone == "Europe/Paris"
+    assert local(await next_send(app, ids["ten"]), "Europe/Paris") == "10:00"
+    assert local(await next_send(app, ids["own"]), "Europe/Paris") == "15:00"
 
 
 async def test_countries_with_several_zones_list_them(app: App) -> None:
@@ -206,7 +205,6 @@ async def test_back_from_a_zone_list_returns_to_the_right_country_page(app: App)
 async def test_users_set_their_own_timezone_through_the_regions_of_america(app: App) -> None:
     ids = await schedules(app)
     await open_timezone(app, USER_ID)
-    before = (await get_bot(app)).rot_next_at
     await app.click(USER_ID, "🌎 América")
     assert app.last_text(USER_ID) == "<b>🌎 América</b>\n\n👇 Elige tu región:"
     assert button_texts(app, USER_ID) == [*REGION_BUTTONS, "🔙 Regresar"]
@@ -221,10 +219,8 @@ async def test_users_set_their_own_timezone_through_the_regions_of_america(app: 
     await app.click(USER_ID, "Ciudad de México")
     assert (await get_bu(app, USER_ID)).timezone == "America/Mexico_City"
     rec = await get_bot(app)
-    assert rec.timezone == "Europe/Madrid" and rec.rot_next_at == before  # users never move the network
-    async with app.db() as s:
-        own = await s.get(Post, ids["own"])
-    assert own is not None and own.next_send_at is None  # nothing was recalculated
+    assert rec.timezone == "Europe/Madrid"  # users never move the network
+    assert await next_send(app, ids["own"]) is None  # nothing was recalculated
     text = app.last_text(USER_ID)
     assert text.startswith("✅ Tu zona horaria es ahora <b>America/Mexico_City</b>.")
     assert "🗺 Zona horaria: America/Mexico_City" in text
@@ -260,6 +256,7 @@ async def test_a_super_admin_managing_a_clone_changes_the_clone_timezone(app: Ap
 # ---------------------------------------------------------------------------------------- onboarding
 async def test_new_clone_asks_its_owner_for_the_timezone_first(app: App) -> None:
     await add_clone(app, timezone_set=False)
+    post_id = await add_post(app, bot_id=CLONE_ID, freq=TEN)
     await app.send(USER_ID, "/start", bot_id=CLONE_ID)
     assert "Te damos la bienvenida a tu bot" not in app.last_text(USER_ID)  # only its owner is asked
     await app.send(OWNER2_ID, "/start", bot_id=CLONE_ID)
@@ -283,7 +280,8 @@ async def test_new_clone_asks_its_owner_for_the_timezone_first(app: App) -> None
     await app.click(OWNER2_ID, "Islas Canarias", bot_id=CLONE_ID)
     rec = await get_bot(app, CLONE_ID)
     assert rec.timezone == "Atlantic/Canary" and rec.timezone_set
-    assert rec.rot_next_at is not None and rec.rot_next_at > utcnow()
+    nxt = await next_send(app, post_id)  # the posts' next times are computed in the zone of the network
+    assert nxt is not None and nxt > utcnow() and local(nxt, "Atlantic/Canary") == "10:00"
     # It is the owner's own zone too: reused in every bot of the platform.
     assert (await get_bu(app, OWNER2_ID, CLONE_ID)).timezone == "Atlantic/Canary"
     text = app.last_text(OWNER2_ID)
@@ -542,6 +540,7 @@ async def test_forged_timezone_callbacks_fall_back_to_the_root(app: App) -> None
 async def test_typed_zone_for_admins(app: App) -> None:
     async with edit_bot(app) as rec:
         rec.freq = TEN
+    post_id = await add_post(app, freq=TEN)
     await open_timezone(app, SUPER_ID)
     await app.click(SUPER_ID, "Escribir zona")
     assert await fsm_state(app, SUPER_ID) == "StartTimezoneFSM:zone"
@@ -554,7 +553,7 @@ async def test_typed_zone_for_admins(app: App) -> None:
     assert (await get_bot(app)).timezone == "Europe/Madrid"
     await app.send(SUPER_ID, "  asia/kolkata ")
     rec = await get_bot(app)
-    assert rec.timezone == "Asia/Kolkata" and local(rec.rot_next_at, "Asia/Kolkata") == "10:00"
+    assert rec.timezone == "Asia/Kolkata" and local(await next_send(app, post_id), "Asia/Kolkata") == "10:00"
     assert await fsm_state(app, SUPER_ID) is None
     assert app.last_text(SUPER_ID).startswith("✅ Zona horaria de la red: <b>Asia/Kolkata</b>")
     await app.click(SUPER_ID, "Zona horaria")

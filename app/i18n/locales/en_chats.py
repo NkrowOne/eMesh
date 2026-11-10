@@ -110,8 +110,6 @@ STRINGS = {
     "ch.d.reason": "📝 Reason: {reason}",
     "ch.d.owner_pause_hint": "   └ If you resume it, its owner's pause is lifted and they're told.",
     "ch.d.groups": "🗂 Groups of channels: {names}",
-    "ch.d.freq_group": "⏰ Frequency: {freq} (🗂 {group})",
-    "ch.d.freq_global": "⏰ Frequency: 🌐 the global one ({freq})",
     "ch.d.received": "📨 Received: {total} · last 7 days: {week}",
     "ch.d.last": "🕐 Last: {date}",
     "ch.btn.groups": "🗂 Groups of channels",
@@ -128,7 +126,7 @@ STRINGS = {
     # --- 🗂 groups of a chat ---
     "ch.groups.title": "🗂 <b>Groups of channels</b> · {chat}",
     "ch.groups.hint": "Tap one to put the chat in it or take it out: it receives the posts aimed at those 🗂 groups "
-                      "of channels, and the own frequency of one of them wins over the global one.",
+                      "of channels.",
     "ch.groups.legend": "🤝 open to external chats",
     "ch.groups.empty": "ℹ️ There are no groups of channels yet. Create them in 🗂 Groups of channels.",
     "ch.btn.all_groups": "🗂 Groups of channels",

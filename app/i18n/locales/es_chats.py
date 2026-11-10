@@ -111,8 +111,6 @@ STRINGS = {
     "ch.d.reason": "📝 Motivo: {reason}",
     "ch.d.owner_pause_hint": "   └ Si lo reanudas, se anula su pausa y se le avisa.",
     "ch.d.groups": "🗂 Grupos de canales: {names}",
-    "ch.d.freq_group": "⏰ Frecuencia: {freq} (🗂 {group})",
-    "ch.d.freq_global": "⏰ Frecuencia: 🌐 la global ({freq})",
     "ch.d.received": "📨 Recibidos: {total} · últimos 7 días: {week}",
     "ch.d.last": "🕐 Último: {date}",
     "ch.btn.groups": "🗂 Grupos de canales",
@@ -129,7 +127,7 @@ STRINGS = {
     # --- 🗂 groups of a chat ---
     "ch.groups.title": "🗂 <b>Grupos de canales</b> · {chat}",
     "ch.groups.hint": "Toca uno para meter o sacar el chat: recibirá los mensajes dirigidos a esos 🗂 grupos de "
-                      "canales, y la frecuencia propia de uno de ellos manda sobre la global.",
+                      "canales.",
     "ch.groups.legend": "🤝 abierto a externos",
     "ch.groups.empty": "ℹ️ Aún no hay grupos de canales. Créalos en 🗂 Grupos de canales.",
     "ch.btn.all_groups": "🗂 Grupos de canales",

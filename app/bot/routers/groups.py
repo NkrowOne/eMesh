@@ -1,6 +1,5 @@
-"""🗂 Grupos de canales: custom sets of chats of the network. A group of chats is a target for posts (``g<id>``) and
-may have its own frequency (edited in ``freq_edit``, see ``freqs.py``). Screens: ``groups``, ``group``,
-``group_chats``.
+"""🗂 Grupos de canales: custom sets of chats of the network. A group of chats is a target for posts (``g<id>``).
+Screens: ``groups``, ``group``, ``group_chats``.
 """
 from __future__ import annotations
 
@@ -15,12 +14,9 @@ from sqlalchemy import delete, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.bot.context import Ctx
-from app.bot.routers.freqs import describe, guard, with_notice
-from app.db.base import utcnow
+from app.bot.routers.freqs import guard, with_notice
 from app.db.models import Chat, ChatGroup, ChatStatus, GroupChat, Post
 from app.services import audience
-from app.services import freq as freq_svc
-from app.services.scheduler import Scheduler
 from app.ui import fmt
 from app.ui.callbacks import MenuCB
 from app.ui.common import alert, back_row, btn, grid, kb, nav_row, paginate, prompt, show, toast, toggle_label
@@ -132,7 +128,6 @@ async def render_groups(event: Event, ctx: Ctx, session: AsyncSession, page: int
     items, page, pages = paginate(groups, page, GROUPS_PAGE)
     lines = [
         ctx.t("gr.item", n=n, name=fmt.esc(g.name), chats=counts.get(g.id, 0),
-              freq=ctx.t("gr.item_own", freq=describe(ctx, g.freq)) if g.freq else ctx.t("fq.global_short"),
               open=ctx.t("gr.item_open") if g.open else "")
         for n, g in enumerate(items, page * GROUPS_PAGE + 1)
     ]
@@ -200,21 +195,15 @@ async def render_group(event: Event, ctx: Ctx, session: AsyncSession, group: Cha
     members = await audience.group_chat_pks(session, group.id)
     chats = [c for c in await network_chats(session, ctx.ws_id) if c.id in members]
     posts = await posts_using(session, ctx.ws_id, group.id)
-    f = group.freq or ctx.ws_rec.freq
-    nxt = freq_svc.next_slot(f, ctx.bot_tz, utcnow())
     lines = [
         ctx.t("gr.d.title", name=fmt.esc(group.name)),
         ctx.t("gr.d.chats", n=fmt.num(len(chats)), members=fmt.num(sum(c.members or 0 for c in chats))),
-        ctx.t("gr.d.freq_own" if group.freq else "gr.d.freq_global", freq=describe(ctx, f)),
-        ctx.t("fq.source_hint"),
-        ctx.t("gr.d.next", when=fmt.dt(nxt, ctx.tz)),
         ctx.t("gr.d.posts", n=len(posts)),
         ctx.t("gr.d.open", value=fmt.onoff(group.open)),
         ctx.t("gr.d.open_hint" if group.open else "gr.d.closed_hint"),
     ]
     markup = kb(
-        [btn(ctx.t("gr.b.chats"), MenuCB(screen="group_chats", arg=group.id)),
-         btn(ctx.t("gr.b.freq"), MenuCB(screen="freq_edit", arg=group.id))],
+        [btn(ctx.t("gr.b.chats"), MenuCB(screen="group_chats", arg=group.id))],
         [btn(toggle_label(ctx.t("gr.b.open"), group.open), GrCB(a="open", id=group.id))],
         [btn(ctx.t("gr.b.rename"), GrCB(a="ren", id=group.id)),
          btn(ctx.t("gr.b.delete"), GrCB(a="del", id=group.id), style="danger")],
@@ -294,8 +283,6 @@ async def on_delete(call: CallbackQuery, callback_data: GrCB, ctx: Ctx, session:
         if len(orphans) > ORPHANS_SHOWN:
             names += ctx.t("gr.del.more", n=len(orphans) - ORPHANS_SHOWN)
         lines.append(ctx.t("gr.del.orphans", names=names))
-    if group.freq:
-        lines.append(ctx.t("gr.del.freq"))
     markup = kb(
         [btn(ctx.t("gr.b.del_yes"), GrCB(a="del_ok", id=group.id), style="danger"),
          btn(ctx.t("common.no"), MenuCB(screen="group", arg=group.id))],
@@ -305,7 +292,7 @@ async def on_delete(call: CallbackQuery, callback_data: GrCB, ctx: Ctx, session:
 
 @router.callback_query(GrCB.filter(F.a == "del_ok"))
 async def on_delete_confirm(call: CallbackQuery, callback_data: GrCB, ctx: Ctx, session: AsyncSession,
-                            state: FSMContext, scheduler: Scheduler) -> None:
+                            state: FSMContext) -> None:
     group = await admin_group(call, callback_data, ctx, session, state)
     if group is None:
         return
@@ -315,7 +302,6 @@ async def on_delete_confirm(call: CallbackQuery, callback_data: GrCB, ctx: Ctx, 
     await session.execute(delete(GroupChat).where(GroupChat.group_id == group.id))
     await session.delete(group)
     await session.flush()
-    scheduler.wake()  # its chats may follow another frequency now
     await toast(call, ctx.t("gr.deleted"))
     await render_groups(call, ctx, session)
 

@@ -105,10 +105,9 @@ async def db_chat(app: App, chat_id: int, title: str, *, bot_id: int = MAIN_BOT_
         return chat.id
 
 
-async def make_group(app: App, name: str, *, open: bool = False, freq: dict[str, Any] | None = None,
-                     bot_id: int = MAIN_BOT_ID) -> int:
+async def make_group(app: App, name: str, *, open: bool = False, bot_id: int = MAIN_BOT_ID) -> int:
     async with app.db() as s:
-        group = ChatGroup(bot_id=bot_id, name=name, open=open, freq=freq)
+        group = ChatGroup(bot_id=bot_id, name=name, open=open)
         s.add(group)
         await s.flush()
         return group.id

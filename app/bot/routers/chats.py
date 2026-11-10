@@ -22,7 +22,6 @@ from app.db.session import SessionMaker
 from app.i18n import t
 from app.services import audience, blast, chatstate, content, stats
 from app.services import chats as chat_svc
-from app.services import freq as freq_svc
 from app.services.chatinfo import add_to_channel_url, add_to_group_url
 from app.services.chats import SRC_CHAT, RqCB
 from app.services.notify import send_dm
@@ -234,11 +233,6 @@ async def detail_text(ctx: Ctx, session: AsyncSession, chat: Chat) -> str:
     member = await audience.chat_group_ids(session, chat.id)
     names = [g.name for g in groups if g.id in member]
     lines.append(ctx.t("ch.d.groups", names=chat_svc.names_text(names, DETAIL_GROUPS) or "—"))
-    source = audience.source_of(member, {g.id: g for g in groups})
-    if source is not None:
-        lines.append(ctx.t("ch.d.freq_group", freq=freq_svc.describe(source.freq, ctx.lang), group=esc(source.name)))
-    else:
-        lines.append(ctx.t("ch.d.freq_global", freq=freq_svc.describe(ctx.ws_rec.freq, ctx.lang)))
     week = await stats.chat_received(session, chat.id, days=7)
     lines.append(ctx.t("ch.d.received", total=num(chat.posts_total), week=num(week)))
     lines.append(ctx.t("ch.d.last", date=dt(chat.last_post_at, ctx.tz)))

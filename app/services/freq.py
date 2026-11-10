@@ -1,6 +1,7 @@
-"""⏰ Frequencies: how often chats receive posts (the global one, a group's own one, a post's own one).
+"""⏰ Frequencies (schedules): when a post goes out (its own one, ``Post.freq``; ``Bot.freq`` is the default schedule
+every new post starts with).
 
-A frequency is a small dict stored in JSON columns (``Bot.freq``, ``ChatGroup.freq``, ``Post.freq``):
+A frequency is a small dict stored in JSON columns (``Bot.freq``, ``Post.freq``):
 
 * ``{"mode": "interval", "every": 180, "window": "08:00-23:00", "days": "0123456"}``: every 3 hours from 08:00 to
   23:00 (both included) on those weekdays (Monday = 0). Without a window the slots start at 00:00 and cover the
@@ -20,8 +21,7 @@ from app.i18n import t
 from app.ui.fmt import zone
 
 if TYPE_CHECKING:
-    from app.db.models import Bot as BotRecord
-    from app.db.models import ChatGroup, Post
+    from app.db.models import Post
 
 DEFAULT_EVERY = 240  # minutes: an interval frequency without a valid "every" (4 h)
 DEFAULT_TIMES = "12:00"  # a times frequency without valid times
@@ -50,7 +50,7 @@ _DATETIME_RE = re.compile(r"^(\d{1,2})[/\-.](\d{1,2})(?:[/\-.](\d{2,4}))?(?:\s+(
 
 # --------------------------------------------------------------------------- the dict
 def normalize(freq: dict[str, Any] | None) -> dict[str, Any]:
-    """A clean copy of ``freq`` (the global default when it is missing or broken). Never raises."""
+    """A clean copy of ``freq`` (``DEFAULT_FREQ`` when it is missing or broken). Never raises."""
     src = freq if isinstance(freq, dict) else DEFAULT_FREQ
     days = "".join(sorted({c for c in str(src.get("days", ALL_DAYS)) if c in ALL_DAYS}))
     if src.get("mode") == "times":
@@ -182,19 +182,7 @@ def per_day(freq: dict[str, Any] | None) -> int:
     return length // f["every"] + 1
 
 
-# --------------------------------------------------------------------------- refresh of stored next times
-def refresh_bot(ws_rec: BotRecord, now: datetime) -> datetime | None:
-    """Next slot of the global frequency (``bots.rot_next_at``)."""
-    ws_rec.rot_next_at = next_slot(ws_rec.freq, ws_rec.timezone, now)
-    return ws_rec.rot_next_at
-
-
-def refresh_group(group: ChatGroup, tz: str, now: datetime) -> datetime | None:
-    """Next slot of a group with its own frequency; None when its chats follow the global one."""
-    group.rot_next_at = next_slot(group.freq, tz, now) if group.freq else None
-    return group.rot_next_at
-
-
+# --------------------------------------------------------------------------- campaign dates and next send times
 def day_start(day: date, tz: str) -> datetime:
     """00:00 of ``day`` in ``tz``, as aware UTC."""
     return datetime(day.year, day.month, day.day, tzinfo=zone(tz)).astimezone(timezone.utc)
@@ -222,7 +210,7 @@ def ended(post: Post, tz: str, now: datetime) -> bool:
 
 
 def refresh_post(post: Post, tz: str, now: datetime) -> datetime | None:
-    """``posts.next_send_at``: own frequency or one-time posts only (rotation and manual posts have none)."""
+    """``posts.next_send_at``: own frequency or one-time posts only (manual posts have none)."""
     nxt: datetime | None = None
     if post.status == PostStatus.ACTIVE:
         if post.mode == SchedMode.ONCE:

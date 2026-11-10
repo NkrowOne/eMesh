@@ -1,41 +1,27 @@
 """🗂 Grupos de canales: list, create, detail, rename, open toggle, delete and the chats of each group."""
 from __future__ import annotations
 
-import pytest
 from sqlalchemy import select
 
 from app.bot.routers.groups import GrCB
-from app.db.base import utcnow
-from app.db.models import DEFAULT_FREQ, ChatGroup, ChatStatus, GroupChat, Post
-from app.services import freq
-from app.ui import fmt
+from app.db.models import ChatGroup, ChatStatus, GroupChat, Post
 from app.ui.callbacks import MenuCB
 from tests.conftest import MAIN_BOT_ID, OWNER2_ID, SUPER_ID, USER_ID, App
 from tests.test_groups_helpers import (
     NO_PERMISSION,
     NOT_FOUND,
-    TZ,
     add_chat,
     add_group,
     add_post,
     answers,
     button_data,
     button_texts,
-    count_wakes,
     load,
     manage,
     members_of,
     open_menu,
     started,
 )
-
-
-@pytest.fixture
-def wakes(app: App, monkeypatch: pytest.MonkeyPatch) -> list[int]:
-    return count_wakes(app, monkeypatch)
-
-
-TWO_HOURS = {"mode": "interval", "every": 120, "window": "", "days": "0123456"}
 
 
 async def all_groups(app: App) -> list[ChatGroup]:
@@ -64,7 +50,7 @@ async def test_create_group_asks_the_name_and_then_its_chats(app: App) -> None:
     assert "✅ Grupo de canales <b>Cine &lt;Clásico&gt;</b> creado" in text
     assert "📣 <b>Chats de 🗂 Cine &lt;Clásico&gt;</b>" in text and "1. 📣 Cine HD" in text
     groups = await all_groups(app)
-    assert [(g.bot_id, g.name, g.freq, g.open) for g in groups] == [(MAIN_BOT_ID, "Cine <Clásico>", None, False)]
+    assert [(g.bot_id, g.name, g.open) for g in groups] == [(MAIN_BOT_ID, "Cine <Clásico>", False)]
     # back from the chats goes to the new group's detail
     assert button_data(app, "Regresar") == MenuCB(screen="group", arg=groups[0].id).pack()
 
@@ -87,18 +73,20 @@ async def test_name_prompt_ignores_commands_and_can_be_cancelled(app: App) -> No
     assert await all_groups(app) == []
 
 
-async def test_groups_list_shows_chats_frequency_and_open(app: App) -> None:
+async def test_groups_list_shows_chats_and_open(app: App) -> None:
     a = await add_chat(app, -1001, "Cine HD")
     b = await add_chat(app, -1002, "Series", status=ChatStatus.PENDING)
     gone = await add_chat(app, -1003, "Ya no está", status=ChatStatus.LEFT)
-    await add_group(app, "Cine", freq=TWO_HOURS, open=True, chats=[a, b, gone])
+    await add_group(app, "Cine", open=True, chats=[a, b, gone])
     await add_group(app, "Noticias", chats=[a])
     await started(app, SUPER_ID)
     await open_menu(app, SUPER_ID, "groups")
     text = app.last_text(SUPER_ID)
-    assert "1. 🗂 <b>Cine</b> · 📣 2 · ⏰ cada 2 h · 🤝" in text  # a chat that left the network isn't counted
-    assert "2. 🗂 <b>Noticias</b> · 📣 1 · 🌐 la global" in text
-    assert "🤝 abierto a externos" in text  # the legend
+    assert text.startswith("🗂 <b>Grupos de canales</b>\nAgrupa canales y grupos para enviarles mensajes concretos.\n\n")
+    assert "1. 🗂 <b>Cine</b> · 📣 2 · 🤝\n" in text  # a chat that left the network isn't counted
+    assert "2. 🗂 <b>Noticias</b> · 📣 1\n" in text
+    assert "\n\n📣 chats · 🤝 abierto a externos" in text  # the legend
+    assert "⏰" not in text and "global" not in text
     assert button_texts(app) == ["🗂 Cine", "🗂 Noticias", "➕ Nuevo grupo de canales", "🔙 Regresar"]
     assert button_data(app, "Regresar") == MenuCB(screen="home").pack()
 
@@ -125,27 +113,15 @@ async def test_group_detail(app: App) -> None:
     await add_post(app, "Mixto", targets=["own", f"g{g}"])
     await add_post(app, "Para todos", targets=["all"])
     await started(app, SUPER_ID)
-    before = utcnow()
     await open_menu(app, SUPER_ID, "group", g)
-    text = app.last_text(SUPER_ID)
-    assert text.startswith("🗂 <b>Cine &lt;HD&gt;</b>")
-    assert "📣 Chats: <b>2</b> (👤 1,500)" in text
-    assert "⏰ Frecuencia: 🌐 la global (a las 12:00)" in text
-    assert "└ Un canal sigue la frecuencia del primero de sus grupos de canales que tenga una propia" in text
-    expected = [fmt.dt(s, TZ) for s in freq.upcoming(DEFAULT_FREQ, TZ, before, 2)]
-    assert any(f"📅 Próximo turno: {e}" in text for e in expected)
-    assert "📝 Mensajes que lo usan: <b>2</b>" in text
-    assert "🤝 Abierto a externos: ✅" in text and "los nuevos entran solos" in text
-    assert button_texts(app) == ["📣 Elegir chats", "⏰ Frecuencia", "✅ Abierto a externos", "✏️ Nombre",
-                                 "🗑 Eliminar", "🔙 Regresar"]
-    assert button_data(app, "Frecuencia") == MenuCB(screen="freq_edit", arg=g).pack()
+    assert app.last_text(SUPER_ID) == (
+        "🗂 <b>Cine &lt;HD&gt;</b>\n"
+        "📣 Chats: <b>2</b> (👤 1,500)\n"
+        "📝 Mensajes que lo usan: <b>2</b>\n"
+        "🤝 Abierto a externos: ✅\n"
+        "   └ Los canales externos pueden unirse o salir desde su panel, y los nuevos entran solos.")
+    assert button_texts(app) == ["📣 Elegir chats", "✅ Abierto a externos", "✏️ Nombre", "🗑 Eliminar", "🔙 Regresar"]
     assert button_data(app, "Elegir chats") == MenuCB(screen="group_chats", arg=g).pack()
-
-    async with app.db() as s:
-        group = await s.get(ChatGroup, g)
-        group.freq = {"mode": "interval", "every": 120, "window": "08:00-23:00", "days": "01234"}
-    await open_menu(app, SUPER_ID, "group", g)
-    assert "⏰ Frecuencia: cada 2 h · 08:00-23:00 · de lunes a viernes (propia)" in app.last_text(SUPER_ID)
 
 
 async def test_rename_group(app: App) -> None:
@@ -181,9 +157,9 @@ async def test_open_to_external_chats_toggle(app: App) -> None:
     assert "✖️ Abierto a externos" in answers(app)
 
 
-async def test_delete_group_cleans_the_targets_of_its_posts(app: App, wakes: list[int]) -> None:
+async def test_delete_group_cleans_the_targets_of_its_posts(app: App) -> None:
     a = await add_chat(app, -1001, "Cine HD")
-    g = await add_group(app, "Cine", freq=TWO_HOURS, chats=[a])
+    g = await add_group(app, "Cine", chats=[a])
     other = await add_group(app, "Series", chats=[a])
     only = await add_post(app, "Promo <Cine>", targets=[f"g{g}"])
     mixed = await add_post(app, "Mixto", targets=["own", f"g{g}"])
@@ -196,8 +172,7 @@ async def test_delete_group_cleans_the_targets_of_its_posts(app: App, wakes: lis
     assert "¿Eliminar el grupo de canales Cine?" in text
     assert "📝 Lo usan <b>3</b> mensajes" in text
     assert "⚠️ Se quedarán sin destino" in text and "<b>Promo &lt;Cine&gt;</b>" in text
-    assert "Mixto" not in text and "Dos grupos" not in text
-    assert "⏰ Sus chats pasarán a seguir la frecuencia global" in text
+    assert "Mixto" not in text and "Dos grupos" not in text and "⏰" not in text
 
     await app.click(SUPER_ID, "❌ No")
     assert app.last_text(SUPER_ID).startswith("🗂 <b>Cine</b>")
@@ -211,7 +186,6 @@ async def test_delete_group_cleans_the_targets_of_its_posts(app: App, wakes: lis
     assert rows == [other]
     targets = {pid: (await load(app, Post, pid)).targets for pid in (only, mixed, both, untouched)}
     assert targets == {only: [], mixed: ["own"], both: [f"g{other}"], untouched: ["all"]}
-    assert wakes == [1]
     assert "🗑 Grupo de canales eliminado" in answers(app)
     text = app.last_text(SUPER_ID)
     assert "🗂 <b>Grupos de canales</b>" in text and "<b>Series</b>" in text and "<b>Cine</b>" not in text
@@ -223,7 +197,7 @@ async def test_delete_confirmation_without_posts(app: App) -> None:
     await app.press(SUPER_ID, GrCB(a="del", id=g).pack())
     text = app.last_text(SUPER_ID)
     assert "¿Eliminar el grupo de canales Vacío?" in text
-    assert "Lo usan" not in text and "sin destino" not in text and "frecuencia global" not in text
+    assert "Lo usan" not in text and "sin destino" not in text
 
 
 async def test_group_chats_toggles_all_none_and_pages(app: App) -> None:

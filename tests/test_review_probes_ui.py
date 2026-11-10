@@ -46,12 +46,12 @@ async def test_far_future_campaign_end_does_not_stop_the_network(app: App, quiet
     await app.click(SUPER_ID, "Hasta")
     await app.send(SUPER_ID, "31/12/9999")  # the usual way of writing "no end"
     async with app.db() as s:
-        rec = await s.get(BotRecord, MAIN_BOT_ID)
-        rec.rot_next_at = utcnow() - timedelta(minutes=1)  # a global slot is due
+        for post in (await s.execute(select(Post).where(Post.bot_id == MAIN_BOT_ID))).scalars():
+            post.next_send_at = utcnow() - timedelta(minutes=1)  # both posts are due
     await app.scheduler.tick()
     async with app.db() as s:
         runs = list((await s.execute(select(Run))).scalars())
-    # freq.in_dates / freq.ended do ends_on + 1 day -> OverflowError: no rotation (nor scheduled) post is sent any more
+    # freq.in_dates / freq.ended do ends_on + 1 day -> OverflowError: no scheduled post is sent any more
     assert runs, "the whole network stopped sending"
 
 

@@ -104,7 +104,7 @@ STRINGS = {
     "po.dm.own": "⏰ Horario propio · {freq}",
     "po.dm.once": "📢 Difusión puntual · {date}",
     "po.dm.manual": "✋ Manual",
-    "po.dh.own": "   └ En cada turno de su horario se envía a todos sus chats.",
+    "po.dh.own": "   └ A cada hora de su horario se envía a todos sus chats.",
     "po.dh.once": "   └ Se envía una vez y después queda terminado.",
     "po.dh.manual": "   └ Solo se envía al pulsar 🚀 Enviar ahora.",
     "po.d.next": "📅 Próximo envío: <b>{date}</b>",

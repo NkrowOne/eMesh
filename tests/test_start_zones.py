@@ -16,10 +16,10 @@ from sqlalchemy.ext.asyncio import AsyncEngine, create_async_engine
 from app.config import Settings
 from app.db.base import utcnow
 from app.db.models import Bot as BotRecord
-from app.db.models import BotUser
+from app.db.models import BotUser, Post
 from app.services import zones
 from tests.conftest import MAIN_BOT_ID, OWNER2_ID, SUPER_ID, USER_ID, App
-from tests.test_start_helpers import CLONE_ID, add_clone, edit_bot, get_bot, get_bu
+from tests.test_start_helpers import CLONE_ID, add_clone, add_post, edit_bot, get_bot, get_bu
 
 EB_SCHEMA = (
     "CREATE TABLE eb_bots (id BIGINT PRIMARY KEY, owner_id BIGINT NOT NULL, is_main BOOLEAN NOT NULL, "
@@ -103,9 +103,12 @@ async def clone_zone(app: App, bot_id: int, zone: str, *, chosen: bool = True) -
         rec.timezone, rec.timezone_set = zone, chosen
 
 
-def local(app_rec: BotRecord) -> str:
-    assert app_rec.rot_next_at is not None
-    return app_rec.rot_next_at.astimezone(ZoneInfo(app_rec.timezone)).strftime("%H:%M")
+async def next_send_local(app: App, post_id: int, zone: str) -> str:
+    """The next send time of a post, in ``zone`` (HH:MM)."""
+    async with app.db() as s:
+        post = await s.get(Post, post_id)
+    assert post is not None and post.next_send_at is not None and post.next_send_at > utcnow()
+    return post.next_send_at.astimezone(ZoneInfo(zone)).strftime("%H:%M")
 
 
 # ------------------------------------------------------------------------------------------ known_zone
@@ -301,11 +304,11 @@ async def test_a_new_clone_takes_the_zone_its_owner_already_chose(app: App) -> N
     await app.send(OWNER2_ID, "/start")
     await own_zone(app, OWNER2_ID, MAIN_BOT_ID, "America/Bogota")  # chosen as a visitor of the main bot
     await add_clone(app, timezone_set=False, setup_done=False)  # a brand new clone
+    post_id = await add_post(app, bot_id=CLONE_ID)  # its own schedule: the default one, at 12:00
     await app.send(OWNER2_ID, "/start", bot_id=CLONE_ID)
     rec = await get_bot(app, CLONE_ID)
     assert (rec.timezone, rec.timezone_set) == ("America/Bogota", True)
-    assert rec.rot_next_at is not None and rec.rot_next_at > utcnow()
-    assert local(rec) == "12:00"  # the next turn is recalculated in the network's zone
+    assert await next_send_local(app, post_id, "America/Bogota") == "12:00"  # recalculated in the network's zone
     assert (await get_bu(app, OWNER2_ID, CLONE_ID)).timezone == "America/Bogota"
     # Not asked: the setup wizard comes at once, with a welcome and the zone it took.
     assert app.last_text(OWNER2_ID).startswith(

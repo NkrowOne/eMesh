@@ -133,7 +133,7 @@ async def test_detail_of_own_and_once_posts(app: App, engine: SimpleNamespace) -
     text = await open_post(app, own)
     nxt = (await load(app, Post, own)).next_send_at
     assert nxt is not None
-    assert "⏰ Envío: ⏰ Horario propio · cada 2 h\n   └ En cada turno de su horario se envía a todos sus chats." in text
+    assert "⏰ Envío: ⏰ Horario propio · cada 2 h\n   └ A cada hora de su horario se envía a todos sus chats." in text
     assert f"📅 Próximo envío: <b>{fmt.dt(nxt, TZ)}</b>" in text
 
     text = await open_post(app, once)

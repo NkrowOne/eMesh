@@ -64,7 +64,7 @@ async def make_chats(app: App, n: int = 1, *, bot_id: int = MAIN_BOT_ID, type: s
 async def make_post(app: App, *, bot_id: int = MAIN_BOT_ID, name: str = "Promo Cine",
                     text: str = "🎬 <b>Estreno</b> esta semana", **kw: Any) -> int:
     values: dict[str, Any] = dict(bot_id=bot_id, name=name, kind="text", text=text, media={}, buttons=[],
-                                  targets=["all"], mode=SchedMode.ROTATION, status=PostStatus.ACTIVE,
+                                  targets=["all"], mode=SchedMode.OWN, status=PostStatus.ACTIVE,
                                   delete_previous=False)
     values.update(kw)
     async with app.db() as s:
@@ -158,20 +158,13 @@ async def test_run_sends_to_every_chat_and_counts(app: App) -> None:
     post = await get(app, Post, post_id)
     assert (post.runs_count, post.sent_count, post.last_sent_at) == (1, 3, run.started_at)
     chat = await get(app, Chat, pks[0])
-    assert (chat.posts_total, chat.last_post_at, chat.rot_last_post_id) == (1, ds[0].sent_at, None)
+    assert (chat.posts_total, chat.last_post_at) == (1, ds[0].sent_at)
     call = app.fake.messages_to(chat.chat_id)[0]
     assert call.params["text"] == "🎬 <b>Estreno</b> esta semana"
     assert call.params["reply_markup"]["inline_keyboard"][0][0] == {"text": "Web", "url": "https://example.com",
                                                                      "style": "success"}
     async with app.db() as s:
         assert await live_count(s, post_id) == 3
-
-
-async def test_rotation_runs_move_the_rotation_pointer(app: App) -> None:
-    [pk] = await make_chats(app)
-    post_id = await make_post(app)
-    await run_post(app, post_id, [pk], kind=RunKind.ROTATION, source="global")
-    assert (await get(app, Chat, pk)).rot_last_post_id == post_id
 
 
 async def test_only_sendable_chats_of_the_post_bot(app: App) -> None:
@@ -588,7 +581,7 @@ async def test_resume_after_a_restart(app: App) -> None:
     post_id = await make_post(app)
     started = utcnow() - timedelta(minutes=2)
     async with app.db() as s:
-        run = Run(bot_id=MAIN_BOT_ID, post_id=post_id, post_name="Promo Cine", kind=RunKind.ROTATION, source="global",
+        run = Run(bot_id=MAIN_BOT_ID, post_id=post_id, post_name="Promo Cine", kind=RunKind.SCHEDULE,
                   status=RunStatus.SENDING, total=4, started_at=started)
         s.add(run)
         await s.flush()
@@ -606,14 +599,14 @@ async def test_resume_after_a_restart(app: App) -> None:
     assert [len(app.fake.messages_to(d.chat_id)) for d in ds] == [0, 0, 1, 1]  # the "sending" one is never resent
     run = await get(app, Run, run_id)
     assert (run.status, run.sent, run.failed) == (RunStatus.DONE, 3, 0)
-    assert (await get(app, Chat, pks[2])).rot_last_post_id == post_id
+    assert (await get(app, Chat, pks[2])).posts_total == 1
 
 
 async def test_a_run_interrupted_long_ago_is_not_sent_late(app: App) -> None:
     pks = await make_chats(app, 2)
     post_id = await make_post(app)
     async with app.db() as s:
-        run = Run(bot_id=MAIN_BOT_ID, post_id=post_id, post_name="Promo Cine", kind=RunKind.ROTATION,
+        run = Run(bot_id=MAIN_BOT_ID, post_id=post_id, post_name="Promo Cine", kind=RunKind.SCHEDULE,
                   status=RunStatus.SENDING, total=2, started_at=utcnow() - timedelta(hours=3))
         s.add(run)
         await s.flush()
