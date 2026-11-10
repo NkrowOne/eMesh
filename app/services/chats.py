@@ -101,13 +101,12 @@ async def users_by_id(session: AsyncSession, ids: set[int | None]) -> dict[int, 
 
 
 def status_icon(chat: Chat, now: datetime | None = None) -> str:
-    """✅ receives posts · ⏸ paused · ⏳ pending · ⚠️ missing rights · 🗄 canal almacén (❌ / 🚫 / 🚪 when out of the
-    network)."""
+    """✅ receives posts · ⏸ paused · ⏳ pending · ⚠️ missing rights (❌ / 🚫 / 🚪 when out of the network)."""
     if chat.status == ChatStatus.PENDING:
         return "⏳" if chat.rights_ok else "⏳⚠️"
     if chat.status != ChatStatus.APPROVED:
         return {ChatStatus.REJECTED: "❌", ChatStatus.BANNED: "🚫", ChatStatus.LEFT: "🚪"}.get(chat.status, "❔")
-    icon = ("" if chat.rights_ok else "⚠️") + ("⏸" if chat.is_paused(now) else "") + ("🗄" if chat.vault else "")
+    icon = ("" if chat.rights_ok else "⚠️") + ("⏸" if chat.is_paused(now) else "")
     return icon or "✅"
 
 
@@ -127,8 +126,6 @@ def status_parts(chat: Chat, lang: str, tz: str, *, partner: bool = False, now: 
                      else t(p + "owner_paused_open", lang))
     if chat.admin_paused:
         parts.append(t(p + "admin_paused", lang))
-    if chat.vault and not partner:
-        parts.append(t("ch.st.vault", lang))  # 💎 canal almacén: receives nothing from the network
     return parts or [t(p + "ok", lang)]
 
 

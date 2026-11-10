@@ -1,4 +1,4 @@
-"""Premium (custom) emoji in posts: marked text, button icons, signature / vault copy and the plain fallback of
+"""Premium (custom) emoji in posts: marked text, button icons and the plain fallback of
 ``deliver`` / ``edit_delivery``."""
 from __future__ import annotations
 
@@ -152,33 +152,6 @@ def test_has_premium() -> None:
     assert content.has_premium(post_with(text='x <tg-emoji emoji-id="1">🔥</tg-emoji>'))
     assert content.has_premium(post_with(buttons=[[WEB]]))
     assert not content.has_premium(post_with(buttons=[[{"text": "Web", "url": "https://example.com"}]]))
-
-
-def test_signature_changes_and_ignores_extra_media() -> None:
-    base = post_with(kind="photo", media={"1": "fileA"})
-    sig = content.signature(base)
-    assert content.signature(post_with(kind="photo", media={"1": "fileA", "2": "fileB"})) == sig
-    assert content.signature(post_with(kind="photo", media={"1": "fileA"}, text="otro")) != sig
-    assert content.signature(post_with(kind="photo", media={"1": "fileA"}, buttons=[[WEB]])) != sig
-    assert content.signature(post_with(kind="photo", media={"1": "fileA"}, caption_above=True)) != sig
-    assert content.signature(post_with(kind="photo", media={"1": "fileZ"})) != sig
-
-
-def test_vault_copy() -> None:
-    p = post_with(buttons=[[WEB]], vault_chat_id=-100, vault_msg_id=7)
-    p.vault_sig = content.signature(p)
-    assert content.vault_copy(p) == (-100, 7)
-    p.text = "cambiado"
-    assert content.vault_copy(p) is None  # signature differs
-    p.vault_sig = content.signature(p)
-    assert content.vault_copy(p) == (-100, 7)
-    p.vault_msg_id = None
-    assert content.vault_copy(p) is None
-    p.vault_msg_id, p.vault_chat_id = 7, None
-    assert content.vault_copy(p) is None
-    plain = post_with(vault_chat_id=-100, vault_msg_id=7)
-    plain.vault_sig = content.signature(plain)
-    assert content.vault_copy(plain) is None  # nothing premium in it
 
 
 def test_custom_emoji_in() -> None:

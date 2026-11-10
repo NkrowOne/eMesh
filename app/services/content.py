@@ -8,7 +8,8 @@ stands for: ``{"text": "Web", "icon": "5368…", "emoji": "🔥", "url": "…"}`
 
 Custom emoji (in the text and as button icons) go out when Telegram lets the bot use them: its owner has Telegram
 Premium (private chats, groups and supergroups) or the bot has a username bought on Fragment (any chat, channels
-too). Where it can't, they are sent as the normal emoji they stand for (:func:`deliver`).
+too). Where it can't, they are sent as the normal emoji they stand for (:func:`deliver`). Channels get them in a
+forward of the post as the bot sent it to an admin's private chat (:func:`forward_copy`, the publisher).
 
 Text syntax of the buttons (one row per line, several buttons in a row separated by ``&&`` or ``|``)::
 
@@ -22,9 +23,7 @@ downloads the file through a bot that has one and uploads it (``media_for``); th
 """
 from __future__ import annotations
 
-import hashlib
 import html
-import json
 import logging
 import re
 from collections.abc import Callable
@@ -445,31 +444,15 @@ def custom_emoji_in(message: Message) -> bool:
     return any(e.type == "custom_emoji" for e in (message.entities or message.caption_entities or []))
 
 
-def signature(post: Post) -> str:
-    """What the message of a post looks like (content, buttons and the options that change it). A premium copy
-    in the canal almacén made from another signature is out of date."""
-    first_media = next(iter((post.media or {}).values()), None)  # the file it was made with (others are added later)
-    data = [post.kind, post.text or "", clean_rows(post.buttons), post.media_name or "", first_media,
-            bool(post.link_preview), bool(post.caption_above), bool(post.spoiler)]
-    return hashlib.sha256(json.dumps(data, sort_keys=True, ensure_ascii=False).encode()).hexdigest()[:32]
-
-
-def vault_copy(post: Post) -> tuple[int, int] | None:
-    """``(chat id, message id)`` of the up to date premium copy of the post in the canal almacén, if it has one.
-    Channels receive it as a forward: Telegram keeps the custom emoji of forwarded messages, while it refuses them
-    in messages a bot sends to a channel (unless the bot has a username bought on Fragment)."""
-    if post.vault_chat_id and post.vault_msg_id and has_premium(post) and post.vault_sig == signature(post):
-        return post.vault_chat_id, post.vault_msg_id
-    return None
-
-
-async def forward_copy(bot: Bot, chat_id: int, post: Post, copy: tuple[int, int], *, silent: bool | None = None,
+async def forward_copy(bot: Bot, chat_id: int, post: Post, source: tuple[int, int], *, silent: bool | None = None,
                        protect: bool | None = None) -> Message:
-    """Forwards the premium copy (:func:`vault_copy`) to ``chat_id`` with the options of the post. Raises the
-    Telegram errors (the copy may be gone: then :func:`deliver` is the way)."""
+    """Forwards the source message of a post (``(chat id, message id)``: the post as the bot sent it to a private
+    chat, custom emoji included) to ``chat_id`` with the options of the post. Telegram keeps the custom emoji of a
+    forwarded message, while it refuses them in a message a bot sends to a channel (unless the bot has a username
+    bought on Fragment). Raises the Telegram errors."""
     silent = post.silent if silent is None else silent
     protect = post.protect if protect is None else protect
-    return await bot.forward_message(chat_id, copy[0], copy[1], disable_notification=silent or None,
+    return await bot.forward_message(chat_id, source[0], source[1], disable_notification=silent or None,
                                      protect_content=protect or None)
 
 
@@ -616,6 +599,5 @@ __all__ = [
     "TelegramAPIError", "apply", "build_markup", "button_label", "button_line", "clean_rows", "content_error",
     "count_buttons", "custom_emoji_in", "default_name", "deliver", "edit_delivery", "file_id_of", "format_buttons",
     "forward_copy", "from_message", "has_premium", "kind_label", "label_of", "make_button", "marked_text",
-    "media_for", "normalize_url", "parse_buttons", "plain", "remember_media", "send_post", "set_text", "signature",
-    "unmark", "vault_copy",
+    "media_for", "normalize_url", "parse_buttons", "plain", "remember_media", "send_post", "set_text", "unmark",
 ]

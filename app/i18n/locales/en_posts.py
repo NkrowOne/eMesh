@@ -117,6 +117,8 @@ STRINGS = {
     "po.camp.to": "until {end}",
     "po.d.sent": "📤 Sent: {times} · {deliveries} · last {last}",
     "po.d.never": "📤 It hasn't been sent yet.",
+    "po.d.premium": "💎 Premium emoji: channels get it forwarded from the bot to keep them («Forwarded from» and its "
+                    "name on top). The bot's owner needs Telegram Premium.",
     "po.d.live": "🟢 Published right now in: <b>{chats}</b>",
     "po.d.opts": "⚙️ <b>Options</b>",
     "po.b.preview": "👁 Preview",

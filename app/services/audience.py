@@ -59,7 +59,7 @@ def make_targets(virtual: Iterable[str], group_ids: Iterable[int]) -> list[str]:
 
 # --------------------------------------------------------------------------- chats
 def is_sendable(chat: Chat, now: datetime | None = None) -> bool:
-    return chat.status == ChatStatus.APPROVED and chat.rights_ok and not chat.vault and not chat.is_paused(now)
+    return chat.status == ChatStatus.APPROVED and chat.rights_ok and not chat.is_paused(now)
 
 
 async def bot_chats(session: AsyncSession, bot_id: int, *, statuses: Sequence[str] | None = None) -> list[Chat]:

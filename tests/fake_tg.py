@@ -115,6 +115,7 @@ class FakeTelegram:
         # Custom (premium) emoji in what bots send: kept in private chats and groups (the bots' owners have Telegram
         # Premium), turned into normal emoji in channels, as Telegram does. False: no owner has Premium.
         self.premium_owners = True
+        self.private_messages: dict[int, dict[int, dict[str, Any]]] = defaultdict(dict)  # what bots sent to users
         self.base_url = ""
         self._runner: web.AppRunner | None = None
 
@@ -362,6 +363,8 @@ class FakeTelegram:
             msg["sender_chat"] = self.chat_json(chat_id, token)
         if chat_id < 0:
             self.chats[chat_id].messages[mid] = msg
+        else:
+            self.private_messages[chat_id][mid] = msg
         return msg
 
     def _markup(self, params: dict[str, Any]) -> dict[str, Any]:
@@ -441,15 +444,19 @@ class FakeTelegram:
     def m_forwardMessage(self, token: str, p: dict[str, Any]) -> dict[str, Any]:
         """Forwards a message the fake knows (one of a chat's ``messages``): same content, ``forward_origin``."""
         self._sender_check(token, p)
-        source = self.chats[int(p["from_chat_id"])].messages.get(int(p["message_id"])) \
-            if int(p["from_chat_id"]) in self.chats else None
+        from_chat = int(p["from_chat_id"])
+        if from_chat > 0:
+            source = self.private_messages[from_chat].get(int(p["message_id"]))
+        else:
+            source = self.chats[from_chat].messages.get(int(p["message_id"])) if from_chat in self.chats else None
         if source is None:
             raise ApiError(400, "Bad Request: message to forward not found")
         keep = {k: v for k, v in source.items() if k in ("text", "entities", "caption", "caption_entities", "photo",
                                                        "video", "animation", "document", "audio", "voice",
                                                        "reply_markup")}
-        origin = source.get("forward_origin") or {"type": "chat", "sender_chat": source["chat"],
-                                                   "date": source["date"]}
+        origin = source.get("forward_origin") or (
+            {"type": "user", "sender_user": source["from"], "date": source["date"]} if "from" in source
+            else {"type": "chat", "sender_chat": source["chat"], "date": source["date"]})
         return self._new_message(token, p["chat_id"], {**keep, "forward_origin": origin}, forward=True)
 
     def m_copyMessage(self, token: str, p: dict[str, Any]) -> dict[str, Any]:
@@ -491,6 +498,8 @@ class FakeTelegram:
             assert chat is not None
             if chat.messages.pop(int(p["message_id"]), None) is None:
                 raise ApiError(400, "Bad Request: message to delete not found")
+        elif isinstance(chat_id, int):
+            self.private_messages[chat_id].pop(int(p["message_id"]), None)
         return True
 
     def m_deleteMessages(self, token: str, p: dict[str, Any]) -> bool:

@@ -69,7 +69,7 @@ async def summary(session: AsyncSession, bot_id: int, *, hours: int = 24, now: d
             out.admin_paused += 1
         if not c.rights_ok:
             out.no_rights += 1
-        if c.rights_ok and not c.vault and not c.is_paused(now):
+        if c.rights_ok and not c.is_paused(now):
             out.sendable += 1
     out.groups = int((await session.execute(
         select(func.count()).select_from(ChatGroup).where(ChatGroup.bot_id == bot_id))).scalar() or 0)

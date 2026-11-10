@@ -269,9 +269,6 @@ class Chat(Base):
     owner_paused_until: Mapped[datetime | None] = mapped_column(UTCDateTime, nullable=True)
     paused_at: Mapped[datetime | None] = mapped_column(UTCDateTime, nullable=True)
 
-    # 🗄 Canal almacén (an own channel): it keeps the premium copies of the posts that the other channels receive as
-    # forwards (Telegram doesn't let bots send custom emoji to channels); it receives nothing from the network.
-    vault: Mapped[bool] = mapped_column(Boolean, default=False, server_default=sa_false())
     posts_total: Mapped[int] = mapped_column(Integer, default=0)  # posts delivered in this chat
     last_post_at: Mapped[datetime | None] = mapped_column(UTCDateTime, nullable=True)
 
@@ -353,11 +350,6 @@ class Post(Base):
     media_name: Mapped[str | None] = mapped_column(String(128), nullable=True)  # file name (documents, audio)
     # Rows of buttons: [[{"text": ..., "url": ...} | {"text": ..., "copy": ...}, + optional "style"]].
     buttons: Mapped[list[list[dict[str, str]]]] = mapped_column(JSON, default=list)
-    # 💎 Premium copy in the canal almacén (forwarded to channels, which refuse custom emoji sent by bots) and the
-    # content signature it was made from (``content.signature``): a different one means it is out of date.
-    vault_chat_id: Mapped[int | None] = mapped_column(BigInteger, nullable=True)
-    vault_msg_id: Mapped[int | None] = mapped_column(Integer, nullable=True)
-    vault_sig: Mapped[str | None] = mapped_column(String(32), nullable=True)
 
     # --- audience: "all", "own", "ext" and "g<group id>" (see services/audience.py) ---
     targets: Mapped[list[str]] = mapped_column(JSON, default=lambda: ["all"])
@@ -429,7 +421,8 @@ class Delivery(Base):
     status: Mapped[str] = mapped_column(String(16), default=DeliveryStatus.QUEUED)
     error: Mapped[str | None] = mapped_column(String(256), nullable=True)
     pinned: Mapped[bool] = mapped_column(Boolean, default=False)
-    forwarded: Mapped[bool] = mapped_column(Boolean, default=False, server_default=sa_false())  # from the almacén
+    # 💎 sent as a forward of the post's source message (custom emoji in a channel): it can't be edited
+    forwarded: Mapped[bool] = mapped_column(Boolean, default=False, server_default=sa_false())
     sent_at: Mapped[datetime | None] = mapped_column(UTCDateTime, nullable=True)
     delete_at: Mapped[datetime | None] = mapped_column(UTCDateTime, nullable=True)
     deleted_at: Mapped[datetime | None] = mapped_column(UTCDateTime, nullable=True)

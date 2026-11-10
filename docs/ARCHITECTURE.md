@@ -111,7 +111,7 @@ never confused with a Telegram group (👥).
 | `app/services/freq.py` | Schedules ("frequencies", dict in JSON: `Post.freq`; `Bot.freq` is the default one new posts copy): `normalize`, `next_slot(freq, tz, after)`, `upcoming(freq, tz, after, n)`, `per_day`, `refresh_post(post, tz, now)`, `in_dates(post, tz, now)`, `ended`, parsers `parse_every` / `parse_times` / `parse_window` / `parse_date` / `parse_datetime` (ValueError with an i18n key), `describe(freq, lang)`, `every_text`, `days_text`, `times_text`, `join_list`, `day_times(freq)` (the (h, m) of a
 day's slots), `EVERY_CHOICES`, `MIN_EVERY`, `MAX_EVERY`. |
 | `app/services/audience.py` | Targets tokens (`all`, `own`, `ext`, `g<id>`): `split_targets`, `make_targets`, `group_token`, `targets_chat`, `is_sendable`, `sendable_chats`, `bot_chats`, `bot_groups`, `memberships`, `chat_group_ids`, `group_chat_pks`, `group_counts`, `set_member(session, group_id, chat_pk, on)`, `join_open_groups`, `leave_all_groups`, `audience(session, post, sendable_only=)`, `audience_size`, `targets_size`. |
-| `app/services/content.py` | Post content: `from_message(message) -> Content | None`, `content_error(c)` (i18n key), `apply(post, content, bot_id)` (**bot_id = the bot that received the message**, `ctx.bot_id`), `default_name`, `kind_label`, `plain`, buttons `parse_buttons(text)` (ButtonsError key/line; pass `marked_text(message)` to keep premium emoji as icons), `label_of`, `button_label`, `format_buttons`, `button_line`, `clean_rows`, `count_buttons`, `build_markup(rows, icons=)`, `make_button(b, icons=)`, `COLORS`, `COLOR_EMOJI`, `MAX_BUTTONS`, `MAX_PER_ROW`; premium `has_premium`, `custom_emoji_in`, `signature`, `vault_copy`, `forward_copy`; sending `media_for(bot, post, manager)` (MediaError too_big/unavailable), `deliver(bot, chat_id, post, media=, reply_markup=, silent=, protect=, premium=, on_plain=)`, `send_post(bot, chat_id, post, manager, sm)` (one-off: previews), `edit_delivery(bot, chat_id, message_id, post)`, `file_id_of`, `remember_media(sm, post_id, bot_id, file_id)`. |
+| `app/services/content.py` | Post content: `from_message(message) -> Content | None`, `content_error(c)` (i18n key), `apply(post, content, bot_id)` (**bot_id = the bot that received the message**, `ctx.bot_id`), `default_name`, `kind_label`, `plain`, buttons `parse_buttons(text)` (ButtonsError key/line; pass `marked_text(message)` to keep premium emoji as icons), `label_of`, `button_label`, `format_buttons`, `button_line`, `clean_rows`, `count_buttons`, `build_markup(rows, icons=)`, `make_button(b, icons=)`, `COLORS`, `COLOR_EMOJI`, `MAX_BUTTONS`, `MAX_PER_ROW`; premium `has_premium`, `custom_emoji_in`, `forward_copy(bot, chat_id, post, source)`; sending `media_for(bot, post, manager)` (MediaError too_big/unavailable), `deliver(bot, chat_id, post, media=, reply_markup=, silent=, protect=, premium=, on_plain=)`, `send_post(bot, chat_id, post, manager, sm)` (one-off: previews), `edit_delivery(bot, chat_id, message_id, post)`, `file_id_of`, `remember_media(sm, post_id, bot_id, file_id)`. |
 | `app/services/limits.py` | Platform settings (KV `platform:settings`): `platform(session, settings) -> Platform(clone_policy, max_clones, limit_chats, limit_posts)`, `save_platform`; per bot `max_chats`, `max_posts`, `count_chats`, `count_posts`, `can_add_chat`, `can_add_post`, `unlimited`. |
 | `app/services/stats.py` | `summary(session, bot_id, hours=24) -> Summary` (chats own/external/members/sendable/pending/owner_paused/admin_paused/no_rights, groups, posts, runs/sent/failed/skipped/reach, top_posts), `chat_received(session, chat_pk, days=7)`. |
 | `app/ui/photos.py` | `show_with_photo(event, ctx, session, name, text, markup)`: `show` with a platform image (`brand.BOT` / `brand.TZ`) on top; edits only the caption while the pressed panel already is that photo, uploads it once to a bot without its own file id (then remembers it), leaves out a photo Telegram refuses. |
@@ -174,16 +174,12 @@ visitors). Times: schedules and dates are in the workspace timezone (`ctx.bot_tz
   owner has Telegram Premium (or anywhere when the bot has a username bought on Fragment). Posts keep them in the
   text (`<tg-emoji>`) and as button icons (a premium emoji at the start of a button name → `icon` + `emoji`);
   `content.deliver` / `edit_delivery` send them as normal emoji when Telegram refuses them. **Channels** refuse
-  them, but a forwarded message keeps them: the **canal almacén** (`Chat.vault`, an own channel that receives
-  nothing from the network) keeps a premium copy of the post (`Post.vault_chat_id/vault_msg_id/vault_sig`), and the
-  channels receive it as a forward («Reenviado de…»; `Delivery.forwarded`). Flow (`app/services/vault.py`,
-  `app/bot/routers/premium.py`, screen `post_premium`): 📨 Preparar para reenviar sends the premium message to the
-  admin's private chat; the admin forwards it to the canal almacén (the first time, the own channel it is forwarded
-  to becomes the canal almacén); the bot recognises the `channel_post` (`forward_origin` = the bot + the date of
-  the prepared message), puts the buttons back if they didn't come (`editMessageReplyMarkup`), links it, deletes
-  the previous copy and tells the admin. A copy made from other content (`content.signature`: text, buttons,
-  media, link preview, caption above, spoiler) is out of date and not used; 🔄 Actualizar publicados replaces the
-  channel copies (delete the old one, send the new one) because a forward can't be edited.
+  them, but a forwarded message keeps them: when a send of a post with custom emoji reaches its first channel, the
+  bot sends the post silently to the private chat of an admin (the owner first; the **source message**), forwards
+  it to every channel of the send («Reenviado de <bot>», `Delivery.forwarded`) and deletes it when the send is over
+  (`publisher._Source`). Groups get the normal message. Without Premium (Telegram turns them into normal emoji in the
+  source message) or when no admin can get it, the channels get the normal message. The post detail says it
+  («💎 Emojis premium…») and the run report adds «💎 📣 Canales: N (reenviado…) · 👥 Grupos: M».
 * **🛡 Anti-spam** (per bot, applies to every automatic run and to 🚀 Enviar ahora): at most `max_per_day` posts per
   chat per day (bot timezone), at least `min_gap` minutes between two posts in a chat, `one_at_a_time` (the previous
   post of the network in that chat is deleted before sending a new one). Chats left out are counted as skipped.
@@ -211,8 +207,7 @@ visitors). Times: schedules and dates are in the workspace timezone (`ctx.bot_tz
 Screen names (owner module in brackets): `home`, `guide`, `settings`, `notifications`, `admins`, `lang`,
 `timezone`, `support`, `externals`, `stats`, `activity`, `add_chat` [start]; `chats`, `chat`, `chat_groups`, `requests`,
 `paused`, `partners_msg`, `join`, `my_chats`, `my_chat` [chats]; `posts`, `post`, `post_new`,
-`post_content`, `post_buttons`, `post_targets`, `post_sched`, `post_opts`, `post_defaults` [posts]; `post_premium`
-[premium]; `groups`,
+`post_content`, `post_buttons`, `post_targets`, `post_sched`, `post_opts`, `post_defaults` [posts]; `groups`,
 `group`, `group_chats`, `freqs`, `freq_edit`, `antispam` [groups]; `clone`, `mybots`, `panel`, `panel_bots`,
 `panel_bot`, `panel_settings`, `panel_photo`, `panel_blast` [clones].
 
@@ -670,9 +665,9 @@ default), `[💬 Escribir al dueño]` (prompt → DM via the main bot), `[📜 A
      `min_gap` (minutes since the chat's last delivery) → `skipped`.
   2. `one_at_a_time` → delete the chat's live deliveries (any post) first; else `delete_previous` → delete this
      post's previous live delivery in that chat.
-  3. Send with `content.deliver` (channels: a forward of the post's premium copy, `content.vault_copy`, when it has
-     one; a copy that can't be forwarded → normal send and its link is cleared) (media from `content.media_for` once
-     per run; a file uploaded to a new bot is
+  3. Send with `content.deliver` (channels, post with custom emoji: a forward of its source message, made once per
+     run in an admin's private chat and deleted at the end; a forward that fails → normal send) (media from
+     `content.media_for` once per run; a file uploaded to a new bot is
      remembered with `content.remember_media` and its file id reused for the next chats).
   4. Success: `sent`, `message_id`, `sent_at`, `delete_at = sent_at + delete_after` (None when 0); pin when
      `post.pin` (silently; `pinned=True`); chat `posts_total += 1`, `last_post_at`.
@@ -688,11 +683,12 @@ default), `[💬 Escribir al dueño]` (prompt → DM via the main bot), `[📜 A
 * `retire(post_id)` deletes every live delivery of the post now (`deleted`; already gone → `missing`; older than
   48 h → `expired`) and returns how many were deleted. `drop_chat(chat_pk)` does the same for one chat (before the bot
   leaves it). `update_live(post_id)` edits the live deliveries (< 48 h) with `content.edit_delivery` → (edited,
-  failed); "not modified" counts as edited. In a channel, a forward of the premium copy (it can't be edited), or any
-  delivery when the post has an up to date copy, is **replaced**: the old message is deleted first (already gone →
-  `missing`, nothing sent again; can't be deleted → left as it is), then the new version goes (forward of the copy,
-  else a normal send; it can't → `deleted`), re-pinned when it was pinned. `withdraw_bot(bot_id, timeout)`: deletes the bot's live deliveries that
-  have a pending auto delete, within `timeout`. `resume()` / `resume_bot(bot_id)`: runs left `sending` by a restart
+  failed); "not modified" counts as edited. In a channel, a forward (it can't be edited), or any delivery of a post
+  with custom emoji when a source message can be made, is **replaced**: the old message is deleted first (already
+  gone → `missing`, nothing sent again; can't be deleted → left as it is), then the new version goes (forward of a
+  new source message, else a normal send; it can't → `deleted`), re-pinned when it was pinned.
+  `withdraw_bot(bot_id, timeout)`: deletes the bot's live deliveries that have a pending auto delete, within
+  `timeout`. `resume()` / `resume_bot(bot_id)`: runs left `sending` by a restart
   continue with their queued deliveries (`sending` ones become `unknown`).
 * `delete_due()`: live deliveries whose `delete_at` passed → `deleteMessage` (gone → `missing`, 48 h → `expired`).
 * `live_count(session, post_id)` (module function): live deliveries of a post (sent, not deleted, < 48 h).
@@ -751,7 +747,6 @@ enforces it). Literal braces: `{{` `}}`. A duplicated key anywhere raises at sta
 | groups | `app/bot/routers/groups.py`, `freqs.py`, tests `tests/test_groups*.py`, `tests/test_freqs*.py` | `gr`, `fq` | `gr.`, `fq.` |
 | start | `app/bot/routers/start.py`, `settings.py`, `timezone.py`, `stats.py`, `setup.py`, `app/data/timezones.py`, `app/services/zones.py`, tests `tests/test_start*.py`, `tests/test_settings*.py`, `tests/test_stats*.py`, `tests/test_setup*.py` | `st`, `ss`, `tz`, `lg`, `ad`, `sx`, `su`, `suf` | `home.`, `guide.`, `set.`, `tz.`, `lang.`, `adm.`, `stats.`, `setup.` |
 | clones | `app/bot/routers/clone.py`, `panel.py`, `app/services/clones.py`, tests `tests/test_clone*.py`, `tests/test_panel*.py` | `cl`, `sa` | `cl.`, `sa.` |
-| premium | `app/bot/routers/premium.py`, `app/services/vault.py`, tests `tests/test_premium*.py` | `pm` | `pm.` |
 Everyone: `app/i18n/locales/{es,en}_<module>.py` for their module name. Core files (section 2) belong to the
 integrator: report needed changes.
 
