@@ -46,6 +46,17 @@ def test_times_and_days() -> None:
     assert freq.normalize(f)["times"] == "10:00,22:00"
 
 
+def test_day_times_lists_the_slots_of_a_day() -> None:
+    every_2h = {"mode": "interval", "every": 120, "window": "08:00-22:00"}
+    assert freq.day_times(every_2h) == [(h, 0) for h in range(8, 23, 2)]
+    assert freq.day_times({"mode": "interval", "every": 120, "window": "22:00-02:00"}) == [(0, 0), (2, 0), (22, 0)]
+    assert freq.day_times({"mode": "interval", "every": 30}) == [(h, m) for h in range(24) for m in (0, 30)]
+    assert freq.day_times({"mode": "times", "times": "21:15,9:30"}) == [(9, 30), (21, 15)]
+    for f in (every_2h, {"mode": "interval", "every": 45}, {"mode": "interval", "every": 90, "window": "20:00-03:00"},
+              {"mode": "times", "times": "10:00,22:00"}):
+        assert len(freq.day_times(f)) == freq.per_day(f), f
+
+
 def test_no_days_means_never() -> None:
     assert freq.next_slot({"mode": "interval", "every": 60, "days": ""}, TZ, utc(2026, 1, 1)) is None
 

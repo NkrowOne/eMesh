@@ -22,7 +22,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.bot.context import Ctx
 from app.db.base import utcnow
-from app.db.models import DEFAULT_FREQ, ChatGroup, Post, PostStatus, RotationOrder, SchedMode
+from app.db.models import DEFAULT_FREQ, ChatGroup, Post, PostStatus, RotationOrder, SchedMode, rotation_on
 from app.db.models import Bot as BotRecord
 from app.services import audience
 from app.services import freq as freq_svc
@@ -74,7 +74,7 @@ DASH_EDIT = "freq_edit_dash"
 WINDOW_CHOICES = ("", "08:00-22:00", "08:00-23:00", "09:00-22:00")  # quick buttons of the "active hours" input
 DAY_PRESETS = (freq_svc.ALL_DAYS, freq_svc.WEEKDAYS, freq_svc.WEEKEND)
 DAY_PRESET_KEYS = ("fq.b.days_all", "fq.b.days_weekdays", "fq.b.days_weekend")
-ROTATIONS = (RotationOrder.SEQUENTIAL, RotationOrder.RANDOM)
+ROTATIONS = (RotationOrder.SEQUENTIAL, RotationOrder.RANDOM, RotationOrder.OFF)
 MAX_CHOICES = (0, 2, 4, 6, 8, 12)  # 🛡 posts per chat and day (0 = no limit)
 GAP_CHOICES = (0, 15, 30, 60, 120)  # 🛡 minutes between two posts in a chat (0 = none)
 MAX_PER_DAY = 100
@@ -239,9 +239,9 @@ def antispam_text(ctx: Ctx, ws: BotRecord) -> str:
     ])
 
 
-async def own_posts_count(session: AsyncSession, bot_id: int) -> int:
+async def active_posts_count(session: AsyncSession, bot_id: int, mode: str) -> int:
     q = select(func.count()).select_from(Post).where(
-        Post.bot_id == bot_id, Post.mode == SchedMode.OWN, Post.status == PostStatus.ACTIVE)
+        Post.bot_id == bot_id, Post.mode == mode, Post.status == PostStatus.ACTIVE)
     return int((await session.execute(q)).scalar() or 0)
 
 
@@ -249,35 +249,45 @@ async def render_freqs(event: Event, ctx: Ctx, session: AsyncSession, page: int 
                        notice: str | None = None) -> None:
     ws, now = ctx.ws_rec, utcnow()
     groups = await audience.bot_groups(session, ws.id)
-    counts = await audience.source_counts(session, ws.id, now)
     items, page, pages = paginate(groups, page, FREQS_PAGE)
     order = ws.rotation if ws.rotation in ROTATIONS else RotationOrder.SEQUENTIAL
+    on = rotation_on(order)  # without rotation the global and groups' frequencies send nothing: not shown
 
-    head = [ctx.t("fq.title")]
+    head = [ctx.t("fq.title" if on else "fq.title_off")]
     if ws.paused:
         head.append(ctx.t("fq.paused"))
-    sources = [ctx.t("fq.global", freq=describe(ctx, ws.freq)), stats_line(ctx, ws.freq, counts.get(None, 0), now)]
-    for g in items:
-        if g.freq:
-            sources += [ctx.t("fq.group", name=fmt.esc(g.name), freq=describe(ctx, g.freq)),
-                        stats_line(ctx, g.freq, counts.get(g.id, 0), now)]
-        else:
-            sources.append(ctx.t("fq.group_global", name=fmt.esc(g.name)))
-    sources.append(ctx.t("fq.source_tip") if groups else ctx.t("fq.no_groups"))
-    if pages > 1:
-        sources.append(ctx.t("common.page", page=page + 1, pages=pages))
-    posts = [ctx.t("fq.own_posts", n=await own_posts_count(session, ws.id)), ctx.t("fq.own_posts_hint")]
-    settings = [ctx.t("fq.rotation", value=ctx.t(f"fq.rot.{order}")), ctx.t(f"fq.rot_hint.{order}"),
-                ctx.t("fq.antispam", value=antispam_text(ctx, ws))]
-    text = "\n\n".join("\n".join(part) for part in (head, sources, posts, settings))
+    parts = [head]
+    rows: list[list[InlineKeyboardButton]] = []
+    if on:
+        counts = await audience.source_counts(session, ws.id, now)
+        sources = [ctx.t("fq.global", freq=describe(ctx, ws.freq)),
+                   stats_line(ctx, ws.freq, counts.get(None, 0), now)]
+        for g in items:
+            if g.freq:
+                sources += [ctx.t("fq.group", name=fmt.esc(g.name), freq=describe(ctx, g.freq)),
+                            stats_line(ctx, g.freq, counts.get(g.id, 0), now)]
+            else:
+                sources.append(ctx.t("fq.group_global", name=fmt.esc(g.name)))
+        sources.append(ctx.t("fq.source_tip") if groups else ctx.t("fq.no_groups"))
+        if pages > 1:
+            sources.append(ctx.t("common.page", page=page + 1, pages=pages))
+        parts.append(sources)
+        rows.append([btn(fmt.truncate(ctx.t("fq.b.global", freq=describe(ctx, ws.freq)), 64),
+                         MenuCB(screen="freq_edit"))])
+        for g in items:
+            label = ctx.t("fq.b.group", name=g.name,
+                          freq=describe(ctx, g.freq) if g.freq else ctx.t("fq.global_short"))
+            rows.append([btn(fmt.truncate(label, 64), MenuCB(screen=DASH_EDIT, arg=g.id))])
+        rows.append(nav_row(page, pages, lambda p: MenuCB(screen="freqs", arg=p), ctx.lang))
+    parts.append([ctx.t("fq.own_posts", n=await active_posts_count(session, ws.id, SchedMode.OWN)),
+                  ctx.t("fq.own_posts_hint")])
+    settings = [ctx.t("fq.rotation", value=ctx.t(f"fq.rot.{order}")), ctx.t(f"fq.rot_hint.{order}")]
+    if not on and (waiting := await active_posts_count(session, ws.id, SchedMode.ROTATION)):
+        settings.append(ctx.t("fq.rot_off.posts.1" if waiting == 1 else "fq.rot_off.posts", n=waiting))
+    settings.append(ctx.t("fq.antispam", value=antispam_text(ctx, ws)))
+    parts.append(settings)
+    text = "\n\n".join("\n".join(part) for part in parts)
 
-    rows: list[list[InlineKeyboardButton]] = [
-        [btn(fmt.truncate(ctx.t("fq.b.global", freq=describe(ctx, ws.freq)), 64), MenuCB(screen="freq_edit"))]
-    ]
-    for g in items:
-        label = ctx.t("fq.b.group", name=g.name, freq=describe(ctx, g.freq) if g.freq else ctx.t("fq.global_short"))
-        rows.append([btn(fmt.truncate(label, 64), MenuCB(screen=DASH_EDIT, arg=g.id))])
-    rows.append(nav_row(page, pages, lambda p: MenuCB(screen="freqs", arg=p), ctx.lang))
     rows.append([btn(choice_label(ctx.t(f"fq.b.{o}"), o == order), FqCB(a="rot", t=page, v=i))
                  for i, o in enumerate(ROTATIONS)])
     rows.append([btn(ctx.t("fq.b.antispam"), MenuCB(screen="antispam"))])
@@ -374,6 +384,8 @@ async def render_edit(event: Event, ctx: Ctx, session: AsyncSession, target: Tar
               ctx.t("fq.e.tz", tz=fmt.esc(ctx.bot_tz))]
     if target.post is not None and target.post.mode != SchedMode.OWN:
         lines += ["", ctx.t("fq.e.post_unused")]
+    elif target.post is None and not rotation_on(target.ws.rotation):
+        lines += ["", ctx.t("fq.e.rot_off")]
     rows.append(back_row(ctx.lang, *back_of(target, dash)))
     await show(event, with_notice("\n".join(lines), notice), kb(*rows))
 

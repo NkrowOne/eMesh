@@ -40,7 +40,7 @@ from app.bot.routers.timezone import ASK_JOIN as TZ_ASK_JOIN
 from app.bot.routers.timezone import adopt_known_zone, must_choose_timezone, needs_timezone
 from app.db.base import utcnow
 from app.db.models import Bot as BotRecord
-from app.db.models import Chat, ChatOrigin, ChatStatus, EventKind
+from app.db.models import Chat, ChatOrigin, ChatStatus, EventKind, Post, PostStatus, rotation_on
 from app.services import brand, clones, events, freq, limits, stats
 from app.services.chatinfo import add_to_channel_url, add_to_group_url
 from app.ui.callbacks import MenuCB
@@ -130,6 +130,13 @@ def _next_turn(ws: BotRecord, tz: str, now: datetime) -> datetime | None:
     return freq.next_slot(ws.freq, tz, now)
 
 
+async def _next_send(session: AsyncSession, bot_id: int, now: datetime) -> datetime | None:
+    """Without rotation: the earliest next send of the active posts with their own schedule (⏰ own / 📢 once)."""
+    q = select(func.min(Post.next_send_at)).where(
+        Post.bot_id == bot_id, Post.status == PostStatus.ACTIVE, Post.next_send_at > now)
+    return (await session.execute(q)).scalar()
+
+
 async def _paused_chats(session: AsyncSession, bot_id: int, now: datetime) -> int:
     """Approved chats paused right now, by their owner or by an admin (a chat paused by both counts once)."""
     owner_pause = and_(Chat.owner_paused, or_(Chat.owner_paused_until.is_(None), Chat.owner_paused_until > now))
@@ -162,9 +169,14 @@ async def _admin_home(ctx: Ctx, session: AsyncSession) -> tuple[str, InlineKeybo
     lines.append(ctx.t("home.posts", n=num(s.posts_active)))
     if not s.posts_active:
         lines.append(ctx.t("home.posts.none"))
-    lines.append(ctx.t("home.freq", freq=freq.describe(ws.freq, ctx.lang)))
-    if not ws.paused:
-        lines.append(ctx.t("home.next", date=dt(_next_turn(ws, ctx.bot_tz, now), ctx.tz)))
+    if rotation_on(ws.rotation):
+        lines.append(ctx.t("home.freq", freq=freq.describe(ws.freq, ctx.lang)))
+        if not ws.paused:
+            lines.append(ctx.t("home.next", date=dt(_next_turn(ws, ctx.bot_tz, now), ctx.tz)))
+    else:  # no rotation: the global frequency sends nothing, each post goes out on its own schedule
+        lines.append(ctx.t("home.rot_off"))
+        if not ws.paused:
+            lines.append(ctx.t("home.next_send", date=dt(await _next_send(session, ws.id, now), ctx.tz)))
     for key, value in (("home.owner_paused", s.owner_paused), ("home.pending", s.pending),
                        ("home.no_rights", s.no_rights)):
         if value:

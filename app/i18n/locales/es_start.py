@@ -13,6 +13,8 @@ STRINGS = {
     "home.posts.none": "   └ Crea el primero en 📝 Mensajes.",
     "home.freq": "⏰ Frecuencia global: {freq}",
     "home.next": "📅 Próximo turno: <b>{date}</b>",
+    "home.rot_off": "🔁 Sin rotación: cada mensaje se envía con su propio horario",
+    "home.next_send": "📅 Próximo envío: <b>{date}</b>",
     "home.owner_paused": "⏸ Pausados por su dueño: <b>{n}</b>",
     "home.pending": "⏳ Solicitudes pendientes: <b>{n}</b>",
     "home.no_rights": "⚠️ Sin permisos: <b>{n}</b>",
@@ -155,6 +157,7 @@ STRINGS = {
         "global.\n"
         "• 🔁 <b>Rotación</b>: en cada turno, cada canal recibe el siguiente mensaje que le toca, en orden o al "
         "azar, nunca el mismo dos veces seguidas.\n"
+        "• 🚫 <b>Sin rotación</b>: si la desactivas, no hay turnos y cada mensaje se envía con su propio horario.\n"
         "• ⏰ Un mensaje con <b>horario propio</b> se envía a todo su destino a sus horas, fuera de la rotación.\n"
         "• 📆 Las <b>fechas de campaña</b> limitan cuándo se envía un mensaje.\n\n"
         "🛡 <b>Anti-spam</b> (⏰ Frecuencias › 🛡 Anti-spam): máximo de mensajes al día por canal, separación "

@@ -25,7 +25,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.bot.context import Ctx
 from app.db.base import utcnow
-from app.db.models import DEFAULT_DELETE_AFTER, ChatGroup, Post, PostStatus, SchedMode
+from app.db.models import DEFAULT_DELETE_AFTER, ChatGroup, Post, PostStatus, SchedMode, rotation_on
 from app.db.session import session_scope
 from app.services import audience, content, freq, limits
 from app.services import publisher as pubsvc
@@ -200,6 +200,18 @@ def refresh(post: Post, ctx: Ctx, scheduler: Scheduler) -> None:
     """After every schedule change: the next send of own / once posts, and the scheduler looks again."""
     freq.refresh_post(post, ctx.bot_tz, utcnow())
     scheduler.wake()
+
+
+def shown_modes(ctx: Ctx, current: str | None = None) -> list[tuple[int, str]]:
+    """The schedule modes offered, as ``(index in MODES, mode)``: no 🔁 rotation while the network has it off,
+    unless it is the ``current`` mode of the post (so its state shows)."""
+    on = rotation_on(ctx.ws_rec.rotation)
+    return [(i, mode) for i, mode in enumerate(MODES) if on or mode != SchedMode.ROTATION or mode == current]
+
+
+def rotation_refused(ctx: Ctx, mode: str) -> bool:
+    """🔁 rotation was chosen while the network has it off (an old or forged button)."""
+    return mode == SchedMode.ROTATION and not rotation_on(ctx.ws_rec.rotation)
 
 
 _tasks: set[asyncio.Task[Any]] = set()
@@ -479,8 +491,12 @@ async def render_posts(event: Event, ctx: Ctx, session: AsyncSession, page: int 
             name=fmt.esc(post.name), kind=kind_icon(post.kind),
             targets=targets_text(ctx, post.targets, groups, icons=False, max_groups=LIST_GROUPS) or ctx.t("po.tg.none"),
             extra=extra))
-    parts = [ctx.t("po.list.title") + "\n" + ctx.t("po.list.legend"),
-             "\n".join(lines) if lines else ctx.t("po.list.empty")]
+    head = [ctx.t("po.list.title")]
+    unsent = sum(p.mode == SchedMode.ROTATION and p.status == PostStatus.ACTIVE for p in posts)
+    if unsent and not rotation_on(ctx.ws_rec.rotation):  # rotation off: these wait, unsent
+        head.append(ctx.t("po.list.rot_off.1" if unsent == 1 else "po.list.rot_off", n=fmt.num(unsent)))
+    head.append(ctx.t("po.list.legend"))
+    parts = ["\n".join(head), "\n".join(lines) if lines else ctx.t("po.list.empty")]
     if pages > 1:
         parts.append(ctx.t("common.page", page=page + 1, pages=pages))
     buttons = [btn(fmt.truncate(f"#{n} {post.name}", 64), MenuCB(screen="post", arg=post.id))
@@ -509,7 +525,8 @@ def mode_lines(ctx: Ctx, post: Post) -> list[str]:
         value = ctx.t("po.dm.once", date=fmt.dt(post.send_at, ctx.tz))
     else:
         value = ctx.t(f"po.dm.{mode}")
-    return [ctx.t("po.d.mode", value=value), ctx.t(f"po.dh.{mode}")]
+    hint = "po.dh.rotation_off" if rotation_refused(ctx, mode) else f"po.dh.{mode}"
+    return [ctx.t("po.d.mode", value=value), ctx.t(hint)]
 
 
 async def detail_text(ctx: Ctx, session: AsyncSession, post: Post) -> tuple[str, int]:
@@ -858,9 +875,11 @@ async def wizard_prompt(event: Event, ctx: Ctx, session: AsyncSession, step: Sta
         rows = await target_rows(ctx, session, tokens, lambda token: PwCB(a="tg", t=token))
         rows.append([btn(ctx.t("po.w.continue"), PwCB(a="tgok"), style="success")])
     elif step == PostsFSM.new_when:
-        text = ctx.t("po.w.when", freq=freq.describe(ctx.ws_rec.freq, ctx.lang))
-        rows = [[btn(ctx.t(f"po.mode.{mode}"),
-                     PwCB(a="mode", v=i))] for i, mode in enumerate(MODES)]
+        if rotation_on(ctx.ws_rec.rotation):
+            text = ctx.t("po.w.when", freq=freq.describe(ctx.ws_rec.freq, ctx.lang))
+        else:
+            text = ctx.t("po.w.when_off")
+        rows = [[btn(ctx.t(f"po.mode.{mode}"), PwCB(a="mode", v=i))] for i, mode in shown_modes(ctx)]
     elif step == PostsFSM.new_delete:
         text = ctx.t("po.w.delete")
         rows = lifetime_rows(ctx, defaults_of(ctx.ws_rec)["delete_after"])
@@ -1013,12 +1032,17 @@ async def on_wizard_use_buttons(message: Message, ctx: Ctx, session: AsyncSessio
 @router.callback_query(PwCB.filter(F.a == "mode"))
 async def on_wizard_mode(call: CallbackQuery, callback_data: PwCB, ctx: Ctx, session: AsyncSession,
                          state: FSMContext) -> None:
-    if await wizard_data(call, ctx, session, state, PostsFSM.new_when) is None:
+    data = await wizard_data(call, ctx, session, state, PostsFSM.new_when)
+    if data is None:
         return
     if not 0 <= callback_data.v < len(MODES):
         await expired(call, ctx)
         return
     mode = MODES[callback_data.v]
+    if rotation_refused(ctx, mode):
+        await alert(call, ctx.t("po.rot_off.alert"))
+        await wizard_prompt(call, ctx, session, PostsFSM.new_when, data)
+        return
     if mode == SchedMode.ONCE:  # its date first (still step 4)
         await wizard_goto(call, ctx, session, state, PostsFSM.new_date)
         return
@@ -1316,15 +1340,20 @@ async def on_target(call: CallbackQuery, callback_data: PoCB, ctx: Ctx, session:
 # ---------------------------------------------------------------------------------------------
 async def render_sched(event: Event, ctx: Ctx, session: AsyncSession, post: Post, *,
                        notice: str | None = None) -> None:
-    lines = [ctx.t("po.s.title", name=fmt.esc(post.name)), "",
-             ctx.t("po.s.modes", freq=freq.describe(ctx.ws_rec.freq, ctx.lang)), ""]
+    if rotation_on(ctx.ws_rec.rotation):
+        modes = ctx.t("po.s.modes", freq=freq.describe(ctx.ws_rec.freq, ctx.lang))
+    else:
+        modes = ctx.t("po.s.modes_off")
+    lines = [ctx.t("po.s.title", name=fmt.esc(post.name)), "", modes, ""]
+    if rotation_refused(ctx, post.mode):  # a rotation post while the network has no rotation: not sent
+        lines += [ctx.t("po.rot_off.post"), ""]
     if post.mode in (SchedMode.OWN, SchedMode.ONCE):
         lines.append(ctx.t("po.d.next", date=fmt.dt(post.next_send_at, ctx.tz)))
     lines += [ctx.t("po.s.campaign", value=campaign_text(ctx, post) or ctx.t("po.s.no_campaign")),
               ctx.t("po.s.campaign_hint")]
     pid = post.id
     rows = [[btn(choice_label(ctx.t(f"po.mode.{mode}"), post.mode == mode), PoCB(a="mode", id=pid, v=i))]
-            for i, mode in enumerate(MODES)]
+            for i, mode in shown_modes(ctx, post.mode)]
     if post.mode == SchedMode.OWN:
         label = ctx.t("po.s.b.own", freq=freq.describe(post.freq, ctx.lang))
         rows.append([btn(fmt.truncate(label, 64), MenuCB(screen="freq_edit", arg=-pid))])
@@ -1352,7 +1381,9 @@ async def on_mode(call: CallbackQuery, callback_data: PoCB, ctx: Ctx, session: A
         await expired(call, ctx)
         return
     mode = MODES[callback_data.v]
-    if mode != post.mode:
+    if rotation_refused(ctx, mode):  # nothing changes
+        await alert(call, ctx.t("po.rot_off.alert"))
+    elif mode != post.mode:
         if mode == SchedMode.ONCE and (post.send_at is None or post.send_at <= utcnow()):
             await ask_send_at(call, ctx, state, post, set_mode=True)  # a once post needs its date first
             return

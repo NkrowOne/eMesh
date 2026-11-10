@@ -9,7 +9,7 @@ from sqlalchemy import select, update
 
 from app.bot.routers.start import StCB, deep_link_target
 from app.db.base import utcnow
-from app.db.models import Chat, ChatOrigin, ChatStatus, Event, EventKind, PostStatus
+from app.db.models import Chat, ChatOrigin, ChatStatus, Event, EventKind, Post, PostStatus, SchedMode
 from app.services import freq, limits
 from app.services.chatinfo import add_to_channel_url, add_to_group_url
 from app.ui.callbacks import MenuCB
@@ -263,6 +263,50 @@ async def test_next_turn_is_computed_when_missing_or_past(app: App) -> None:
         expected = freq.next_slot(times, "Europe/Madrid", utcnow())
         assert f"📅 Próximo turno: <b>{dt(expected, 'Europe/Madrid')}</b>" in app.last_text(SUPER_ID)
         assert "10:00 AM" in dt(expected, "Europe/Madrid")
+
+
+async def test_home_without_rotation_shows_the_next_send_of_the_posts(app: App) -> None:
+    now = utcnow()
+    soon, later = now + timedelta(hours=2), now + timedelta(days=1)
+    paused = await add_post(app, name="Pausado", mode=SchedMode.OWN, status=PostStatus.PAUSED)
+    sends = [(await add_post(app, name="Propio", mode=SchedMode.OWN), later),
+             (await add_post(app, name="Puntual", mode=SchedMode.ONCE), soon),
+             (paused, now + timedelta(hours=1)),  # not active
+             (await add_post(app, name="Pasado", mode=SchedMode.OWN), now - timedelta(hours=1)),
+             (await add_post(app, bot_id=await add_clone(app), mode=SchedMode.OWN), now + timedelta(minutes=30))]
+    async with app.db() as s:
+        for post_id, when in sends:
+            (await s.get(Post, post_id)).next_send_at = when
+    async with edit_bot(app) as rec:
+        rec.rotation = "off"
+    await app.send(SUPER_ID, "/start")
+    text = app.last_text(SUPER_ID)
+    assert ("📝 Mensajes activos: <b>3</b>\n🔁 Sin rotación: cada mensaje se envía con su propio horario\n"
+            f"📅 Próximo envío: <b>{dt(soon, 'Europe/Madrid')}</b>") in text
+    assert "Frecuencia global" not in text and "Próximo turno" not in text
+    app.fake.add_user(778, "Eng", "eng", lang="en")
+    await make_admin(app, 778)
+    await app.send(778, "/start")
+    assert ("🔁 No rotation: each post goes out on its own schedule\n"
+            f"📅 Next send: <b>{dt(soon, 'Europe/Madrid')}</b>") in app.last_text(778)
+
+    async with app.db() as s:
+        await s.execute(update(Post).where(Post.bot_id == MAIN_BOT_ID).values(next_send_at=None))
+    await app.send(SUPER_ID, "/start")
+    assert "🔁 Sin rotación: cada mensaje se envía con su propio horario\n📅 Próximo envío: <b>—</b>" in (
+        app.last_text(SUPER_ID))
+    async with edit_bot(app) as rec:
+        rec.paused = True
+    await app.send(SUPER_ID, "/start")
+    text = app.last_text(SUPER_ID)
+    assert "🔁 Sin rotación" in text and "Próximo envío" not in text and "está pausada" in text
+
+    async with edit_bot(app) as rec:
+        rec.paused, rec.rotation, rec.rot_next_at = False, "seq", soon
+    await app.send(SUPER_ID, "/start")
+    text = app.last_text(SUPER_ID)
+    assert f"⏰ Frecuencia global: a las 12:00\n📅 Próximo turno: <b>{dt(soon, 'Europe/Madrid')}</b>" in text
+    assert "Sin rotación" not in text and "Próximo envío" not in text
 
 
 async def test_home_buttons_open_the_screens_of_other_modules(app: App, stub_screens: list) -> None:  # noqa: F811
@@ -649,8 +693,8 @@ async def test_guide_describes_the_real_features(app: App) -> None:
 
     admin = " ".join(t(f"guide.admin.{i}", "es") for i in range(1, 6))
     for feature in ("Pausar todo", "Añadir canal o grupo", "Canales externos", "&amp;&amp;", "copiar:", "rotación",
-                    "horario propio", "Anti-spam", "uno a la vez", "/admin @usuario", "/deladmin", "Mis avisos",
-                    "Zona horaria", "Estadísticas", "Crear mi bot", "48 h", "Asistente de configuración",
+                    "Sin rotación", "horario propio", "Anti-spam", "uno a la vez", "/admin @usuario", "/deladmin",
+                    "Mis avisos", "Zona horaria", "Estadísticas", "Crear mi bot", "48 h", "Asistente de configuración",
                     "las pausas de los socios"):
         assert feature in admin, feature
     admin_en = " ".join(t(f"guide.admin.{i}", "en") for i in range(1, 6))

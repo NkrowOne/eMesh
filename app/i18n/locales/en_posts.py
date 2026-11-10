@@ -6,6 +6,8 @@ STRINGS = {
     "po.list.runs": "📤 {sends}",
     "po.list.next": "📅 {date}",
     "po.list.empty": "📭 There are no posts yet. Create the first one with ➕ New post.",
+    "po.list.rot_off": "⚠️ Rotation is off: {n} 🔁 rotation posts are not sent.",
+    "po.list.rot_off.1": "⚠️ Rotation is off: {n} 🔁 rotation post is not sent.",
     "po.btn.new": "➕ New post",
     "po.btn.defaults": "⚙️ Default options",
     "po.limit": "🔒 This network already has the maximum number of posts ({max}). Delete one to create another.",
@@ -65,6 +67,16 @@ STRINGS = {
         "✋ <b>Only when sent by hand</b>\n"
         "   └ Only with 🚀 Send now."
     ),
+    "po.w.when_off": (
+        "⏰ <b>When is it sent?</b> · 4/5\n\n"
+        "⏰ <b>On its own schedule</b>\n"
+        "   └ It has its own frequency; at each slot it goes to all its chats.\n"
+        "📢 <b>One-off broadcast</b>\n"
+        "   └ It is sent just once to its whole target: right now or on the date you choose.\n"
+        "✋ <b>Only when sent by hand</b>\n"
+        "   └ Only with 🚀 Send now."
+    ),
+    "po.rot_off.alert": "⚠️ Rotation is off. Turn it on in ⏰ Frequencies or pick another way to send it.",
     "po.w.date": "📢 <b>One-off broadcast</b> · 4/5\n\nPress 🚀 <b>Right now</b> or {ask}",
     "po.w.delete": (
         "🗑 <b>How long does it stay published?</b> · 5/5\n"
@@ -114,6 +126,7 @@ STRINGS = {
     "po.dh.own": "   └ At each slot of its schedule it goes to all its chats.",
     "po.dh.once": "   └ It is sent once and then it is finished.",
     "po.dh.manual": "   └ It is only sent with 🚀 Send now.",
+    "po.dh.rotation_off": "   └ ⚠️ Not sent: rotation is off (⏰ Frequencies).",
     "po.d.next": "📅 Next send: <b>{date}</b>",
     "po.d.campaign": "📆 Campaign: {value}",
     "po.camp.both": "from {start} to {end}",
@@ -217,6 +230,17 @@ STRINGS = {
         "   └ It is sent just once, on the date chosen; then it is finished.\n"
         "✋ <b>Only when I send it</b>\n"
         "   └ Only with 🚀 Send now."
+    ),
+    "po.s.modes_off": (
+        "⏰ <b>On its own schedule</b>\n"
+        "   └ At each slot of its schedule it goes to all its chats.\n"
+        "📢 <b>One-off broadcast</b>\n"
+        "   └ It is sent just once, on the date chosen; then it is finished.\n"
+        "✋ <b>Only when I send it</b>\n"
+        "   └ Only with 🚀 Send now."
+    ),
+    "po.rot_off.post": (
+        "⚠️ <b>Not sent</b>: rotation is off. Pick another way to send it or turn it on in ⏰ Frequencies."
     ),
     "po.s.campaign": "📆 Campaign: {value}",
     "po.s.no_campaign": "no dates",

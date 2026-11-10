@@ -6,6 +6,8 @@ STRINGS = {
     "po.list.runs": "📤 {sends}",
     "po.list.next": "📅 {date}",
     "po.list.empty": "📭 Todavía no hay mensajes. Crea el primero con ➕ Nuevo mensaje.",
+    "po.list.rot_off": "⚠️ Rotación desactivada: {n} mensajes 🔁 en rotación no se envían.",
+    "po.list.rot_off.1": "⚠️ Rotación desactivada: {n} mensaje 🔁 en rotación no se envía.",
     "po.btn.new": "➕ Nuevo mensaje",
     "po.btn.defaults": "⚙️ Opciones por defecto",
     "po.limit": "🔒 Esta red ya tiene el máximo de mensajes ({max}). Elimina alguno para crear otro.",
@@ -63,6 +65,16 @@ STRINGS = {
         "✋ <b>Solo cuando lo envíes</b>\n"
         "   └ Únicamente con 🚀 Enviar ahora."
     ),
+    "po.w.when_off": (
+        "⏰ <b>¿Cuándo se envía?</b> · 4/5\n\n"
+        "⏰ <b>Con su propio horario</b>\n"
+        "   └ Tiene su propia frecuencia; en cada turno se envía a todos sus chats.\n"
+        "📢 <b>Difusión puntual</b>\n"
+        "   └ Se envía una sola vez a todo su destino: ahora mismo o en la fecha que elijas.\n"
+        "✋ <b>Solo cuando lo envíes</b>\n"
+        "   └ Únicamente con 🚀 Enviar ahora."
+    ),
+    "po.rot_off.alert": "⚠️ La rotación está desactivada. Actívala en ⏰ Frecuencias o elige otro tipo de envío.",
     "po.w.date": "📢 <b>Difusión puntual</b> · 4/5\n\nPulsa 🚀 <b>Ahora mismo</b> o {ask}",
     "po.w.delete": (
         "🗑 <b>¿Cuánto tiempo sigue publicado?</b> · 5/5\n"
@@ -112,6 +124,7 @@ STRINGS = {
     "po.dh.own": "   └ En cada turno de su horario se envía a todos sus chats.",
     "po.dh.once": "   └ Se envía una vez y después queda terminado.",
     "po.dh.manual": "   └ Solo se envía al pulsar 🚀 Enviar ahora.",
+    "po.dh.rotation_off": "   └ ⚠️ No se envía: la rotación está desactivada (⏰ Frecuencias).",
     "po.d.next": "📅 Próximo envío: <b>{date}</b>",
     "po.d.campaign": "📆 Campaña: {value}",
     "po.camp.both": "del {start} al {end}",
@@ -215,6 +228,18 @@ STRINGS = {
         "   └ Se envía una sola vez, en la fecha elegida; después queda terminado.\n"
         "✋ <b>Solo cuando lo envíe yo</b>\n"
         "   └ Únicamente con 🚀 Enviar ahora."
+    ),
+    "po.s.modes_off": (
+        "⏰ <b>Con su propio horario</b>\n"
+        "   └ En cada turno de su horario se envía a todos sus chats.\n"
+        "📢 <b>Difusión puntual</b>\n"
+        "   └ Se envía una sola vez, en la fecha elegida; después queda terminado.\n"
+        "✋ <b>Solo cuando lo envíe yo</b>\n"
+        "   └ Únicamente con 🚀 Enviar ahora."
+    ),
+    "po.rot_off.post": (
+        "⚠️ <b>No se envía</b>: la rotación está desactivada. Elige otro tipo de envío o actívala en "
+        "⏰ Frecuencias."
     ),
     "po.s.campaign": "📆 Campaña: {value}",
     "po.s.no_campaign": "sin fechas",

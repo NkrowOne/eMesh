@@ -108,6 +108,34 @@ async def test_random_rotation_never_repeats_a_post(app: App, quiet: None) -> No
     assert all(x != y for x, y in zip(got, got[1:]))
 
 
+async def test_without_rotation_slots_send_nothing_but_own_posts_go_out(app: App, quiet: None) -> None:
+    await set_bot(app, rotation=RotationOrder.OFF)
+    pks = await make_chats(app, 2)
+    await make_post(app, name="Rotación", text="En la cola")
+    async with app.db() as s:
+        group = ChatGroup(bot_id=MAIN_BOT_ID, name="Cine", freq=dict(HOURLY), sort=0)
+        s.add(group)
+        await s.flush()
+        s.add(GroupChat(group_id=group.id, chat_pk=pks[0]))
+        group_id = group.id
+    own = await make_post(app, name="Propio", text="A su hora", mode=SchedMode.OWN, freq=dict(HOURLY),
+                          next_send_at=utcnow() - timedelta(minutes=1))
+    await slot_due(app)
+    await slot_due(app, group_id=group_id)
+    await app.scheduler.tick()
+    # No turns: the slots move on and send nothing; the post with its own schedule goes to everyone.
+    cids = [await chat_id_of(app, pk) for pk in pks]
+    assert [texts_in(app, cid) for cid in cids] == [["A su hora"], ["A su hora"]]
+    assert [(r.post_id, r.kind) for r in await all_runs(app)] == [(own, RunKind.SCHEDULE)]
+    assert (await get(app, BotRecord, MAIN_BOT_ID)).rot_next_at > utcnow()
+    assert (await get(app, ChatGroup, group_id)).rot_next_at > utcnow()
+    # With the rotation on again, the next due slot sends the rotation post.
+    await set_bot(app, rotation=RotationOrder.SEQUENTIAL)
+    await slot_due(app)
+    await app.scheduler.tick()
+    assert texts_in(app, cids[1])[-1] == "En la cola"
+
+
 async def test_group_frequency_and_global_frequency(app: App, quiet: None) -> None:
     a, b, c, d = await make_chats(app, 4)
     async with app.db() as s:

@@ -30,7 +30,7 @@ from sqlalchemy import delete, exists, func, select, update
 
 from app.db.base import utcnow
 from app.db.models import KV, BotStatus, BotUser, Chat, ChatGroup, ChatStatus, Delivery, DeliveryStatus, Event, \
-    EventKind, Post, PostStatus, Run, RunKind, SchedMode
+    EventKind, Post, PostStatus, Run, RunKind, SchedMode, rotation_on
 from app.db.models import Bot as BotRecord
 from app.db.session import session_scope
 from app.i18n import t
@@ -271,7 +271,8 @@ class Scheduler:
                             audience.source_key(group), due.isoformat(), now - due)
                 advance()
                 return
-            plan = await audience.plan_slot(s, bot_id, group, tz, ws.rotation, now)
+            # Without rotation the slots still move on (nothing stale when it is turned on again) but send nothing.
+            plan = await audience.plan_slot(s, bot_id, group, tz, ws.rotation, now) if rotation_on(ws.rotation) else {}
             advance()
             source = audience.source_key(group)
             jobs = [(post_id, [c.id for c in chats]) for post_id, chats in plan.items()]

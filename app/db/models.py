@@ -84,8 +84,18 @@ class SchedMode:
 
 
 class RotationOrder:
+    """``Bot.rotation``: how the 🔁 rotation posts take turns, or no rotation at all."""
+
     SEQUENTIAL = "seq"  # each chat gets the posts in order (oldest first), then starts again
     RANDOM = "random"  # a random post each time (never the same twice in a row when there are more)
+    # No rotation: the global and groups' frequencies send nothing; each post goes out on its own schedule (⏰ own,
+    # 📢 once, ✋ manual). Rotation posts stay as they are, unsent, until it is on again or their mode changes.
+    OFF = "off"
+
+
+def rotation_on(order: str | None) -> bool:
+    """``Bot.rotation`` turns the rotation on (in order or at random)."""
+    return order != RotationOrder.OFF
 
 
 class RunKind:
