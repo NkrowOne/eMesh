@@ -217,6 +217,7 @@ class _Job:
     markup: InlineKeyboardMarkup | None
     no_buttons: bool = False  # Telegram refused a button: the rest goes without buttons
     media: str | InputFile | None = None
+    plain: set[str] = field(default_factory=set)  # chat types where Telegram refused the custom emoji of the post
 
     @property
     def post_id(self) -> int:
@@ -741,7 +742,11 @@ class Publisher:
             while True:
                 markup = None if job.no_buttons else job.markup
                 try:
-                    msg = await content.deliver(job.bot, chat_id, job.post, media=job.media, reply_markup=markup)
+                    # Custom emoji refused in a type of chat (channels, unless the bot has a Fragment username)
+                    # go as normal emoji there right away for the rest of the run.
+                    msg = await content.deliver(job.bot, chat_id, job.post, media=job.media, reply_markup=markup,
+                                                premium=tg.chat_type not in job.plain,
+                                                on_plain=partial(job.plain.add, tg.chat_type))
                 except TelegramMigrateToChat as exc:
                     if res.migrated:
                         res.error = short(exc)
