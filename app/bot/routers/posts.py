@@ -559,6 +559,8 @@ async def detail_text(ctx: Ctx, session: AsyncSession, post: Post) -> tuple[str,
     live = await pubsvc.live_count(session, post.id)
     if live:
         lines.append(ctx.t("po.d.live", chats=units(ctx, live, "chats")))
+    if content.has_premium(post):
+        lines.append(ctx.t("po.d.premium.ready" if content.vault_copy(post) else "po.d.premium.todo"))
     options = options_lines(ctx, option_values(ctx, post), option_names(post.kind), hints=False)
     quote = "<blockquote expandable>" + "\n".join([ctx.t("po.d.opts"), *options]) + "</blockquote>"
     return "\n".join(lines) + "\n" + quote, live
@@ -574,6 +576,7 @@ def detail_markup(ctx: Ctx, post: Post, live: int) -> InlineKeyboardMarkup:
         [btn(ctx.t("po.b.targets"), MenuCB(screen="post_targets", arg=pid)),
          btn(ctx.t("po.b.sched"), MenuCB(screen="post_sched", arg=pid))],
         [btn(ctx.t("po.b.opts"), MenuCB(screen="post_opts", arg=pid)), btn(ctx.t("po.b.dup"), PoCB(a="dup", id=pid))],
+        [btn(ctx.t("po.b.premium"), MenuCB(screen="post_premium", arg=pid))] if content.has_premium(post) else None,
         [btn(ctx.t("po.b.update", n=live), PoCB(a="upd", id=pid)),
          btn(ctx.t("po.b.retire", n=live), PoCB(a="ret", id=pid))] if live else None,
         [btn(ctx.t("po.b.play" if stopped else "po.b.pause"), PoCB(a="play" if stopped else "pause", id=pid),
@@ -975,7 +978,7 @@ async def on_wizard_buttons(message: Message, ctx: Ctx, session: AsyncSession, s
         await wizard_retry(message, ctx, session, state, PostsFSM.new_buttons, ctx.t("po.err.text_only"))
         return
     try:
-        rows = content.parse_buttons(message.text)
+        rows = content.parse_buttons(content.marked_text(message))
     except content.ButtonsError as exc:
         await wizard_retry(message, ctx, session, state, PostsFSM.new_buttons, ctx.t(exc.key, line=exc.line))
         return

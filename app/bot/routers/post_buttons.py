@@ -173,9 +173,10 @@ def parse_link(text: str) -> dict[str, str]:
     return {"url": url}
 
 
-def clean_name(message: Message) -> str | None:
-    name = " ".join((message.text or "").split())
-    return name if 0 < len(name) <= content.MAX_BUTTON_TEXT else None
+def clean_name(message: Message) -> dict[str, str] | None:
+    """The name of a button: ``{"text": …}``, with ``icon`` / ``emoji`` when it starts with a premium emoji."""
+    label = content.label_of(content.marked_text(message)) if message.text else {"text": ""}
+    return label if 0 < len(label["text"]) <= content.MAX_BUTTON_TEXT else None
 
 
 def color_buttons(ctx: Ctx, make_cb: Callable[[int], CallbackData],
@@ -196,7 +197,8 @@ async def render_buttons(event: Event, ctx: Ctx, session: AsyncSession, post: Po
         parts.append(ctx.t("pb.count", n=content.count_buttons(rows), max=content.MAX_BUTTONS))
         if await pubsvc.live_count(session, post.id):
             parts.append(ctx.t("pb.live_hint"))
-    keyboard = [[btn(fmt.truncate(b["text"], 64), PbCB(a="b", id=post.id, r=r, c=c), style=color_style(style_of(b)))
+    keyboard = [[btn(fmt.truncate(b["text"], 64), PbCB(a="b", id=post.id, r=r, c=c), style=color_style(style_of(b)),
+                     icon_custom_emoji_id=b.get("icon") if str(b.get("icon", "")).isdigit() else None)
                  for c, b in enumerate(row)] for r, row in enumerate(rows)]
     markup = kb(
         *keyboard,
@@ -263,7 +265,7 @@ async def render_button(event: Event, ctx: Ctx, session: AsyncSession, post: Pos
     lines = [
         ctx.t("pb.e.title", name=fmt.esc(post.name)),
         "",
-        ctx.t("pb.e.name", v=fmt.esc(button["text"])),
+        ctx.t("pb.e.name", v=fmt.esc(content.button_label(button))),
         target,
         ctx.t("pb.e.color", v=ctx.t(f"color.{style}")),
         ctx.t("pb.e.pos", row=r + 1, col=c + 1),
@@ -357,9 +359,10 @@ async def ask_edit(event: Event, ctx: Ctx, state: FSMContext, post: Post, r: int
     """Text input of the name or the link of the button at (r, c) (Cancel goes back to the keyboard)."""
     button = rows_of(post)[r][c]
     if step == PostButtonsFSM.name:
-        text = ctx.t("pb.ask_name", name=fmt.esc(button["text"]))
+        text = ctx.t("pb.ask_name", name=fmt.esc(content.button_label(button)))
     else:
-        text = ctx.t("pb.ask_link_edit", name=fmt.esc(button["text"]), current=fmt.esc(link_text(button)),
+        text = ctx.t("pb.ask_link_edit", name=fmt.esc(content.button_label(button)),
+                     current=fmt.esc(link_text(button)),
                      ask=ctx.t("pb.ask_link"))
     await state.set_state(step)
     await state.set_data({"id": post.id, "r": r, "c": c})
@@ -394,7 +397,7 @@ async def on_edit_input(message: Message, ctx: Ctx, session: AsyncSession, state
         if name is None:
             await ask_edit(message, ctx, state, post, r, c, step, ctx.t("pb.err.name"))
             return
-        rows[r][c] = {**rows[r][c], "text": name}
+        rows[r][c] = {**{k: v for k, v in rows[r][c].items() if k not in ("icon", "emoji")}, **name}
     else:
         try:
             target = parse_link(message.text or "")
@@ -410,6 +413,12 @@ async def on_edit_input(message: Message, ctx: Ctx, session: AsyncSession, state
 # ---------------------------------------------------------------------------------------------
 # ➕ Añadir botón: name → link → color → place
 # ---------------------------------------------------------------------------------------------
+def added_label(data: dict[str, Any]) -> str:
+    """The name of the button being added, with the emoji of its icon in front."""
+    return content.button_label({"text": str(data.get("name") or ""), "icon": str(data.get("icon") or ""),
+                                 "emoji": str(data.get("emoji") or "")})
+
+
 async def add_prompt(event: Event, ctx: Ctx, post: Post, step: State, data: dict[str, Any],
                      error: str | None = None) -> None:
     rows: list[list[InlineKeyboardButton]] = []
@@ -418,10 +427,10 @@ async def add_prompt(event: Event, ctx: Ctx, post: Post, step: State, data: dict
     elif step == PostButtonsFSM.add_link:
         text = ctx.t("pb.a.link", ask=ctx.t("pb.ask_link"))
     elif step == PostButtonsFSM.add_color:
-        text = ctx.t("pb.a.color", name=fmt.esc(data.get("name", "")))
+        text = ctx.t("pb.a.color", name=fmt.esc(added_label(data)))
         rows = [color_buttons(ctx, lambda i: PbCB(a="acol", id=post.id, v=i))]
     else:
-        text = ctx.t("pb.a.place", name=fmt.esc(data.get("name", "")))
+        text = ctx.t("pb.a.place", name=fmt.esc(added_label(data)))
         rows = [[btn(ctx.t("pb.a.new_row"), PbCB(a="aplace", id=post.id, v=0))],
                 [btn(ctx.t("pb.a.same_row"), PbCB(a="aplace", id=post.id, v=1))]]
     back = None if step == PostButtonsFSM.add_name else PbCB(a="aback", id=post.id)
@@ -489,7 +498,7 @@ async def on_add_name(message: Message, ctx: Ctx, session: AsyncSession, state: 
     if name is None:
         await add_prompt(message, ctx, post, PostButtonsFSM.add_name, await state.get_data(), ctx.t("pb.err.name"))
         return
-    await state.update_data(name=name)
+    await state.update_data(name=name["text"], icon=name.get("icon"), emoji=name.get("emoji"))
     await add_goto(message, ctx, state, post, PostButtonsFSM.add_link)
 
 
@@ -556,7 +565,9 @@ async def finish_add(call: CallbackQuery, ctx: Ctx, session: AsyncSession, state
     if await full(call, ctx, post):
         await render_buttons(call, ctx, session, post)
         return
-    button = with_style({"text": name, **{k: str(v) for k, v in target.items() if k in ("url", "copy")}},
+    icon = {"icon": str(data["icon"]), "emoji": str(data.get("emoji") or "")} \
+        if str(data.get("icon") or "").isdigit() else {}
+    button = with_style({"text": name, **icon, **{k: str(v) for k, v in target.items() if k in ("url", "copy")}},
                         str(data.get("style") or "default"))
     rows = rows_of(post)
     if same_row and rows and len(rows[-1]) < content.MAX_PER_ROW:
@@ -601,7 +612,7 @@ async def on_bulk_input(message: Message, ctx: Ctx, session: AsyncSession, state
         await ask_bulk(message, ctx, state, post, ctx.t("po.err.text_only"))
         return
     try:
-        rows = content.parse_buttons(message.text)
+        rows = content.parse_buttons(content.marked_text(message))
     except content.ButtonsError as exc:
         await ask_bulk(message, ctx, state, post, ctx.t(exc.key, line=exc.line))
         return

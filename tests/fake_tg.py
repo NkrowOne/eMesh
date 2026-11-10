@@ -10,6 +10,7 @@ from __future__ import annotations
 import asyncio
 import itertools
 import json
+import re
 import time
 from collections import defaultdict, deque
 from dataclasses import dataclass, field
@@ -53,6 +54,10 @@ class Call:
     @property
     def chat_id(self) -> Any:
         return self.params.get("chat_id")
+
+
+_TG_EMOJI = re.compile(r"<tg-emoji[^>]*>(.*?)</tg-emoji>", re.DOTALL)
+_TG_EMOJI_ID = re.compile(r'<tg-emoji emoji-id="(\d+)"')
 
 
 @dataclass
@@ -107,6 +112,9 @@ class FakeTelegram:
         self._sends: dict[str, deque[float]] = defaultdict(deque)
         self._chat_sends: dict[tuple[str, int], deque[float]] = defaultdict(deque)
         self.limit_violations = 0
+        # Custom (premium) emoji in what bots send: kept in private chats and groups (the bots' owners have Telegram
+        # Premium), turned into normal emoji in channels, as Telegram does. False: no owner has Premium.
+        self.premium_owners = True
         self.base_url = ""
         self._runner: web.AppRunner | None = None
 
@@ -326,7 +334,24 @@ class FakeTelegram:
             raise ApiError(400, "Bad Request: not enough rights to send text messages to the chat")
         return chat
 
-    def _new_message(self, token: str, chat_id: int, extra: dict[str, Any]) -> dict[str, Any]:
+    def _custom_emoji(self, chat_id: int, extra: dict[str, Any]) -> dict[str, Any]:
+        """``<tg-emoji>`` of a sent text: custom_emoji entities where bots may use them, else normal emoji."""
+        out = dict(extra)
+        for field_name, entities in (("text", "entities"), ("caption", "caption_entities")):
+            value = out.get(field_name)
+            if not isinstance(value, str) or "<tg-emoji" not in value:
+                continue
+            channel = chat_id < 0 and chat_id in self.chats and self.chats[chat_id].type == "channel"
+            if self.premium_owners and not channel:
+                out[entities] = [{"type": "custom_emoji", "offset": 0, "length": 1, "custom_emoji_id": i}
+                                 for i in _TG_EMOJI_ID.findall(value)]
+            else:
+                out[field_name] = _TG_EMOJI.sub(r"\1", value)
+        return out
+
+    def _new_message(self, token: str, chat_id: int, extra: dict[str, Any], *, forward: bool = False) -> dict[str, Any]:
+        if not forward:  # a forward keeps what the original has
+            extra = self._custom_emoji(chat_id, extra)
         mid = next(self._msg_ids[chat_id])
         msg = {"message_id": mid, "date": int(time.time()), "chat": self.chat_json(chat_id, token), **extra}
         if chat_id > 0:
@@ -412,6 +437,20 @@ class FakeTelegram:
 
     def m_sendVoice(self, token: str, p: dict[str, Any]) -> dict[str, Any]:
         return self._media("voice", token, p)
+
+    def m_forwardMessage(self, token: str, p: dict[str, Any]) -> dict[str, Any]:
+        """Forwards a message the fake knows (one of a chat's ``messages``): same content, ``forward_origin``."""
+        self._sender_check(token, p)
+        source = self.chats[int(p["from_chat_id"])].messages.get(int(p["message_id"])) \
+            if int(p["from_chat_id"]) in self.chats else None
+        if source is None:
+            raise ApiError(400, "Bad Request: message to forward not found")
+        keep = {k: v for k, v in source.items() if k in ("text", "entities", "caption", "caption_entities", "photo",
+                                                       "video", "animation", "document", "audio", "voice",
+                                                       "reply_markup")}
+        origin = source.get("forward_origin") or {"type": "chat", "sender_chat": source["chat"],
+                                                   "date": source["date"]}
+        return self._new_message(token, p["chat_id"], {**keep, "forward_origin": origin}, forward=True)
 
     def m_copyMessage(self, token: str, p: dict[str, Any]) -> dict[str, Any]:
         self._sender_check(token, p)

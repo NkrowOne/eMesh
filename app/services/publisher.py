@@ -24,8 +24,14 @@ from typing import TYPE_CHECKING, Any, TypeVar
 
 from aiogram import Bot
 from aiogram.enums import ChatMemberStatus
-from aiogram.exceptions import TelegramAPIError, TelegramForbiddenError, TelegramMigrateToChat, TelegramRetryAfter
-from aiogram.types import InlineKeyboardMarkup, InputFile
+from aiogram.exceptions import (
+    TelegramAPIError,
+    TelegramBadRequest,
+    TelegramForbiddenError,
+    TelegramMigrateToChat,
+    TelegramRetryAfter,
+)
+from aiogram.types import InlineKeyboardMarkup, InputFile, Message
 from sqlalchemy import case, delete, func, select, update
 
 from app.db.base import utcnow
@@ -160,10 +166,11 @@ class _Live:
     sent_at: datetime | None
     pinned: bool
     post_id: int | None
+    forwarded: bool = False  # a forward of the premium copy (it can't be edited)
 
     @classmethod
     def of(cls, d: Delivery) -> _Live:
-        return cls(d.id, d.chat_pk, d.chat_id, d.message_id, d.sent_at, bool(d.pinned), d.post_id)
+        return cls(d.id, d.chat_pk, d.chat_id, d.message_id, d.sent_at, bool(d.pinned), d.post_id, bool(d.forwarded))
 
 
 @dataclass
@@ -202,6 +209,7 @@ class _Result:
     file_id: str | None = None  # the file id an upload got (media taken from another bot)
     previous: list[_Gone] = field(default_factory=list)
     pinned: bool = False
+    forwarded: bool = False  # sent as a forward of the premium copy (canal almacén)
 
 
 @dataclass
@@ -218,6 +226,8 @@ class _Job:
     no_buttons: bool = False  # Telegram refused a button: the rest goes without buttons
     media: str | InputFile | None = None
     plain: set[str] = field(default_factory=set)  # chat types where Telegram refused the custom emoji of the post
+    vault: tuple[int, int] | None = None  # the premium copy forwarded to the channels (content.vault_copy)
+    stale_vault: int | None = None  # message id of a premium copy that can't be forwarded: its link is cleared
 
     @property
     def post_id(self) -> int:
@@ -412,7 +422,9 @@ class Publisher:
 
     async def update_live(self, post_id: int) -> tuple[int, int]:
         """🔄 Actualizar publicados: the live deliveries (< 48 h) get the current text and buttons of the post (not the
-        media). Returns (edited, failed); "not modified" counts as edited."""
+        media). In the channels a forward of the premium copy (it can't be edited), or any message when the post has an
+        up to date copy, is replaced by a new message (the forward of the copy, else a normal send) and the old one is
+        deleted. Returns (edited, failed); "not modified" and replaced count as edited."""
         self._claim(post_id)
         return await self._exclusive(post_id, partial(self._update_live, post_id))
 
@@ -624,7 +636,7 @@ class Publisher:
                 return
             job = _Job(run_id=run_id, bot=bot, bot_id=bot_id, post=post, kind=kind,
                        one_at_a_time=bool(ws.one_at_a_time), markup=content.build_markup(post.buttons),
-                       no_buttons=no_buttons)
+                       no_buttons=no_buttons, vault=content.vault_copy(post))
             if queued:
                 try:
                     job.media = await content.media_for(bot, post, self.manager)
@@ -690,6 +702,9 @@ class Publisher:
                 await content.remember_media(self.sm, job.post_id, job.bot_id, file_id,
                                              source=content.media_source(job.media))
                 job.media = file_id
+        if job.stale_vault is not None:
+            await self._clear_vault(job.post_id, job.stale_vault)
+            job.stale_vault = None
 
     async def _prepare(self, job: _Job, ids: Sequence[int]) -> list[_Target]:
         """Under the locks of the chats: the deliveries still queued whose chat can still receive posts are marked
@@ -739,14 +754,18 @@ class Publisher:
                 res.previous.append(await self._delete_message(job.bot, live, tg.chat_type))
             chat_id = tg.chat_id
             button_error: str | None = None
+            # Channels get the premium copy of the canal almacén as a forward (it keeps the custom emoji).
+            copy = job.vault if tg.chat_type == ChatType.CHANNEL else None
             while True:
                 markup = None if job.no_buttons else job.markup
+                send = partial(self._send_normal, job, chat_id, tg.chat_type, markup)
                 try:
-                    # Custom emoji refused in a type of chat (channels, unless the bot has a Fragment username)
-                    # go as normal emoji there right away for the rest of the run.
-                    msg = await content.deliver(job.bot, chat_id, job.post, media=job.media, reply_markup=markup,
-                                                premium=tg.chat_type not in job.plain,
-                                                on_plain=partial(job.plain.add, tg.chat_type))
+                    if copy is not None:
+                        msg, res.forwarded = await self._forward(job.bot, chat_id, job.post, copy, send)
+                        if not res.forwarded:
+                            self._drop_vault(job, copy)
+                    else:
+                        msg = await send()
                 except TelegramMigrateToChat as exc:
                     if res.migrated:
                         res.error = short(exc)
@@ -779,9 +798,45 @@ class Publisher:
                 res.status, res.message_id, res.sent_at = DeliveryStatus.SENT, msg.message_id, utcnow()
                 if button_error:
                     res.error = NO_BUTTONS + button_error
-                if isinstance(job.media, InputFile):
+                if isinstance(job.media, InputFile) and not res.forwarded:
                     res.file_id = content.file_id_of(msg, job.post.kind)
                 return res
+
+    @staticmethod
+    async def _send_normal(job: _Job, chat_id: int, chat_type: str, markup: InlineKeyboardMarkup | None) -> Message:
+        # Custom emoji refused in a type of chat (channels, unless the bot has a Fragment username) go as normal
+        # emoji there right away for the rest of the run.
+        return await content.deliver(job.bot, chat_id, job.post, media=job.media, reply_markup=markup,
+                                     premium=chat_type not in job.plain, on_plain=partial(job.plain.add, chat_type))
+
+    @staticmethod
+    async def _forward(bot: Bot, chat_id: int, post: Post, copy: tuple[int, int],
+                       send: Callable[[], Awaitable[Message]]) -> tuple[Message, bool]:
+        """Forwards the premium copy of the post; when Telegram refuses the forward, ``send`` sends the post normally
+        right away. Returns the message and whether it is the forward: a normal send that worked means the copy is
+        the problem (deleted from the canal almacén, the bot out of it...). The errors of ``send`` are raised."""
+        try:
+            return await content.forward_copy(bot, chat_id, post, copy), True
+        except (TelegramBadRequest, TelegramForbiddenError) as exc:  # the copy or the chat: the normal send tells
+            log.info("Post %s: its premium copy can't be forwarded to %s (%s), trying a normal send", post.id,
+                     chat_id, short(exc))
+        return await send(), False
+
+    @staticmethod
+    def _drop_vault(job: _Job, copy: tuple[int, int]) -> None:
+        """The premium copy can't be forwarded: the rest of the run goes as normal sends and its link is cleared
+        after the batch."""
+        if job.vault != copy:
+            return  # another chat of the run found it first
+        job.vault, job.stale_vault = None, copy[1]
+        log.warning("Run %s: the premium copy of post %s (message %s of %s) can't be forwarded: link cleared",
+                    job.run_id, job.post_id, copy[1], copy[0])
+
+    async def _clear_vault(self, post_id: int, msg_id: int) -> None:
+        """Forgets a premium copy that can't be forwarded (if the post still points to that message)."""
+        async with session_scope(self.sm) as s:
+            await s.execute(update(Post).where(Post.id == post_id, Post.vault_msg_id == msg_id)
+                            .values(vault_msg_id=None).execution_options(synchronize_session=False))
 
     @staticmethod
     async def _diagnose(bot: Bot, chat_id: int, chat_type: str, exc: TelegramAPIError) -> tuple[str | None, list[str]]:
@@ -822,6 +877,7 @@ class Publisher:
                 if d is None:
                     continue
                 d.status, d.error, d.message_id, d.sent_at = r.status, r.error, r.message_id, r.sent_at
+                d.forwarded = r.forwarded
                 if r.chat_id is not None:
                     d.chat_id = r.chat_id
                 if r.migrated and r.chat_id is not None:
@@ -1105,38 +1161,125 @@ class Publisher:
             return 0, 0
         sem = asyncio.Semaphore(self._concurrency)
         edited = failed = 0
+        # A forward can't be edited, and a channel gets the premium copy when there is one: there the message is
+        # replaced by a new one (the forward of the copy, or a normal send) instead.
+        copy = content.vault_copy(post)
+        stale: int | None = None  # message id of a premium copy that can't be forwarded: its link is cleared
+        plain: set[str] = set()  # chat types where Telegram refused the custom emoji of the post
+        media: list[str | InputFile | None] = []  # for the normal sends: resolved once, when one is needed
+        media_lock = asyncio.Lock()
+
+        async def send(chat_id: int) -> Message:
+            async with media_lock:
+                if not media:
+                    media.append(await content.media_for(bot, post, self.manager))
+            file = media[0]
+            msg = await content.deliver(bot, chat_id, post, media=file, premium=ChatType.CHANNEL not in plain,
+                                        on_plain=partial(plain.add, ChatType.CHANNEL))
+            if isinstance(file, InputFile) and media[0] is file:  # uploaded: the next ones use its file id
+                file_id = content.file_id_of(msg, post.kind)
+                if file_id:
+                    media[0] = file_id
+                    await content.remember_media(self.sm, post.id, post.bot_id, file_id,
+                                                 source=content.media_source(file))
+            return msg
 
         async def edit(live: _Live) -> str:
             """``ok``, ``gone`` (the message isn't there any more) or ``failed``."""
+            try:
+                await content.edit_delivery(bot, live.chat_id, live.message_id, post)  # type: ignore[arg-type]
+            except TelegramAPIError as exc:
+                if is_not_modified(exc):
+                    return "ok"
+                log.info("Delivery %s in %s not updated: %s", live.id, live.chat_id, short(exc))
+                return "gone" if is_message_gone(exc) else "failed"
+            except Exception:  # noqa: BLE001
+                log.warning("Delivery %s in %s: unexpected error while updating it", live.id, live.chat_id,
+                            exc_info=True)
+                return "failed"
+            return "ok"
+
+        async def replace(live: _Live) -> tuple[str, Message | None, bool]:
+            """Deletes the old message, then sends the new version: ``ok`` with the new message and whether it is a
+            forward; ``gone`` (someone deleted it: it isn't sent again), ``failed`` (it can't be deleted: it stays,
+            never twice) or ``lost`` (deleted, but the new version couldn't be sent)."""
+            nonlocal copy, stale
+            try:
+                await bot.delete_message(live.chat_id, live.message_id)  # type: ignore[arg-type]
+            except TelegramAPIError as exc:
+                log.info("Delivery %s in %s not replaced, it can't be deleted: %s", live.id, live.chat_id, short(exc))
+                return ("gone" if is_message_gone(exc) else "failed"), None, False
+            except Exception as exc:  # noqa: BLE001 - e.g. an answer that can't be read: it stays as it is
+                log.info("Delivery %s in %s not replaced: %s", live.id, live.chat_id, short(exc))
+                return "failed", None, False
+            forwarded = False
+            try:
+                if copy is not None:
+                    msg, forwarded = await self._forward(bot, live.chat_id, post, copy, partial(send, live.chat_id))
+                    if not forwarded and copy is not None:  # a normal send works: the copy is the problem
+                        log.warning("Post %s: its premium copy (message %s of %s) can't be forwarded: link cleared",
+                                    post.id, copy[1], copy[0])
+                        stale, copy = copy[1], None
+                else:
+                    msg = await send(live.chat_id)
+            except Exception as exc:  # noqa: BLE001 - the old message is already deleted
+                log.info("Delivery %s in %s deleted but its new version not sent: %s", live.id, live.chat_id,
+                         short(exc))
+                return "lost", None, False
+            return "ok", msg, forwarded
+
+        async def update_one(live: _Live, chat_type: str | None) -> tuple[str, Message | None, bool]:
+            async with sem:
+                if chat_type == ChatType.CHANNEL and (live.forwarded or copy is not None):
+                    return await replace(live)
+                return await edit(live), None, False
+
+        async def repin(live: _Live, msg: Message) -> int | None:
             async with sem:
                 try:
-                    await content.edit_delivery(bot, live.chat_id, live.message_id, post)  # type: ignore[arg-type]
-                except TelegramAPIError as exc:
-                    if is_not_modified(exc):
-                        return "ok"
-                    log.info("Delivery %s in %s not updated: %s", live.id, live.chat_id, short(exc))
-                    return "gone" if is_message_gone(exc) else "failed"
-                except Exception:  # noqa: BLE001
-                    log.warning("Delivery %s in %s: unexpected error while updating it", live.id, live.chat_id,
-                                exc_info=True)
-                    return "failed"
-                return "ok"
+                    await bot.pin_chat_message(live.chat_id, msg.message_id, disable_notification=True)
+                except Exception as exc:  # noqa: BLE001 - best effort: the new version is out
+                    log.info("Delivery %s in %s can't be pinned again: %s", live.id, live.chat_id, short(exc))
+                    return None
+                return live.id
 
         with bot_scope(post.bot_id):
             for batch in chunks(rows, BATCH_SIZE):
                 async with self._chats.hold(pk for _, pk in batch):
                     async with session_scope(self.sm) as s:
-                        lives = [_Live.of(d) for d in (await s.execute(select(Delivery).where(
-                            Delivery.id.in_([i for i, _ in batch]), Delivery.status == DeliveryStatus.SENT))).scalars()]
-                    results = await asyncio.gather(*(edit(live) for live in lives))
-                    gone = [live.id for live, res in zip(lives, results) if res == "gone"]
-                    if gone:
+                        lives = [(_Live.of(d), chat_type) for d, chat_type in (await s.execute(
+                            select(Delivery, Chat.type).outerjoin(Chat, Chat.id == Delivery.chat_pk)
+                            .where(Delivery.id.in_([i for i, _ in batch]), Delivery.status == DeliveryStatus.SENT)
+                        )).all()]
+                    results = await asyncio.gather(*(update_one(live, chat_type) for live, chat_type in lives))
+                    gone = [live.id for (live, _), (res, _, _) in zip(lives, results) if res == "gone"]
+                    lost = [live.id for (live, _), (res, _, _) in zip(lives, results) if res == "lost"]
+                    replaced = [(live, msg, fwd) for (live, _), (_, msg, fwd) in zip(lives, results) if msg is not None]
+                    if gone or lost or replaced:
+                        now = utcnow()
                         async with session_scope(self.sm) as s:
-                            await s.execute(update(Delivery).where(Delivery.id.in_(gone),
-                                                                   Delivery.status == DeliveryStatus.SENT)
-                                            .values(status=DeliveryStatus.MISSING, deleted_at=utcnow(), pinned=False)
+                            for ids, status in ((gone, DeliveryStatus.MISSING), (lost, DeliveryStatus.DELETED)):
+                                if ids:
+                                    await s.execute(update(Delivery).where(Delivery.id.in_(ids),
+                                                                           Delivery.status == DeliveryStatus.SENT)
+                                                    .values(status=status, deleted_at=now, pinned=False)
+                                                    .execution_options(synchronize_session=False))
+                            for live, msg, fwd in replaced:
+                                await s.execute(update(Delivery).where(Delivery.id == live.id).values(
+                                    message_id=msg.message_id, sent_at=now, forwarded=fwd, pinned=False,
+                                    delete_at=delete_time(now, post.delete_after))
+                                    .execution_options(synchronize_session=False))
+                    # Pinned again after they are stored (the "pinned" service message may arrive at once).
+                    pinned = [i for i in await asyncio.gather(*(repin(live, msg) for live, msg, _ in replaced
+                                                                if live.pinned and post.pin)) if i is not None]
+                    if pinned:
+                        async with session_scope(self.sm) as s:
+                            await s.execute(update(Delivery).where(Delivery.id.in_(pinned)).values(pinned=True)
                                             .execution_options(synchronize_session=False))
-                    edited += sum(1 for res in results if res == "ok")
-                    failed += sum(1 for res in results if res != "ok")
+                    edited += sum(1 for res, _, _ in results if res == "ok")
+                    failed += sum(1 for res, _, _ in results if res != "ok")
+                if stale is not None:
+                    await self._clear_vault(post_id, stale)
+                    stale = None
         log.info("Post %s: %d live deliveries updated, %d failed", post_id, edited, failed)
         return edited, failed

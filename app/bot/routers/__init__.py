@@ -20,6 +20,7 @@ def setup_dispatcher(dp: Dispatcher, sessionmaker: SessionMaker, settings: Setti
         partners,
         post_buttons,
         posts,
+        premium,
         requests,
         settings as settings_router,
         setup,
@@ -35,6 +36,7 @@ def setup_dispatcher(dp: Dispatcher, sessionmaker: SessionMaker, settings: Setti
     routers = (
         core.router,
         start.router,  # /start, /cancel and the other commands win over any half-finished input
+        premium.router,  # forwards that reach the canal almacén, before the other channel posts
         chat_events.router,
         requests.router,
         chats.router,
