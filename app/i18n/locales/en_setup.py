@@ -25,12 +25,28 @@ STRINGS = {
     "setup.pause.no": "🚫 They can't pause",
     # --- 3. Global frequency -----------------------------------------------------------------------
     "setup.q.3": (
-        "⏰ <b>How often does each channel get a post?</b>\n"
-        "Every channel gets one post on each turn of its frequency; the posts in rotation take turns.\n"
-        "   └ The intervals run from 08:00 to 22:00. It can be fine-tuned later in ⏰ Frequencies."
+        "⏰ <b>At what times does each channel get a post?</b>\n"
+        "Tap an hour to tick or untick it, or pick a quick option. On each ticked hour every channel gets one post; "
+        "the posts in rotation take turns."
     ),
+    "setup.freq.now": "🕐 <b>{n} a day</b>: {times}",
+    "setup.freq.days": "📅 Days: {days}",
+    "setup.freq.tz": "   └ {tz} time. It can be fine-tuned later in ⏰ Frequencies.",
+    "setup.freq.n": "{n} a day",
     "setup.freq.every": "Every {t}",
-    "setup.freq.daily": "Once a day (12:00)",
+    "setup.freq.hourly": "Every hour",
+    "setup.days.0": "All",
+    "setup.days.1": "Mo-Fr",
+    "setup.days.2": "Sa-Su",
+    "setup.freq.write": "✏️ Type other times (9:30…)",
+    "setup.freq.need_hour": "⚠️ Keep at least one hour ticked.",
+    "setup.freq.ask": (
+        "✏️ <b>Type the times</b>\n\n"
+        "Separated by commas, up to 24, with any minutes. For example: <code>9:30, 14, 21:15</code>.\n\n"
+        "🕐 Now: <b>{current}</b>"
+    ),
+    "setup.freq.saved": "✅ Saved: {freq}",
+    "setup.btn.next": "Continue ➡️",
     # --- 4. Auto delete ----------------------------------------------------------------------------
     "setup.q.4": (
         "🗑 <b>How long do the posts stay published?</b>\n"

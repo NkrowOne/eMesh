@@ -151,6 +151,22 @@ def upcoming(freq: dict[str, Any] | None, tz: str, after: datetime, n: int = 3) 
     return out
 
 
+def day_times(freq: dict[str, Any] | None) -> list[tuple[int, int]]:
+    """The wall-clock times (hour, minute) of the slots of a day it runs, sorted (``per_day`` of them)."""
+    f = normalize(freq)
+    if f["mode"] == "times":
+        return _times_of(f["times"])
+    win = _window_of(f["window"]) if f["window"] else None
+    start, length = 0, 1439
+    if win is not None:
+        (sh, sm), (eh, em) = win
+        start = sh * 60 + sm
+        length = (eh * 60 + em) - start
+        if length <= 0:
+            length += 1440
+    return sorted({divmod((start + k) % 1440, 60) for k in range(0, length + 1, f["every"])})
+
+
 def per_day(freq: dict[str, Any] | None) -> int:
     """Slots on a day it runs (to show "≈ 6 al día")."""
     f = normalize(freq)

@@ -25,12 +25,28 @@ STRINGS = {
     "setup.pause.no": "🚫 No pueden pausar",
     # --- 3. Frecuencia global ----------------------------------------------------------------------
     "setup.q.3": (
-        "⏰ <b>¿Cada cuánto recibe un mensaje cada canal?</b>\n"
-        "Cada canal recibe un mensaje en cada turno de su frecuencia; los mensajes en rotación se van turnando.\n"
-        "   └ Los intervalos van de 08:00 a 22:00. Luego se puede afinar en ⏰ Frecuencias."
+        "⏰ <b>¿A qué horas recibe un mensaje cada canal?</b>\n"
+        "Toca una hora para marcarla o quitarla, o elige una opción rápida. En cada hora marcada, cada canal recibe "
+        "un mensaje; los mensajes en rotación se van turnando."
     ),
+    "setup.freq.now": "🕐 <b>{n} al día</b>: {times}",
+    "setup.freq.days": "📅 Días: {days}",
+    "setup.freq.tz": "   └ Hora de {tz}. Luego se puede afinar en ⏰ Frecuencias.",
+    "setup.freq.n": "{n} al día",
     "setup.freq.every": "Cada {t}",
-    "setup.freq.daily": "1 al día (12:00)",
+    "setup.freq.hourly": "Cada hora",
+    "setup.days.0": "Todos",
+    "setup.days.1": "L-V",
+    "setup.days.2": "S-D",
+    "setup.freq.write": "✏️ Escribir otras horas (9:30…)",
+    "setup.freq.need_hour": "⚠️ Deja al menos una hora marcada.",
+    "setup.freq.ask": (
+        "✏️ <b>Escribe las horas</b>\n\n"
+        "Separadas por comas, hasta 24 y con los minutos que quieras. Por ejemplo: <code>9:30, 14, 21:15</code>.\n\n"
+        "🕐 Ahora: <b>{current}</b>"
+    ),
+    "setup.freq.saved": "✅ Guardado: {freq}",
+    "setup.btn.next": "Continuar ➡️",
     # --- 4. Borrado automático ---------------------------------------------------------------------
     "setup.q.4": (
         "🗑 <b>¿Cuánto tiempo siguen publicados los mensajes?</b>\n"
