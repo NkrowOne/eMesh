@@ -542,6 +542,8 @@ async def detail_text(ctx: Ctx, session: AsyncSession, post: Post) -> tuple[str,
     live = await pubsvc.live_count(session, post.id)
     if live:
         lines.append(ctx.t("po.d.live", chats=units(ctx, live, "chats")))
+    if content.has_premium(post):
+        lines.append(ctx.t("po.d.premium"))
     options = options_lines(ctx, option_values(ctx, post), option_names(post.kind), hints=False)
     quote = "<blockquote expandable>" + "\n".join([ctx.t("po.d.opts"), *options]) + "</blockquote>"
     return "\n".join(lines) + "\n" + quote, live
@@ -955,7 +957,7 @@ async def on_wizard_buttons(message: Message, ctx: Ctx, session: AsyncSession, s
         await wizard_retry(message, ctx, session, state, PostsFSM.new_buttons, ctx.t("po.err.text_only"))
         return
     try:
-        rows = content.parse_buttons(message.text)
+        rows = content.parse_buttons(content.marked_text(message))
     except content.ButtonsError as exc:
         await wizard_retry(message, ctx, session, state, PostsFSM.new_buttons, ctx.t(exc.key, line=exc.line))
         return

@@ -282,12 +282,12 @@ async def _partner_home(event: Message | CallbackQuery, ctx: Ctx, session: Async
     if not platform:
         rows.append([None if ctx.is_main else await _create_own_button(ctx, session), mybots])
     markup = kb(*rows)
-    # The owner's welcome text is Telegram HTML: custom emoji can't be used by most bots, and if Telegram still
-    # refuses it the default text is shown instead.
-    custom = _TG_EMOJI_RE.sub(r"\1", ws.join_text) if ws.join_open and ws.join_text else None
-    if custom:
+    # The owner's welcome text is Telegram HTML. Its custom (premium) emoji go out when the bot may use them (its
+    # owner has Telegram Premium), else as normal emoji; if Telegram still refuses it the default text is shown.
+    custom = ws.join_text if ws.join_open and ws.join_text else None
+    for text in dict.fromkeys([custom, _TG_EMOJI_RE.sub(r"\1", custom)] if custom else []):
         try:
-            await _show_home(event, ctx, session, with_notice(_partner_text(ctx, platform=platform, custom=custom),
+            await _show_home(event, ctx, session, with_notice(_partner_text(ctx, platform=platform, custom=text),
                                                               notice), markup)
             return
         except TelegramBadRequest as exc:

@@ -421,6 +421,8 @@ class Delivery(Base):
     status: Mapped[str] = mapped_column(String(16), default=DeliveryStatus.QUEUED)
     error: Mapped[str | None] = mapped_column(String(256), nullable=True)
     pinned: Mapped[bool] = mapped_column(Boolean, default=False)
+    # 💎 sent as a forward of the post's source message (custom emoji in a channel): it can't be edited
+    forwarded: Mapped[bool] = mapped_column(Boolean, default=False, server_default=sa_false())
     sent_at: Mapped[datetime | None] = mapped_column(UTCDateTime, nullable=True)
     delete_at: Mapped[datetime | None] = mapped_column(UTCDateTime, nullable=True)
     deleted_at: Mapped[datetime | None] = mapped_column(UTCDateTime, nullable=True)

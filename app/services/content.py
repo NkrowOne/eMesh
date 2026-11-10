@@ -2,7 +2,14 @@
 
 Buttons are stored as rows: ``[[{"text": "Web", "url": "https://…", "style": "success"}, {...}], [...]]``. A button
 has either ``url`` or ``copy`` (a "copy to clipboard" button, Bot API ``copy_text``) and an optional ``style``:
-``primary`` (🔵 blue), ``success`` (🟢 green) or ``danger`` (🔴 red) (Bot API 9.4 button colors).
+``primary`` (🔵 blue), ``success`` (🟢 green) or ``danger`` (🔴 red) (Bot API 9.4 button colors). A custom (premium)
+emoji at the start of its name becomes its ``icon`` (Bot API ``icon_custom_emoji_id``), with the normal ``emoji`` it
+stands for: ``{"text": "Web", "icon": "5368…", "emoji": "🔥", "url": "…"}``.
+
+Custom emoji (in the text and as button icons) go out when Telegram lets the bot use them: its owner has Telegram
+Premium (private chats, groups and supergroups) or the bot has a username bought on Fragment (any chat, channels
+too). Where it can't, they are sent as the normal emoji they stand for (:func:`deliver`). Channels get them in a
+forward of the post as the bot sent it to an admin's private chat (:func:`forward_copy`, the publisher).
 
 Text syntax of the buttons (one row per line, several buttons in a row separated by ``&&`` or ``|``)::
 
@@ -19,6 +26,7 @@ from __future__ import annotations
 import html
 import logging
 import re
+from collections.abc import Callable
 from dataclasses import dataclass
 from typing import TYPE_CHECKING, Any
 from urllib.parse import urlsplit
@@ -38,7 +46,7 @@ from aiogram.types import (
 from app.db.models import Post
 from app.db.session import SessionMaker, session_scope
 from app.i18n import t
-from app.telegram.errors import is_parse_error, short
+from app.telegram.errors import is_button_error, is_parse_error, short
 from app.ui.common import visible_len
 
 if TYPE_CHECKING:
@@ -77,6 +85,10 @@ _COLOR_TAIL_RE = re.compile(r"\s+(?:(?P<emoji>🔵|🟦|🟢|🟩|🔴|🟥|⬜|
 _ROW_SPLIT_RE = re.compile(r"\s*(?:&&|\s\|\s)\s*")
 _TG_EMOJI_RE = re.compile(r"<tg-emoji[^>]*>(.*?)</tg-emoji>", re.IGNORECASE | re.DOTALL)
 _TAG_RE = re.compile(r"<[^>]+>")
+# A custom emoji of a user's message inside its plain text (:func:`marked_text`): \ue000<id>\ue001<emoji>\ue002
+_MARKS = "\ue000\ue001\ue002"
+_MARK_RE = re.compile("\ue000(\\d+)\ue001([^\ue000-\ue002]*)\ue002")
+_LEAD_MARK_RE = re.compile("^(?:\\[\\s*)?\ue000(\\d+)\ue001([^\ue000-\ue002]*)\ue002")
 
 
 class ButtonsError(ValueError):
@@ -148,6 +160,52 @@ def plain(html_text: str | None) -> str:
     return html.unescape(_TAG_RE.sub("", html_text or ""))
 
 
+def marked_text(message: Message) -> str:
+    """The plain text of a user's message with its custom (premium) emoji marked, so the buttons read from it keep
+    them as icons (:func:`parse_buttons`, :func:`label_of`)."""
+    text = message.text or message.caption or ""
+    entities = (message.entities if message.text else message.caption_entities) or []
+    found = sorted((e for e in entities if e.type == "custom_emoji" and (e.custom_emoji_id or "").isdigit()),
+                   key=lambda e: e.offset)
+    raw = text.encode("utf-16-le")  # entity offsets count UTF-16 code units
+
+    def part(start: int, end: int) -> str:
+        return raw[start * 2:end * 2].decode("utf-16-le", "ignore").translate({ord(c): None for c in _MARKS})
+
+    out: list[str] = []
+    pos = 0
+    for e in found:
+        if e.offset < pos:
+            continue
+        out.append(part(pos, e.offset))
+        out.append(f"{e.custom_emoji_id}{part(e.offset, e.offset + e.length)}")
+        pos = e.offset + e.length
+    out.append(part(pos, len(raw) // 2))
+    return "".join(out)
+
+
+def unmark(text: str) -> str:
+    """:func:`marked_text` without the marks: custom emoji become the normal emoji they stand for."""
+    return _MARK_RE.sub(r"\2", text).translate({ord(c): None for c in _MARKS})
+
+
+def label_of(marked: str) -> dict[str, str]:
+    """A button name from marked text: ``{"text": …}``, plus ``icon`` / ``emoji`` when it starts with a custom
+    emoji (unless that emoji is all there is)."""
+    m = _LEAD_MARK_RE.match(marked.strip())
+    if m and not m.group(0).startswith("["):
+        rest = " ".join(unmark(marked.strip()[m.end():]).split())
+        if rest:
+            return {"text": rest, "icon": m.group(1), "emoji": m.group(2)}
+    return {"text": " ".join(unmark(marked).split())}
+
+
+def button_label(button: dict[str, str]) -> str:
+    """The name of a button with the emoji of its icon in front (plain text)."""
+    emoji = button.get("emoji") if button.get("icon") else None
+    return f"{emoji} {button.get('text', '')}" if emoji else button.get("text", "")
+
+
 def kind_label(kind: str, lang: str) -> str:
     """``📝 Texto``, ``🖼 Foto``, ``🎬 Vídeo``…"""
     return t(f"content.kind.{kind if kind in KINDS else 'text'}", lang)
@@ -186,6 +244,8 @@ def normalize_url(raw: str) -> str | None:
 
 def _parse_button(raw: str, line: int) -> dict[str, str]:
     part = raw.strip()
+    lead = _LEAD_MARK_RE.match(part)  # a custom emoji at the start of the name: the button's icon
+    part = unmark(part)
     style = None
     m = _COLOR_TAIL_RE.search(part)
     if m:
@@ -199,10 +259,12 @@ def _parse_button(raw: str, line: int) -> dict[str, str]:
     if not m:
         raise ButtonsError("content.err.format", line)
     text = m.group("text").strip()
-    if not text or len(text) > MAX_BUTTON_TEXT:
+    button: dict[str, str] = {"text": text}
+    if lead and text.startswith(lead.group(2)) and text[len(lead.group(2)):].strip():
+        button = {"text": text[len(lead.group(2)):].strip(), "icon": lead.group(1), "emoji": lead.group(2)}
+    if not button["text"] or len(button["text"]) > MAX_BUTTON_TEXT:
         raise ButtonsError("content.err.button_text", line)
     target = m.group("target").strip()
-    button: dict[str, str] = {"text": text}
     copy = _COPY_RE.match(target)
     if copy:
         value = copy.group("value").strip()
@@ -220,7 +282,8 @@ def _parse_button(raw: str, line: int) -> dict[str, str]:
 
 
 def parse_buttons(text: str) -> list[list[dict[str, str]]]:
-    """Rows of buttons from their text syntax (see the module docstring). Raises :class:`ButtonsError`."""
+    """Rows of buttons from their text syntax (see the module docstring). ``text`` may come from
+    :func:`marked_text` (custom emoji at the start of a name become icons). Raises :class:`ButtonsError`."""
     rows: list[list[dict[str, str]]] = []
     count = 0
     for lineno, raw in enumerate((text or "").splitlines(), 1):
@@ -245,7 +308,7 @@ def button_line(button: dict[str, str]) -> str:
     """One button in the text syntax."""
     target = f"copiar: {button['copy']}" if button.get("copy") else button.get("url", "")
     color = COLOR_EMOJI.get(button.get("style", ""), "")
-    return f"{button.get('text', '')} - {target}" + (f" {color}" if color else "")
+    return f"{button_label(button)} - {target}" + (f" {color}" if color else "")
 
 
 def format_buttons(rows: list[list[dict[str, str]]] | None) -> str:
@@ -269,8 +332,15 @@ def count_buttons(rows: Any) -> int:
     return sum(len(r) for r in clean_rows(rows))
 
 
-def make_button(b: dict[str, str]) -> InlineKeyboardButton:
+def make_button(b: dict[str, str], *, icons: bool = True) -> InlineKeyboardButton:
+    """The Telegram button. ``icons=False``: the custom emoji icon goes as the normal emoji in front of the name."""
     kwargs: dict[str, Any] = {"text": b["text"]}
+    icon = b.get("icon")
+    if isinstance(icon, str) and icon.isdigit():
+        if icons:
+            kwargs["icon_custom_emoji_id"] = icon
+        else:
+            kwargs["text"] = button_label(b)
     if b.get("style") in STYLES:
         kwargs["style"] = b["style"]
     if b.get("copy"):
@@ -280,11 +350,11 @@ def make_button(b: dict[str, str]) -> InlineKeyboardButton:
     return InlineKeyboardButton(**kwargs)
 
 
-def build_markup(rows: Any) -> InlineKeyboardMarkup | None:
+def build_markup(rows: Any, *, icons: bool = True) -> InlineKeyboardMarkup | None:
     clean = clean_rows(rows)
     if not clean:
         return None
-    return InlineKeyboardMarkup(inline_keyboard=[[make_button(b) for b in row] for row in clean])
+    return InlineKeyboardMarkup(inline_keyboard=[[make_button(b, icons=icons) for b in row] for row in clean])
 
 
 # --------------------------------------------------------------------------- media across bots
@@ -363,6 +433,56 @@ def _strip_custom_emoji(html_text: str | None) -> str | None:
     return _TG_EMOJI_RE.sub(r"\1", html_text) if html_text else html_text
 
 
+def has_premium(post: Post) -> bool:
+    """The post has custom (premium) emoji: in its text or as button icons."""
+    return bool(_TG_EMOJI_RE.search(post.text or "")) or any(b.get("icon") for row in clean_rows(post.buttons)
+                                                             for b in row)
+
+
+def custom_emoji_in(message: Message) -> bool:
+    """The message Telegram stored has custom (premium) emoji in its text or caption."""
+    return any(e.type == "custom_emoji" for e in (message.entities or message.caption_entities or []))
+
+
+async def forward_copy(bot: Bot, chat_id: int, post: Post, source: tuple[int, int], *, silent: bool | None = None,
+                       protect: bool | None = None) -> Message:
+    """Forwards the source message of a post (``(chat id, message id)``: the post as the bot sent it to a private
+    chat, custom emoji included) to ``chat_id`` with the options of the post. Telegram keeps the custom emoji of a
+    forwarded message, while it refuses them in a message a bot sends to a channel (unless the bot has a username
+    bought on Fragment). Raises the Telegram errors."""
+    silent = post.silent if silent is None else silent
+    protect = post.protect if protect is None else protect
+    return await bot.forward_message(chat_id, source[0], source[1], disable_notification=silent or None,
+                                     protect_content=protect or None)
+
+
+def _plain_markup(markup: InlineKeyboardMarkup | None, post: Post) -> InlineKeyboardMarkup | None:
+    """The keyboard without custom emoji icons: each one goes as its normal emoji in front of the name."""
+    if markup is None:
+        return None
+    alts = {b["icon"]: b.get("emoji") or "" for row in clean_rows(post.buttons) for b in row if b.get("icon")}
+    rows: list[list[InlineKeyboardButton]] = []
+    for row in markup.inline_keyboard:
+        out: list[InlineKeyboardButton] = []
+        for button in row:
+            if button.icon_custom_emoji_id:
+                data = button.model_dump(exclude_unset=True, exclude_none=True)
+                icon = data.pop("icon_custom_emoji_id")
+                alt = alts.get(icon)
+                if alt:
+                    data["text"] = f"{alt} {button.text}"
+                button = InlineKeyboardButton(**data)
+            out.append(button)
+        rows.append(out)
+    return InlineKeyboardMarkup(inline_keyboard=rows)
+
+
+def _is_premium_refusal(exc: TelegramBadRequest) -> bool:
+    """Telegram may have refused the custom emoji of the text or of the buttons."""
+    m = str(exc).lower()
+    return is_parse_error(exc) or is_button_error(exc) or "emoji" in m or "icon" in m
+
+
 _KEEP = object()
 
 
@@ -375,22 +495,31 @@ async def deliver(
     reply_markup: InlineKeyboardMarkup | None | object = _KEEP,
     silent: bool | None = None,
     protect: bool | None = None,
+    premium: bool = True,
+    on_plain: Callable[[], None] | None = None,
 ) -> Message:
     """Sends the post to ``chat_id`` with its options. ``media`` comes from :func:`media_for` (required for media
-    posts). Custom emoji the bot may not use are sent as normal emoji. Raises the Telegram errors."""
-    markup = build_markup(post.buttons) if reply_markup is _KEEP else reply_markup
-    text = post.text
-    for attempt in range(2):
+    posts). Custom (premium) emoji go out as they are when Telegram lets the bot use them; when it refuses them they
+    are sent as normal emoji and ``on_plain`` is called. ``premium=False`` sends them as normal emoji right away.
+    Raises the Telegram errors."""
+    markup: InlineKeyboardMarkup | None = (build_markup(post.buttons) if reply_markup is _KEEP
+                                           else reply_markup)  # type: ignore[assignment]
+    silent = post.silent if silent is None else silent
+    protect = post.protect if protect is None else protect
+    fancy = has_premium(post)
+    if fancy and premium:
         try:
-            return await _send(bot, chat_id, post, text, media, markup,  # type: ignore[arg-type]
-                               post.silent if silent is None else silent, post.protect if protect is None else protect)
+            return await _send(bot, chat_id, post, post.text, media, markup, silent, protect)
         except TelegramBadRequest as exc:
-            stripped = _strip_custom_emoji(text)
-            if attempt == 0 and stripped != text and (is_parse_error(exc) or "emoji" in str(exc).lower()):
-                text = stripped
-                continue
-            raise
-    raise RuntimeError("unreachable")
+            if not _is_premium_refusal(exc):
+                raise
+            log.info("Custom emoji of post %s refused in %s, sent as normal emoji: %s", post.id, chat_id, short(exc))
+    text = _strip_custom_emoji(post.text) if fancy else post.text
+    msg = await _send(bot, chat_id, post, text, media, _plain_markup(markup, post) if fancy else markup, silent,
+                      protect)
+    if fancy and premium and on_plain is not None:
+        on_plain()
+    return msg
 
 
 async def _send(bot: Bot, chat_id: int, post: Post, text: str | None, media: str | InputFile | None,
@@ -432,14 +561,31 @@ async def send_post(bot: Bot, chat_id: int, post: Post, manager: BotManager | No
 
 
 async def edit_delivery(bot: Bot, chat_id: int, message_id: int, post: Post) -> None:
-    """Applies the current text/caption and buttons of a post to a message already sent (the media stays).
-    Raises the Telegram errors ("message is not modified" included)."""
+    """Applies the current text/caption and buttons of a post to a message already sent (the media stays). Custom
+    emoji Telegram refuses go as normal emoji (as in :func:`deliver`). Raises the Telegram errors ("message is not
+    modified" included)."""
     markup = build_markup(post.buttons)
+    if has_premium(post):
+        try:
+            await _edit(bot, chat_id, message_id, post, post.text, markup)
+            return
+        except TelegramBadRequest as exc:
+            if not _is_premium_refusal(exc):
+                raise
+            log.info("Custom emoji of post %s refused in %s, edited as normal emoji: %s", post.id, chat_id,
+                     short(exc))
+        await _edit(bot, chat_id, message_id, post, _strip_custom_emoji(post.text), _plain_markup(markup, post))
+        return
+    await _edit(bot, chat_id, message_id, post, post.text, markup)
+
+
+async def _edit(bot: Bot, chat_id: int, message_id: int, post: Post, text: str | None,
+                markup: InlineKeyboardMarkup | None) -> None:
     if post.kind not in MEDIA_KINDS:
-        await bot.edit_message_text(post.text or "…", chat_id=chat_id, message_id=message_id, reply_markup=markup,
+        await bot.edit_message_text(text or "…", chat_id=chat_id, message_id=message_id, reply_markup=markup,
                                     link_preview_options=LinkPreviewOptions(is_disabled=not post.link_preview))
     else:
-        await bot.edit_message_caption(chat_id=chat_id, message_id=message_id, caption=post.text, reply_markup=markup,
+        await bot.edit_message_caption(chat_id=chat_id, message_id=message_id, caption=text, reply_markup=markup,
                                        show_caption_above_media=(post.caption_above or None)
                                        if post.kind in VISUAL_KINDS else None)
 
@@ -450,7 +596,8 @@ def is_media_error(exc: BaseException) -> bool:
 
 __all__ = [
     "COLORS", "COLOR_EMOJI", "KINDS", "MEDIA_KINDS", "VISUAL_KINDS", "ButtonsError", "Content", "MediaError",
-    "TelegramAPIError", "apply", "build_markup", "button_line", "clean_rows", "content_error", "count_buttons",
-    "default_name", "deliver", "edit_delivery", "file_id_of", "format_buttons", "from_message", "kind_label",
-    "make_button", "media_for", "normalize_url", "parse_buttons", "plain", "remember_media", "send_post", "set_text",
+    "TelegramAPIError", "apply", "build_markup", "button_label", "button_line", "clean_rows", "content_error",
+    "count_buttons", "custom_emoji_in", "default_name", "deliver", "edit_delivery", "file_id_of", "format_buttons",
+    "forward_copy", "from_message", "has_premium", "kind_label", "label_of", "make_button", "marked_text",
+    "media_for", "normalize_url", "parse_buttons", "plain", "remember_media", "send_post", "set_text", "unmark",
 ]

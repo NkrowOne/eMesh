@@ -402,8 +402,21 @@ async def test_partner_home_with_a_custom_join_text(app: App) -> None:
         rec.join_text = '<b>Únete</b> a <i>Cine</i> <tg-emoji emoji-id="5368324170671202286">🔥</tg-emoji>'
     await app.send(USER_ID, "/start")
     text = app.last_text(USER_ID)
-    assert "<b>Únete</b> a <i>Cine</i> 🔥" in text  # custom emoji are sent as normal emoji
-    assert "tg-emoji" not in text and "Únete a la red de" not in text
+    # custom emoji go out as they are (the bot may use them when its owner has Telegram Premium)
+    assert '<b>Únete</b> a <i>Cine</i> <tg-emoji emoji-id="5368324170671202286">🔥</tg-emoji>' in text
+    assert "Únete a la red de" not in text
+
+
+async def test_refused_custom_emoji_of_the_join_text_go_as_normal_emoji(app: App) -> None:
+    async with edit_bot(app) as rec:
+        rec.join_open = True
+        rec.join_approval = False
+        rec.join_text = '<b>Únete</b> <tg-emoji emoji-id="5368324170671202286">🔥</tg-emoji>'
+    app.fake.fail("sendMessage", description="Bad Request: custom emoji can't be used",
+                  when=lambda p: "tg-emoji" in str(p.get("text")))
+    await app.send(USER_ID, "/start")
+    text = app.last_text(USER_ID)
+    assert "<b>Únete</b> 🔥" in text and "tg-emoji" not in text and "Únete a la red de" not in text
 
 
 async def test_a_refused_custom_join_text_falls_back_to_the_default(app: App) -> None:
