@@ -1,6 +1,6 @@
 """👑 Panel (super admins, main bots): platform numbers, the clones (list, search, detail, 🛠 Gestionar, enable /
 disable, approve / reject, limits, message to the owner, activity, delete), ⚙️ Plataforma (clone policy and default
-limits), 🖼 Imagen del bot (profile photo of the main bots, which the clones get too), 📢 Aviso a los dueños and
+limits), 🖼 Imagen del bot (the photo on top of the home; it changes no profile photo), 📢 Aviso a los dueños and
 📄 Errores (.txt)."""
 from __future__ import annotations
 
@@ -28,8 +28,6 @@ from app.i18n import t
 from app.services import blast, brand, clones, events, freq, limits, logbook, stats
 from app.services.notify import send_dm
 from app.services.users import get_lang
-from app.telegram.context import set_low_priority
-from app.telegram.errors import short
 from app.telegram.manager import BotManager
 from app.ui.callbacks import MenuCB
 from app.ui.common import (
@@ -69,7 +67,6 @@ DM_MAX = 3500  # visible characters of a message to an owner (the header must fi
 
 _tasks: set[asyncio.Task[None]] = set()  # running 📢 blasts (kept so they aren't garbage collected)
 _blasts: set[tuple[int, int, int]] = set()  # (bot, super admin, message) already sent: a double tap sends once
-_photo_job: asyncio.Task[Any] | None = None  # the latest 🖼 bot image on its way to the clones
 
 
 class PanelCB(CallbackData, prefix="sa"):
@@ -131,11 +128,10 @@ def approval_markup(rec: BotRecord) -> Callable[[str], InlineKeyboardMarkup | No
     return make
 
 
-async def give_image(session: AsyncSession, manager: BotManager, sm: SessionMaker, bot_id: int) -> None:
-    """A clone that has just started running gets the platform's bot image, unless its owner put a photo of their
-    own (background work; nothing to do while there is no image)."""
-    if await brand.has_photo(session, brand.BOT):
-        brand.spawn(brand.give_to_clone(manager, sm, bot_id))
+def give_avatar(manager: BotManager, sm: SessionMaker, bot_id: int) -> None:
+    """A clone that has just started running gets the eMesh logo as its profile photo, unless its owner put a photo
+    of their own or it already shows it (background work, ``brand.give_to_clone``)."""
+    brand.spawn(brand.give_to_clone(manager, sm, bot_id))
 
 
 # --------------------------------------------------------------------------- panel
@@ -439,7 +435,7 @@ async def on_switch(call: CallbackQuery, callback_data: PanelCB, ctx: Ctx, sessi
     elif rec.status not in (BotStatus.ACTIVE, BotStatus.PENDING):  # pending bots are approved instead
         if await manager.enable_bot(rec.id):
             await toast(call, ctx.t("sa.enabled"))
-            await give_image(session, manager, sm, rec.id)  # the image may have changed while it was stopped
+            give_avatar(manager, sm, rec.id)  # the avatar may have changed while it was stopped
             log.info("Bot %s (@%s) enabled by super admin %s", rec.id, rec.username, ctx.user_id)
         else:
             await alert(call, ctx.t("sa.enable_failed"))
@@ -464,7 +460,7 @@ async def on_decide(call: CallbackQuery, callback_data: PanelCB, ctx: Ctx, sessi
                 markup = kb([btn(t("cl.btn.open", lang, username=username), url=f"https://t.me/{username}",
                                  style="success")])
                 await send_dm(bot, session, rec.owner_id, t("cl.approved_dm", lang, username=esc(username)), markup)
-                await give_image(session, manager, sm, rec.id)
+                give_avatar(manager, sm, rec.id)
                 log.info("Clone %s (@%s) approved by %s", rec.id, username, ctx.user_id)
             else:
                 await alert(call, ctx.t("sa.enable_failed"))
@@ -740,7 +736,7 @@ def _main_name(ctx: Ctx) -> str:
 @screen("panel_photo")
 async def panel_photo_screen(event: Message | CallbackQuery, ctx: Ctx, session: AsyncSession, arg: int = 0,
                              notice: str | None = None, **_: object) -> None:
-    """🖼 Imagen del bot: the profile photo of the main bots, which the clones get too (shown on top)."""
+    """🖼 Imagen del bot: the photo on top of the home in the main bots and the clones (shown on top)."""
     if not _allowed(ctx):
         await alert(event, ctx.t("common.no_permission"))
         return
@@ -771,10 +767,8 @@ async def on_photo(call: CallbackQuery, ctx: Ctx, state: FSMContext) -> None:
 
 
 @router.message(PanelFSM.photo, F.chat.type == "private", ~F.text.startswith("/"))
-async def on_photo_input(message: Message, ctx: Ctx, session: AsyncSession, state: FSMContext, bot: Bot,
-                         manager: BotManager, sm: SessionMaker) -> None:
-    """The new bot image: Telegram puts it on the main bots at once (or refuses it), then it is stored; the clones
-    get it in the background and the super admin gets a report."""
+async def on_photo_input(message: Message, ctx: Ctx, session: AsyncSession, state: FSMContext, bot: Bot) -> None:
+    """The new bot image: stored once it can be read (it only goes on top of the home: no profile photo changes)."""
     if not _allowed(ctx):
         await state.clear()
         return
@@ -782,50 +776,13 @@ async def on_photo_input(message: Message, ctx: Ctx, session: AsyncSession, stat
         await _ask_photo(message, ctx, ctx.t("sa.photo.err_type"))
         return
     file_id = message.photo[-1].file_id
-    raw = await brand.fetch_one(bot, file_id)
-    if raw is None:
+    if await brand.fetch_one(bot, file_id) is None:
         await _ask_photo(message, ctx, ctx.t("sa.photo.err_read"))
         return
-    try:
-        await brand.set_main_photos(manager, raw)
-    except TelegramAPIError as exc:
-        log.info("Telegram refused the bot image sent by %s: %s", ctx.user_id, short(exc))
-        error = esc(truncate(getattr(exc, "message", "") or str(exc), 120))
-        await _ask_photo(message, ctx, ctx.t("sa.photo.err_refused", error=error))
-        return
     await brand.set_photo(session, brand.BOT, bot.id, file_id)
-    await session.commit()  # the main bots already show it; the clones' job writes through its own sessions
     await state.clear()
     log.info("Bot image changed by super admin %s", ctx.user_id)
-    notice = ctx.t("sa.photo.saved", main=_main_name(ctx))
-    if await _scalar(session, select(func.count()).select_from(BotRecord).where(
-            BotRecord.is_main.is_(False), BotRecord.status == BotStatus.ACTIVE)):
-        _queue_photo_job(manager, sm, bot, raw, file_id, ctx.user_id, ctx.lang)
-        notice += " " + ctx.t("sa.photo.saved_clones")
-    await panel_photo_screen(message, ctx, session, notice=notice)
-
-
-def _queue_photo_job(manager: BotManager, sm: SessionMaker, bot: Bot, raw: bytes, file_id: str, admin_id: int,
-                     lang: str) -> None:
-    """The new image goes to the clones in the background, after the previous one if it is still on its way."""
-    global _photo_job
-    _photo_job = brand.spawn(_give_to_clones(manager, sm, bot, raw, file_id, admin_id, lang, _photo_job))
-
-
-async def _give_to_clones(manager: BotManager, sm: SessionMaker, bot: Bot, raw: bytes, file_id: str, admin_id: int,
-                          lang: str, previous: asyncio.Task[Any] | None) -> None:
-    """Background: the new bot image on every clone without a photo of its own, then a report to the super admin
-    through the main bot. A previous image still on its way goes first (else it could end up on some clones)."""
-    if previous is not None and not previous.done():
-        await asyncio.wait([previous])
-    set_low_priority()
-    given = await brand.give_to_clones(manager, sm, raw, file_id)
-    log.info("Bot image given to the clones: %d set, %d with a photo of their own, %d failed", given.set, given.own,
-             given.failed)
-    text = t("sa.photo.done", lang, set=num(given.set), own=num(given.own))
-    if given.failed:
-        text += "\n" + t("sa.photo.done_failed", lang, failed=num(given.failed))
-    await send_dm(bot, None, admin_id, text)
+    await panel_photo_screen(message, ctx, session, notice=ctx.t("sa.photo.saved"))
 
 
 # ------------------------------------------------------------ 📢 Aviso a los dueños

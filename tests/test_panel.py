@@ -200,7 +200,7 @@ async def test_clone_page(app: App) -> None:
     assert "📌 Estado: ✅ Activo" in text
     assert "📣 Chats: <b>2</b> (🏠 1 · 🤝 1) · 👤 1,500" in text
     assert "⏸ Pausados por su dueño: 1 · ⏳ Pendientes: 1" in text
-    assert "📝 Mensajes activos: <b>2</b> · ⏰ a las 12:00" in text
+    assert "📝 Mensajes activos: <b>2</b> · 🕐 a las 12:00" in text
     assert "📤 Últimas 24 h: 1 envíos · 7 entregas · 2 fallos" in text
     assert "🔒 Límites: sin límites (predeterminado)" in text
     buttons = button_texts(app, SUPER_ID)
