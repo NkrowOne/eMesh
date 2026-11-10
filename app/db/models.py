@@ -3,7 +3,7 @@
 Vocabulary (code -> UI):
 * ``Bot``        the main bot or a clone ("bot").
 * ``Chat``       a channel or group of a bot ("📣 Canal" / "👥 Grupo"); own or external (a partner's).
-* ``ChatGroup``  a custom set of chats with an optional own frequency ("🗂 Grupo de canales").
+* ``ChatGroup``  a custom set of chats, a target for posts ("🗂 Grupo de canales").
 * ``Post``       content the network distributes, with its buttons, targets and schedule ("📝 Mensaje").
 * ``Run``        one distribution of a post to a set of chats ("envío").
 * ``Delivery``   the post inside one chat (the Telegram message there).
@@ -75,31 +75,15 @@ class PostStatus:
 
 
 class SchedMode:
-    """When a post is sent."""
+    """When a post is sent (there is no rotation: migration 0004 turned rotation posts into own ones)."""
 
-    ROTATION = "rotation"  # 🔁 takes turns with the other rotation posts of each chat, at the chat's frequency
-    OWN = "own"  # ⏰ its own frequency (Post.freq), to its whole audience
+    OWN = "own"  # ⏰ «A sus horas»: its own schedule (Post.freq), to its whole audience
     ONCE = "once"  # 📆 one date and time (Post.send_at)
     MANUAL = "manual"  # ✋ only with "🚀 Enviar ahora"
 
 
-class RotationOrder:
-    """``Bot.rotation``: how the 🔁 rotation posts take turns, or no rotation at all."""
-
-    SEQUENTIAL = "seq"  # each chat gets the posts in order (oldest first), then starts again
-    RANDOM = "random"  # a random post each time (never the same twice in a row when there are more)
-    # No rotation: the global and groups' frequencies send nothing; each post goes out on its own schedule (⏰ own,
-    # 📢 once, ✋ manual). Rotation posts stay as they are, unsent, until it is on again or their mode changes.
-    OFF = "off"
-
-
-def rotation_on(order: str | None) -> bool:
-    """``Bot.rotation`` turns the rotation on (in order or at random)."""
-    return order != RotationOrder.OFF
-
-
 class RunKind:
-    ROTATION = "rotation"
+    ROTATION = "rotation"  # old runs only (there is no rotation any more)
     SCHEDULE = "schedule"  # a post with its own frequency
     ONCE = "once"
     MANUAL = "manual"  # 🚀 Enviar ahora
@@ -145,7 +129,7 @@ DEFAULT_DELETE_AFTER = 0
 # Partners may pause the distribution in their chats until they resume it (0 = no limit), unless the admins limit it.
 DEFAULT_PAUSE_MAX_HOURS = 0
 
-# Global frequency of a new bot: once a day, at 12:00 (a post can also be a one-off broadcast: SchedMode.ONCE).
+# 🕐 Default schedule of a new bot (``Bot.freq``, the one new posts start with): once a day, at 12:00.
 DEFAULT_FREQ: dict[str, Any] = {"mode": "times", "times": "12:00", "days": "0123456"}
 
 
@@ -175,9 +159,8 @@ class Bot(Base):
 
     # --- distribution ---
     paused: Mapped[bool] = mapped_column(Boolean, default=False, server_default=sa_false())  # ⏸ everything
-    freq: Mapped[dict[str, Any]] = mapped_column(JSON, default=lambda: dict(DEFAULT_FREQ))  # 🌐 global frequency
-    rot_next_at: Mapped[datetime | None] = mapped_column(UTCDateTime, nullable=True)  # next global slot
-    rotation: Mapped[str] = mapped_column(String(8), default=RotationOrder.SEQUENTIAL, server_default="seq")
+    # 🕐 Default schedule: every new post with its own schedule starts with a copy of it.
+    freq: Mapped[dict[str, Any]] = mapped_column(JSON, default=lambda: dict(DEFAULT_FREQ))
     # 🛡 Anti-spam, per chat: at most N posts a day (bot timezone; 0 = no limit), at least N minutes between two
     # posts (0 = no minimum), and only one post of the network at a time (the previous one is deleted first).
     max_per_day: Mapped[int] = mapped_column(Integer, default=0, server_default="0")
@@ -289,7 +272,6 @@ class Chat(Base):
     # 🗄 Canal almacén (an own channel): it keeps the premium copies of the posts that the other channels receive as
     # forwards (Telegram doesn't let bots send custom emoji to channels); it receives nothing from the network.
     vault: Mapped[bool] = mapped_column(Boolean, default=False, server_default=sa_false())
-    rot_last_post_id: Mapped[int | None] = mapped_column(Integer, nullable=True)  # rotation: last post received
     posts_total: Mapped[int] = mapped_column(Integer, default=0)  # posts delivered in this chat
     last_post_at: Mapped[datetime | None] = mapped_column(UTCDateTime, nullable=True)
 
@@ -330,16 +312,13 @@ class Chat(Base):
 
 
 class ChatGroup(Base):
-    """🗂 A custom group of chats: a target for posts and, optionally, its own frequency."""
+    """🗂 A custom group of chats: a target for posts."""
 
     __tablename__ = "em_groups"
 
     id: Mapped[int] = mapped_column(Integer, primary_key=True, autoincrement=True)
     bot_id: Mapped[int] = mapped_column(ForeignKey("em_bots.id", ondelete="CASCADE"), index=True)
     name: Mapped[str] = mapped_column(String(64))
-    # None = the chats of the group follow the global frequency; a dict = its own frequency (see services/freq.py).
-    freq: Mapped[dict[str, Any] | None] = mapped_column(JSON, nullable=True)
-    rot_next_at: Mapped[datetime | None] = mapped_column(UTCDateTime, nullable=True)  # next slot (own freq only)
     # 🤝 Partners can join or leave it from their panel, and new external chats join it automatically.
     open: Mapped[bool] = mapped_column(Boolean, default=False, server_default=sa_false())
     sort: Mapped[int] = mapped_column(Integer, default=0)
@@ -384,7 +363,7 @@ class Post(Base):
     targets: Mapped[list[str]] = mapped_column(JSON, default=lambda: ["all"])
 
     # --- schedule ---
-    mode: Mapped[str] = mapped_column(String(16), default=SchedMode.ROTATION)
+    mode: Mapped[str] = mapped_column(String(16), default=SchedMode.OWN)
     freq: Mapped[dict[str, Any] | None] = mapped_column(JSON, nullable=True)  # mode "own"
     send_at: Mapped[datetime | None] = mapped_column(UTCDateTime, nullable=True)  # mode "once"
     starts_on: Mapped[date | None] = mapped_column(Date, nullable=True)  # 📆 campaign dates (bot timezone)
@@ -421,7 +400,7 @@ class Run(Base):
                                                 index=True)
     post_name: Mapped[str] = mapped_column(String(64), default="")
     kind: Mapped[str] = mapped_column(String(16), default=RunKind.MANUAL)
-    source: Mapped[str] = mapped_column(String(16), default="")  # rotation: "global" or "g<group id>"
+    source: Mapped[str] = mapped_column(String(16), default="")  # old rotation runs: "global" or "g<group id>"
     status: Mapped[str] = mapped_column(String(16), default=RunStatus.SENDING)
     total: Mapped[int] = mapped_column(Integer, default=0)
     sent: Mapped[int] = mapped_column(Integer, default=0)

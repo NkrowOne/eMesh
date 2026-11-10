@@ -10,7 +10,7 @@ from sqlalchemy import select, update
 from app.bot.routers.start import StCB, deep_link_target
 from app.db.base import utcnow
 from app.db.models import Chat, ChatOrigin, ChatStatus, Event, EventKind, Post, PostStatus, SchedMode
-from app.services import freq, limits
+from app.services import limits
 from app.services.chatinfo import add_to_channel_url, add_to_group_url
 from app.ui.callbacks import MenuCB
 from app.ui.fmt import dt
@@ -40,10 +40,10 @@ from tests.test_start_helpers import (
     url_of,
 )
 
-ADMIN_BUTTONS = ("Añadir canal o grupo", "Mensajes", "Canales", "Grupos de canales", "Frecuencias", "Estadísticas",
+ADMIN_BUTTONS = ("Añadir canal o grupo", "Mensajes", "Canales", "Grupos de canales", "Horarios", "Estadísticas",
                  "Actividad", "Pausar todo", "Ajustes", "Guía")
 NETWORK_SCREENS = {"📝 Mensajes": "posts", "📣 Canales": "chats", "🗂 Grupos de canales": "groups",
-                   "⏰ Frecuencias": "freqs", "📊 Estadísticas": "stats", "📜 Actividad": "activity",
+                   "⏰ Horarios": "freqs", "📊 Estadísticas": "stats", "📜 Actividad": "activity",
                    "⚙️ Ajustes": "settings", "📖 Guía": "guide"}
 ADD_CHAT = ("➕ <b>Añadir canal o grupo</b>\n\n"
             "1. Pulsa ➕ <b>Añadir canal</b> o ➕ <b>Añadir grupo</b> y elige el tuyo.\n"
@@ -119,7 +119,7 @@ async def test_owner_home_of_an_empty_network(app: App) -> None:
     assert text.startswith("🕸 <b>Tu red de distribución</b>\n\n📣 Canales y grupos: <b>0</b>\n"
                            "   └ Añade el bot a tus canales y grupos con ➕ <b>Añadir canal o grupo</b>.\n"
                            "📝 Mensajes activos: <b>0</b>\n   └ Crea el primero en 📝 Mensajes.\n"
-                           "⏰ Frecuencia global: a las 12:00\n📅 Próximo turno: <b>")
+                           "📅 Próximo envío: <b>—</b>")
     for absent in ("Estado", "Pausados por su dueño", "Solicitudes pendientes", "Sin permisos", "está pausada"):
         assert absent not in text
     for label in (*ADMIN_BUTTONS, "Crear mi bot", "Panel"):
@@ -133,7 +133,7 @@ async def test_owner_home_of_an_empty_network(app: App) -> None:
     assert callback_of(app, SUPER_ID, "Panel") == MenuCB(screen="panel").pack()
     assert callback_of(app, SUPER_ID, "Pausar todo") == StCB(action="pause").pack()
     assert button_rows(app, SUPER_ID) == [
-        ["➕ Añadir canal o grupo"], ["📝 Mensajes", "📣 Canales"], ["🗂 Grupos de canales", "⏰ Frecuencias"],
+        ["➕ Añadir canal o grupo"], ["📝 Mensajes", "📣 Canales"], ["🗂 Grupos de canales", "⏰ Horarios"],
         ["📊 Estadísticas", "📜 Actividad"], ["⏸ Pausar todo"], ["⚙️ Ajustes", "📖 Guía"], ["🤖 Crear mi bot"],
         ["👑 Panel"],
     ]
@@ -189,15 +189,13 @@ async def test_admin_home_summarizes_the_network(app: App) -> None:
     await add_post(app, name="Promo Series")
     await add_post(app, name="Pausado", status=PostStatus.PAUSED)
     slot = datetime(2030, 1, 15, 10, 0, tzinfo=timezone.utc)
-    async with edit_bot(app) as rec:
-        rec.freq = {"mode": "interval", "every": 180, "window": "08:00-23:00", "days": "0123456"}
-        rec.rot_next_at = slot
+    async with app.db() as s:
+        await s.execute(update(Post).where(Post.name == "Promo Series").values(next_send_at=slot))
     await app.send(SUPER_ID, "/start")
     text = app.last_text(SUPER_ID)
     assert ("📣 Canales y grupos: <b>4</b> (👤 2,000)\n   └ 🏠 Propios: 2 · 🤝 Externos: 2\n"
             "📊 Estado: ✅ 2 reciben · ⏸ 1 pausado · ⚠️ 1 sin permisos · ⏳ 1 pendiente\n"
-            "📝 Mensajes activos: <b>2</b>\n⏰ Frecuencia global: cada 3 h · 08:00-23:00\n"
-            f"📅 Próximo turno: <b>{dt(slot, 'Europe/Madrid')}</b>\n"
+            f"📝 Mensajes activos: <b>2</b>\n📅 Próximo envío: <b>{dt(slot, 'Europe/Madrid')}</b>\n"
             "⏸ Pausados por su dueño: <b>1</b>\n⏳ Solicitudes pendientes: <b>1</b>\n⚠️ Sin permisos: <b>1</b>") in text
     assert "Añade el bot" not in text and "Crea el primero" not in text
     assert ["⏳ Solicitudes (1)", "⏸ Pausados (1)"] in button_rows(app, SUPER_ID)
@@ -253,19 +251,7 @@ async def test_status_line_with_only_pending_chats(app: App) -> None:
     assert "📊 Status: ✅ 0 receiving · ⏸ 0 paused · ⚠️ 0 missing rights · ⏳ 2 pending" in app.last_text(778)
 
 
-async def test_next_turn_is_computed_when_missing_or_past(app: App) -> None:
-    times = {"mode": "times", "times": "10:00", "days": "0123456"}
-    for stored in (None, utcnow() - timedelta(hours=5)):
-        async with edit_bot(app) as rec:
-            rec.freq = times
-            rec.rot_next_at = stored
-        await app.send(SUPER_ID, "/start")
-        expected = freq.next_slot(times, "Europe/Madrid", utcnow())
-        assert f"📅 Próximo turno: <b>{dt(expected, 'Europe/Madrid')}</b>" in app.last_text(SUPER_ID)
-        assert "10:00 AM" in dt(expected, "Europe/Madrid")
-
-
-async def test_home_without_rotation_shows_the_next_send_of_the_posts(app: App) -> None:
+async def test_home_shows_the_next_send_of_the_posts(app: App) -> None:
     now = utcnow()
     soon, later = now + timedelta(hours=2), now + timedelta(days=1)
     paused = await add_post(app, name="Pausado", mode=SchedMode.OWN, status=PostStatus.PAUSED)
@@ -277,42 +263,25 @@ async def test_home_without_rotation_shows_the_next_send_of_the_posts(app: App) 
     async with app.db() as s:
         for post_id, when in sends:
             (await s.get(Post, post_id)).next_send_at = when
-    async with edit_bot(app) as rec:
-        rec.rotation = "off"
     await app.send(SUPER_ID, "/start")
     text = app.last_text(SUPER_ID)
-    assert ("📝 Mensajes activos: <b>3</b>\n🔁 Sin rotación: cada mensaje se envía con su propio horario\n"
-            f"📅 Próximo envío: <b>{dt(soon, 'Europe/Madrid')}</b>") in text
-    assert "Frecuencia global" not in text and "Próximo turno" not in text
+    assert f"📝 Mensajes activos: <b>3</b>\n📅 Próximo envío: <b>{dt(soon, 'Europe/Madrid')}</b>" in text
+    assert "Frecuencia" not in text and "Próximo turno" not in text and "rotación" not in text
     app.fake.add_user(778, "Eng", "eng", lang="en")
     await make_admin(app, 778)
     await app.send(778, "/start")
-    assert ("🔁 No rotation: each post goes out on its own schedule\n"
-            f"📅 Next send: <b>{dt(soon, 'Europe/Madrid')}</b>") in app.last_text(778)
-
-    async with app.db() as s:
-        await s.execute(update(Post).where(Post.bot_id == MAIN_BOT_ID).values(next_send_at=None))
-    await app.send(SUPER_ID, "/start")
-    assert "🔁 Sin rotación: cada mensaje se envía con su propio horario\n📅 Próximo envío: <b>—</b>" in (
-        app.last_text(SUPER_ID))
+    assert f"📅 Next send: <b>{dt(soon, 'Europe/Madrid')}</b>" in app.last_text(778)
     async with edit_bot(app) as rec:
         rec.paused = True
     await app.send(SUPER_ID, "/start")
     text = app.last_text(SUPER_ID)
-    assert "🔁 Sin rotación" in text and "Próximo envío" not in text and "está pausada" in text
-
-    async with edit_bot(app) as rec:
-        rec.paused, rec.rotation, rec.rot_next_at = False, "seq", soon
-    await app.send(SUPER_ID, "/start")
-    text = app.last_text(SUPER_ID)
-    assert f"⏰ Frecuencia global: a las 12:00\n📅 Próximo turno: <b>{dt(soon, 'Europe/Madrid')}</b>" in text
-    assert "Sin rotación" not in text and "Próximo envío" not in text
+    assert "Próximo envío" not in text and "está pausada" in text
 
 
 async def test_home_buttons_open_the_screens_of_other_modules(app: App, stub_screens: list) -> None:  # noqa: F811
     await add_chat_row(app, status=ChatStatus.PENDING)
     await add_chat_row(app, origin=ChatOrigin.EXTERNAL, owner_paused=True)
-    expected = {"Mensajes": "posts", "📣 Canales": "chats", "Grupos de canales": "groups", "Frecuencias": "freqs",
+    expected = {"Mensajes": "posts", "📣 Canales": "chats", "Grupos de canales": "groups", "Horarios": "freqs",
                 "Solicitudes": "requests", "Pausados (": "paused", "Crear mi bot": "clone", "Panel": "panel"}
     for label, name in expected.items():
         await app.send(SUPER_ID, "/start")
@@ -595,7 +564,7 @@ async def test_pause_and_resume_the_whole_network(app: App) -> None:
     assert last_answer(app)["text"] == "⏸ Distribución pausada: no se enviará nada hasta que la reanudes."
     text = app.last_text(SUPER_ID)
     assert text.endswith("\n\n⏸ <b>La distribución está pausada.</b> No se envía nada hasta que la reanudes.")
-    assert "Próximo turno" not in text
+    assert "Próximo envío" not in text
     resume = button_of(app, SUPER_ID, "Reanudar todo")
     assert resume["style"] == "success" and resume["callback_data"] == StCB(action="resume").pack()
     assert not has_button(app, SUPER_ID, "Pausar todo")
@@ -607,7 +576,7 @@ async def test_pause_and_resume_the_whole_network(app: App) -> None:
     await app.click(SUPER_ID, "Reanudar todo")
     assert not (await get_bot(app)).paused
     assert last_answer(app)["text"] == "▶️ Distribución reanudada."
-    assert "Próximo turno" in app.last_text(SUPER_ID) and has_button(app, SUPER_ID, "Pausar todo")
+    assert "Próximo envío" in app.last_text(SUPER_ID) and has_button(app, SUPER_ID, "Pausar todo")
     async with app.db() as s:
         rows = (await s.execute(select(Event).where(Event.bot_id == MAIN_BOT_ID).order_by(Event.id))).scalars().all()
     assert [(e.kind, e.actor_id) for e in rows] == [(EventKind.BOT_PAUSED, SUPER_ID), (EventKind.BOT_RESUMED, SUPER_ID)]
@@ -705,13 +674,14 @@ async def test_guide_describes_the_real_features(app: App) -> None:
     from app.i18n import t
 
     admin = " ".join(t(f"guide.admin.{i}", "es") for i in range(1, 6))
-    for feature in ("Pausar todo", "Añadir canal o grupo", "Canales externos", "&amp;&amp;", "copiar:", "rotación",
-                    "Sin rotación", "horario propio", "Anti-spam", "uno a la vez", "/admin @usuario", "/deladmin",
+    for feature in ("Pausar todo", "Añadir canal o grupo", "Canales externos", "&amp;&amp;", "copiar:", "a sus horas",
+                    "horario por defecto", "Anti-spam", "uno a la vez", "/admin @usuario", "/deladmin",
                     "Mis avisos", "Zona horaria", "Estadísticas", "Crear mi bot", "48 h", "Asistente de configuración",
                     "las pausas de los socios"):
         assert feature in admin, feature
     admin_en = " ".join(t(f"guide.admin.{i}", "en") for i in range(1, 6))
     assert "Importar" not in admin and "Import" not in admin_en  # there is no import any more
+    assert "rotación" not in admin and "rotation" not in admin_en  # there is no rotation any more
     assert "Add channel or group" in admin_en
     # The partners pause within the admins' rules, and the admins can resume any pause.
     pauses = t("guide.admin.2", "es")

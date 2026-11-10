@@ -1,34 +1,27 @@
 STRINGS = {
     # --- 🗂 groups of chats (groups.py) ---
-    "gr.title": "🗂 <b>Grupos de canales</b>\nAgrupa canales y grupos para enviarles mensajes concretos y darles su "
-                "propia frecuencia.",
+    "gr.title": "🗂 <b>Grupos de canales</b>\nAgrupa canales y grupos para enviarles mensajes concretos.",
     "gr.empty": "📭 Todavía no hay ningún grupo de canales. Crea el primero con ➕.",
-    "gr.item": "{n}. 🗂 <b>{name}</b> · 📣 {chats} · {freq}{open}",
-    "gr.item_own": "⏰ {freq}",
+    "gr.item": "{n}. 🗂 <b>{name}</b> · 📣 {chats}{open}",
     "gr.item_open": " · 🤝",
-    "gr.legend": "📣 chats · ⏰ frecuencia propia · 🌐 sigue la global · 🤝 abierto a externos",
+    "gr.legend": "📣 chats · 🤝 abierto a externos",
     "gr.b.group": "🗂 {name}",
     "gr.b.new": "➕ Nuevo grupo de canales",
     "gr.limit": "🔒 Esta red ya tiene el máximo de grupos de canales ({max}). Elimina alguno que ya no uses "
                 "para crear otro.",
     "gr.new.prompt": "🗂 <b>Nuevo grupo de canales</b>\n\nEscribe su nombre (máximo {max} caracteres), por ejemplo "
-                     "<i>Cine</i> o <i>Noticias</i>.\n💡 Después se eligen sus chats y, si se quiere, su propia "
-                     "frecuencia.",
+                     "<i>Cine</i> o <i>Noticias</i>.\n💡 Después se eligen sus chats.",
     "gr.rename.prompt": "✏️ <b>Nombre del grupo de canales</b>\n\n🗂 Ahora: <b>{name}</b>\n\nEscribe el nuevo nombre "
                         "(máximo {max} caracteres).",
     "gr.err.name": "⚠️ Escribe el nombre como texto.",
     "gr.created": "✅ Grupo de canales <b>{name}</b> creado. Elige sus chats:",
     "gr.d.title": "🗂 <b>{name}</b>",
     "gr.d.chats": "📣 Chats: <b>{n}</b> (👤 {members})",
-    "gr.d.freq_own": "⏰ Frecuencia: {freq} (propia)",
-    "gr.d.freq_global": "⏰ Frecuencia: 🌐 la global ({freq})",
-    "gr.d.next": "📅 Próximo turno: {when}",
     "gr.d.posts": "📝 Mensajes que lo usan: <b>{n}</b>",
     "gr.d.open": "🤝 Abierto a externos: {value}",
     "gr.d.open_hint": "   └ Los canales externos pueden unirse o salir desde su panel, y los nuevos entran solos.",
     "gr.d.closed_hint": "   └ Solo los admins eligen sus chats.",
     "gr.b.chats": "📣 Elegir chats",
-    "gr.b.freq": "⏰ Frecuencia",
     "gr.b.open": "🤝 Abierto a externos",
     "gr.b.rename": "✏️ Nombre",
     "gr.b.delete": "🗑 Eliminar",
@@ -38,7 +31,6 @@ STRINGS = {
     "gr.del.posts_1": "📝 Lo usa <b>1</b> mensaje: dejará de tenerlo como destino.",
     "gr.del.orphans": "⚠️ Se quedarán sin destino y no se enviarán hasta que se les elija otro: {names}",
     "gr.del.more": " y {n} más",
-    "gr.del.freq": "⏰ Sus chats pasarán a seguir la frecuencia global (o la de otro de sus grupos de canales).",
     "gr.b.del_yes": "🗑 Sí, eliminar",
     "gr.deleted": "🗑 Grupo de canales eliminado",
     "gr.c.title": "📣 <b>Chats de 🗂 {name}</b>\n✅ En el grupo de canales: <b>{n}</b> de {total}\n"
@@ -54,54 +46,22 @@ STRINGS = {
     "gr.c.removed": "✖️ Quitado: {title}",
     "gr.c.added_n": "✅ Chats añadidos: {n}",
     "gr.c.removed_n": "✖️ Chats quitados: {n}",
-    # --- ⏰ frequencies: dashboard (freqs.py) ---
-    "fq.title": "⏰ <b>Frecuencias</b>\nCada canal recibe un mensaje en cada turno de su frecuencia; los mensajes en "
-                "rotación se van turnando.",
-    "fq.title_off": "⏰ <b>Frecuencias</b>\nSin rotación: cada mensaje se envía con su propio horario.",
+    # --- ⏰ schedules: dashboard (freqs.py) ---
+    "fq.title": "⏰ <b>Horarios</b>\nCada mensaje se envía a sus propias horas (📝 Mensajes › ⏰ Programación).",
     "fq.paused": "⏸ <b>La distribución está pausada.</b> No se envía nada hasta que se reanude.",
-    "fq.global": "🌐 <b>Global</b>: {freq}",
-    "fq.group": "🗂 <b>{name}</b>: {freq}",
-    "fq.group_global": "🗂 <b>{name}</b>: 🌐 la global",
-    "fq.stats": "   └ {chats} · ≈ {per_day} al día · próximo: {next}",
-    "fq.chats": "{n} chats",
-    "fq.chats_1": "1 chat",
-    "fq.source_tip": "💡 Un canal sigue la frecuencia del primero de sus grupos de canales (en este orden) que tenga "
-                     "una propia; si no, la global.",
-    "fq.source_hint": "   └ Un canal sigue la frecuencia del primero de sus grupos de canales que tenga una propia; "
-                      "si no, la global.",
-    "fq.no_groups": "💡 Para dar a unos chats su propia frecuencia, crea un 🗂 grupo de canales.",
-    "fq.own_posts": "⏰ Mensajes con su propio horario: <b>{n}</b>",
-    "fq.own_posts_hint": "   └ Van a todo su destino en cada turno de su horario, fuera de la rotación "
-                         "(📝 Mensajes › ⏰ Programación).",
-    "fq.rotation": "🔁 Rotación: <b>{value}</b>",
-    "fq.rot.seq": "en orden",
-    "fq.rot.random": "al azar",
-    "fq.rot.off": "desactivada",
-    "fq.rot_hint.seq": "   └ Cada canal recibe los mensajes uno tras otro, del más antiguo al más nuevo.",
-    "fq.rot_hint.random": "   └ Cada canal recibe uno al azar, sin repetir el último.",
-    "fq.rot_hint.off": "   └ No hay turnos: cada mensaje se envía a sus propias horas (📝 Mensajes › ⏰ Programación).",
-    "fq.rot_off.posts": "⚠️ {n} mensajes 🔁 en rotación no se envían mientras esté desactivada.",
-    "fq.rot_off.posts.1": "⚠️ {n} mensaje 🔁 en rotación no se envía mientras esté desactivada.",
+    "fq.default": "🕐 Horario por defecto: <b>{freq}</b>",
+    "fq.default_hint": "   └ Cada mensaje nuevo empieza con este horario; luego se cambia en el suyo.",
+    "fq.scheduled": "⏰ Mensajes programados: <b>{n}</b>",
     "fq.antispam": "🛡 Anti-spam: {value}",
-    "fq.global_short": "🌐 la global",
-    "fq.b.global": "🌐 Global: {freq}",
-    "fq.b.group": "🗂 {name}: {freq}",
-    "fq.b.seq": "🔀 En orden",
-    "fq.b.random": "🎲 Al azar",
-    "fq.b.off": "🚫 Sin rotación",
+    "fq.b.default": "🕐 Horario por defecto: {freq}",
     "fq.b.antispam": "🛡 Anti-spam",
-    # --- ⏰ frequency editor ---
-    "fq.e.global": "⏰ <b>Frecuencia</b> · 🌐 Global",
-    "fq.e.group": "⏰ <b>Frecuencia</b> · 🗂 {name}",
+    # --- ⏰ schedule editor ---
+    "fq.e.default": "🕐 <b>Horario por defecto</b>",
+    "fq.e.default_hint": "   └ Cada mensaje nuevo empieza con este horario.",
     "fq.e.post": "⏰ <b>Frecuencia</b> · 📝 {name}",
-    "fq.e.followers": "📣 La siguen: <b>{chats}</b>",
-    "fq.e.global_who": "   └ Los chats que reciben mensajes y no están en ningún grupo de canales con frecuencia "
-                       "propia.",
-    "fq.e.post_hint": "📝 En cada turno se envía a todo su destino, fuera de la rotación.",
-    "fq.e.post_unused": "ℹ️ Ahora este mensaje no se envía con su propio horario: esta frecuencia se usará cuando se "
-                        "elija ⏰ Con su propio horario en su programación.",
-    "fq.e.uses_global": "🌐 Sigue la frecuencia global: <b>{freq}</b>",
-    "fq.e.uses_global_hint": "   └ Para darle una propia, desmarca «Usar la global».",
+    "fq.e.post_hint": "📝 A cada hora de su horario se envía a todo su destino.",
+    "fq.e.post_unused": "ℹ️ Ahora este mensaje no se envía con su propio horario: este horario se usará cuando se "
+                        "elija ⏰ A sus horas en su programación.",
     "fq.e.every": "🔁 Cada: <b>{every}</b>",
     "fq.e.times": "🕐 A las: <b>{times}</b>",
     "fq.e.window": "🕐 Horario: {window}",
@@ -110,8 +70,6 @@ STRINGS = {
     "fq.e.next": "📅 Próximos: {slots}",
     "fq.e.per_day": "≈ <b>{n}</b> envíos al día por chat",
     "fq.e.tz": "🗺 Zona horaria: {tz}",
-    "fq.e.rot_off": "⚠️ La rotación está desactivada: esta frecuencia no envía nada ahora.",
-    "fq.b.use_global": "🌐 Usar la global: {freq}",
     "fq.b.interval": "⏱ Cada cierto tiempo",
     "fq.b.times": "🕐 A horas fijas",
     "fq.b.every_other": "✏️ Otro intervalo",
@@ -124,12 +82,10 @@ STRINGS = {
     "fq.b.all_day": "Todo el día",
     "fq.saved": "✅ Guardado: {freq}",
     "fq.need_day": "⚠️ Elige al menos un día.",
-    "fq.own_on": "✅ Ahora tiene su propia frecuencia (una copia de la global).",
-    "fq.own_off": "🌐 Ahora sigue la frecuencia global.",
-    "fq.p.every": "✏️ <b>Otro intervalo</b>\n\nEscribe cada cuánto toca un turno, entre 10 minutos y 24 horas. Por "
+    "fq.p.every": "✏️ <b>Otro intervalo</b>\n\nEscribe cada cuánto se envía, entre 10 minutos y 24 horas. Por "
                   "ejemplo: <code>45 min</code>, <code>2 h</code> o <code>1 h 30 min</code>.\n\n🔁 Ahora: "
                   "<b>{current}</b>",
-    "fq.p.window": "🕐 <b>Horario activo</b>\n\nLos turnos solo caen dentro de este horario. Escríbelo así: "
+    "fq.p.window": "🕐 <b>Horario activo</b>\n\nSolo se envía dentro de este horario. Escríbelo así: "
                    "<code>08:00-23:00</code> (puede pasar de la medianoche: <code>20:00-02:00</code>). Envía "
                    "<code>0</code> para todo el día.\n\n🕐 Ahora: <b>{current}</b>\n\n👇 O elige uno:",
     "fq.p.times": "🕐 <b>Horas fijas</b>\n\nEscribe a qué horas se envía, separadas por comas (hasta 24). Por "

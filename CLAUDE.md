@@ -6,8 +6,8 @@
 
 **Repository**: eMesh
 **What**: Telegram message distribution network. An owner adds the bot to their channels/groups (and optionally lets
-partners add theirs), writes posts (text/media + colored buttons) and the bot publishes them on a schedule:
-a global frequency or one per group of chats, posts taking turns (rotation). Partners can pause the distribution in
+partners add theirs), writes posts (text/media + colored buttons) and the bot publishes each one at its own times
+(there is no rotation; new posts start with the network's default schedule). Partners can pause the distribution in
 their chats; the owner is alerted. One process runs the main bot (platform: clones + 👑 panel) plus every clone.
 **Stack**: Python 3.12+, aiogram 3.31 (Bot API 10.3), SQLAlchemy 2.1 async (PostgreSQL / SQLite in tests), Alembic,
 pydantic-settings.

@@ -2,8 +2,8 @@
 
 eMesh is a Telegram **distribution network** platform. An owner adds their bot to their channels and groups (and,
 if they want, lets other people add theirs: *partners*), writes **posts** (text or media with colored buttons) and
-the bot publishes them into the chats on a schedule. **Frequencies** say how often each chat receives a post: one
-global frequency, or a custom one per **group of chats**. Posts in *rotation* take turns in each chat. Partners can
+the bot publishes them into the chats on a schedule. Each post has its own **schedule** (hours and days; ⏰ «A sus
+horas», 📢 once or ✋ manual) and goes to its whole audience: all the chats, or some **groups of chats**. Partners can
 **pause** the distribution in their chats whenever they want; the owner is alerted and sees it in their panel.
 One process runs the **main bot** (the platform: creates clones, 👑 panel, and its own network) plus any number of
 **clones** (bots of other owners, each one with its own network). A super admin controls every clone from the main
@@ -19,7 +19,7 @@ Vocabulary (code → UI, Spanish):
 |---|---|---|
 | `Bot` | bot / red | a bot run by the platform; its *network* = its chats, groups, posts and settings |
 | `Chat` | 📣 Canal / 👥 Grupo | a channel or group of a bot. `origin` own (🏠 Propio) or ext (🤝 Externo, a partner's) |
-| `ChatGroup` | 🗂 Grupo de canales | custom set of chats: a target for posts and, optionally, its own frequency |
+| `ChatGroup` | 🗂 Grupo de canales | custom set of chats: a target for posts (no schedule of its own) |
 | `Post` | 📝 Mensaje | content + buttons + targets + schedule + options |
 | `Run` | envío | one distribution of a post to a set of chats |
 | `Delivery` | — | the post inside one chat (Telegram message id, auto delete) |
@@ -94,7 +94,7 @@ never confused with a Telegram group (👥).
 | File | What |
 |---|---|
 | `app/config.py` | `Settings`: `super_admin_ids`, `MAIN_BOT_MODE` (`full`/`hub`), `EBUTTONS_DATABASE_URL` (eButtons' database to reuse the timezones chosen there; empty = eMesh's own, the tables are prefixed `em_` / `eb_` so both can share one), `SCHEDULER_TICK_SECONDS`, `LATE_SKIP_MINUTES`, `SEND_CONCURRENCY`, `MAINTENANCE_INTERVAL_HOURS`, `SUMMARY_HOUR`, `RETENTION_DAYS`, `CLONE_POLICY`, `MAX_CLONES_PER_USER`, `DEFAULT_LIMIT_CHATS/POSTS`. |
-| `app/db/models.py` | All tables + constants (`BotStatus`, `Role`, `ChatOrigin`, `ChatStatus`, `PostStatus`, `SchedMode`, `RotationOrder`, `RunKind`, `RunStatus`, `DeliveryStatus`, `EventKind`, `DEFAULT_FREQ`). `Chat.owner_pause_active(now)`, `Chat.is_paused(now)`, `Chat.is_external`, `display_title`. |
+| `app/db/models.py` | All tables + constants (`BotStatus`, `Role`, `ChatOrigin`, `ChatStatus`, `PostStatus`, `SchedMode` (`own` / `once` / `manual`: there is no rotation), `RunKind` (`ROTATION` only for old runs), `RunStatus`, `DeliveryStatus`, `EventKind`, `DEFAULT_FREQ`). `Chat.owner_pause_active(now)`, `Chat.is_paused(now)`, `Chat.is_external`, `display_title`. |
 | `app/db/session.py` | `session_scope(sm)`, `LeaderLock`. `app/db/base.py`: `utcnow()`. |
 | `app/telegram/manager.py` | `BotManager`: `get(bot_id) -> Bot`, `main_bot`, `main_bot_id`, `main_bot_ids`, `add_bot(token, owner_id, managed=, pending=)`, `validate_token`, `stop_bot(bot_id, withdraw=)`, `disable_bot(bot_id, reason)` (deletes pending auto deletes first through `Publisher.withdraw_bot`), `enable_bot`, `is_running`, `on_bot_invalid` callbacks, `cipher`, `BotTokenError(code)`: format/unauthorized/network/not_bot/is_main/taken. |
 | `app/telegram/ratelimit.py`, `context.py`, `errors.py` | Rate limits per bot (global 27/s, bulk 20/s LOW priority, 1/s per private chat, 19/min per group/channel, 429/5xx retries); `set_low_priority()`, `bot_scope()`; error classifiers `is_not_modified`, `is_message_gone`, `is_cant_delete`, `is_chat_gone`, `is_user_blocked`, `is_rights_error`, `is_parse_error`, `is_topic_error`, `is_button_error`, `is_outcome_unknown`, `migrated_to`, `short`. |
@@ -108,14 +108,14 @@ never confused with a Telegram group (👥).
 | `app/services/chatinfo.py` | `add_to_channel_url(username)`, `add_to_group_url(username)` (rights pre-selected: channels post+edit+delete, groups delete+pin), `inspect_chat(bot, chat)`, `check_access(bot, chat)`, `missing_rights`, `apply_rights(chat, member)`, `chat_type_of`, `REQUIRED_CHANNEL/GROUP`. |
 | `app/services/chatstate.py` | `mark_left(bot, session, ws_rec, chat)` (a conditional update: only an approved or pending chat becomes left, never a banned one; it closes its request notices), `mark_rights(bot, session, ws_rec, chat, missing)`, `rights_restored(...)`, `refresh(bot, session, ws_rec, chat) -> RefreshResult` (title, members, rights; gone → left), `rights_text(missing, lang)`, `kind_word(chat, lang)`. They log events, alert admins and DM partners. |
 | `app/services/events.py` | `emit(bot, session, ws_rec, kind, chat=, actor_id=, data=, notify=, skip_user=, markup=)` stores an `Event` and alerts the owner + admins with 🔔 alerts on (defaults per kind: `ALERT_KINDS`); `describe(session, ev, lang, tz)` one entry for 📜 Actividad; `recent(session, bot_id, limit=, offset=, chat_pk=, kinds=)`. Data conventions: pause `{"by": "owner"|"admin", "until": iso|None}`, resume `{"by": "owner"|"admin"|"auto"}`, removed `{"by": "owner"|"admin"}`. |
-| `app/services/freq.py` | Frequencies (dict in JSON): `normalize`, `next_slot(freq, tz, after)`, `upcoming(freq, tz, after, n)`, `per_day`, `refresh_bot(ws_rec, now)`, `refresh_group(group, tz, now)`, `refresh_post(post, tz, now)`, `in_dates(post, tz, now)`, `ended`, parsers `parse_every` / `parse_times` / `parse_window` / `parse_date` / `parse_datetime` (ValueError with an i18n key), `describe(freq, lang)`, `every_text`, `days_text`, `times_text`, `join_list`, `day_times(freq)` (the (h, m) of a
+| `app/services/freq.py` | Schedules ("frequencies", dict in JSON: `Post.freq`; `Bot.freq` is the default one new posts copy): `normalize`, `next_slot(freq, tz, after)`, `upcoming(freq, tz, after, n)`, `per_day`, `refresh_post(post, tz, now)`, `in_dates(post, tz, now)`, `ended`, parsers `parse_every` / `parse_times` / `parse_window` / `parse_date` / `parse_datetime` (ValueError with an i18n key), `describe(freq, lang)`, `every_text`, `days_text`, `times_text`, `join_list`, `day_times(freq)` (the (h, m) of a
 day's slots), `EVERY_CHOICES`, `MIN_EVERY`, `MAX_EVERY`. |
-| `app/services/audience.py` | Targets tokens (`all`, `own`, `ext`, `g<id>`): `split_targets`, `make_targets`, `group_token`, `targets_chat`, `is_sendable`, `sendable_chats`, `bot_chats`, `bot_groups`, `memberships`, `chat_group_ids`, `group_chat_pks`, `group_counts`, `set_member(session, group_id, chat_pk, on)`, `join_open_groups`, `leave_all_groups`, `audience(session, post, sendable_only=)`, `audience_size`, `targets_size`, `source_of`, `chat_source`, `chats_of_source`, `source_counts`, `source_key`, `rotation_posts`, `rotation_pool`, `next_in_rotation`, `plan_slot`. |
+| `app/services/audience.py` | Targets tokens (`all`, `own`, `ext`, `g<id>`): `split_targets`, `make_targets`, `group_token`, `targets_chat`, `is_sendable`, `sendable_chats`, `bot_chats`, `bot_groups`, `memberships`, `chat_group_ids`, `group_chat_pks`, `group_counts`, `set_member(session, group_id, chat_pk, on)`, `join_open_groups`, `leave_all_groups`, `audience(session, post, sendable_only=)`, `audience_size`, `targets_size`. |
 | `app/services/content.py` | Post content: `from_message(message) -> Content | None`, `content_error(c)` (i18n key), `apply(post, content, bot_id)` (**bot_id = the bot that received the message**, `ctx.bot_id`), `default_name`, `kind_label`, `plain`, buttons `parse_buttons(text)` (ButtonsError key/line; pass `marked_text(message)` to keep premium emoji as icons), `label_of`, `button_label`, `format_buttons`, `button_line`, `clean_rows`, `count_buttons`, `build_markup(rows, icons=)`, `make_button(b, icons=)`, `COLORS`, `COLOR_EMOJI`, `MAX_BUTTONS`, `MAX_PER_ROW`; premium `has_premium`, `custom_emoji_in`, `signature`, `vault_copy`, `forward_copy`; sending `media_for(bot, post, manager)` (MediaError too_big/unavailable), `deliver(bot, chat_id, post, media=, reply_markup=, silent=, protect=, premium=, on_plain=)`, `send_post(bot, chat_id, post, manager, sm)` (one-off: previews), `edit_delivery(bot, chat_id, message_id, post)`, `file_id_of`, `remember_media(sm, post_id, bot_id, file_id)`. |
 | `app/services/limits.py` | Platform settings (KV `platform:settings`): `platform(session, settings) -> Platform(clone_policy, max_clones, limit_chats, limit_posts)`, `save_platform`; per bot `max_chats`, `max_posts`, `count_chats`, `count_posts`, `can_add_chat`, `can_add_post`, `unlimited`. |
 | `app/services/stats.py` | `summary(session, bot_id, hours=24) -> Summary` (chats own/external/members/sendable/pending/owner_paused/admin_paused/no_rights, groups, posts, runs/sent/failed/skipped/reach, top_posts), `chat_received(session, chat_pk, days=7)`. |
 | `app/ui/photos.py` | `show_with_photo(event, ctx, session, name, text, markup)`: `show` with a platform image (`brand.BOT` / `brand.TZ`) on top; edits only the caption while the pressed panel already is that photo, uploads it once to a bot without its own file id (then remembers it), leaves out a photo Telegram refuses. |
-| `app/services/brand.py` | 🖼 Platform images chosen by a super admin (KV `platform:photo:<name>` = `{"<bot id>": "<file id>"}`, file ids are per bot): `BOT` (profile photo of the main bots, given to the clones without a photo of their own) and `TZ` (photo of the 🗺 timezone picker, every bot). `photo_ids`, `has_photo`, `set_photo`, `clear_photo`, `photo_for(session, bot, name, manager)` (own file id or a downloaded upload) + `remember(..., source=source_of(photo))`, `fetch_one`, `fetch`, `set_profile_photo`, `set_main_photos`, `give_to_clone` / `give_to_clones` (background, `spawn`). |
+| `app/services/brand.py` | 🖼 Platform images chosen by a super admin (KV `platform:photo:<name>` = `{"<bot id>": "<file id>"}`, file ids are per bot): `BOT` (the photo on top of the home of the main bots and, for their admins, of the clones; it changes no profile photo) and `TZ` (photo of the 🗺 timezone picker, every bot). `photo_ids`, `has_photo`, `set_photo`, `clear_photo`, `photo_for(session, bot, name, manager)` (own file id or a downloaded upload) + `remember(..., source=source_of(photo))`, `fetch_one`, `fetch`. **Profile photo of the clones**: always the bundled square logo `app/assets/clone_avatar.jpg` (`AVATAR_FILE`, `avatar()` -> bytes + marker `asset:<sha1>`); `current_photo`, `set_profile_photo`, `give_to_clone(manager, sm, bot_id)` (`set` / `same` / `own` / `none` / `failed`; KV `photo:bot:<id>` = `{uid, src}` remembers what was given), `give_to_running_clones` (at startup), `spawn` (background). |
 | `app/services/blast.py` | `copy_to_users(bot, sm, from_chat_id, message_id, user_ids, on_progress=) -> BlastResult(sent, failed, blocked)` (background, low priority). |
 | `app/services/kv.py` | `get`, `put`, `delete` JSON values. |
 | `app/services/moderation.py` | `check_chat(session, title, username, description) -> word | None` (platform blocked words: abuse of minors, non consensual content). |
@@ -124,7 +124,7 @@ day's slots), `EVERY_CHOICES`, `MIN_EVERY`, `MAX_EVERY`. |
 
 Roles: **super admin** (`SUPER_ADMIN_IDS`, owner rights in every bot + 👑 panel in the main bots), **owner**
 (`bots.owner_id`), **admin** (`bot_users.role == "admin"`, promoted with `/admin @user`), **user** (partners and
-visitors). Times: frequencies and dates are in the workspace timezone (`ctx.bot_tz`); dates are displayed with
+visitors). Times: schedules and dates are in the workspace timezone (`ctx.bot_tz`); dates are displayed with
 `ctx.tz` using `fmt.dt()`.
 
 ---------------------------------------------------------------------------------------------------
@@ -145,7 +145,7 @@ visitors). Times: frequencies and dates are in the workspace timezone (`ctx.bot_
 * Disabled buttons (Bot API 10.3, `btn(..., disabled=True)`) for "done" states (a decided request).
 * Status icons of chats: ✅ recibe mensajes, ⏸ pausado, ⏳ pendiente, ⚠️ faltan permisos, 🚪 fuera (left),
   ❌ rechazado, 🚫 bloqueado. Origin: 🏠 propio, 🤝 externo. Posts: ▶️ activo, ⏸ pausado, ✅ terminado; modes
-  🔁 rotación, ⏰ horario propio, 📆 una vez, ✋ manual.
+  ⏰ a sus horas, 📢 puntual, ✋ manual.
 
 ---------------------------------------------------------------------------------------------------
 ## 4. How the distribution works (all modules must describe it the same way)
@@ -156,23 +156,20 @@ visitors). Times: frequencies and dates are in the workspace timezone (`ctx.bot_
   the announced auto deletes still happen.
 * **Targets of a post** (`Post.targets`): `all` (🌐 Todos), `own` (🏠 Solo propios), `ext` (🤝 Solo externos),
   `g<id>` (🗂 a group of chats). Several may be combined (union). An empty list targets nobody (show ⚠️).
-* **Frequencies**: the global one (`Bot.freq`, 🌐; a new network starts with once a day at 12:00, `DEFAULT_FREQ`)
-  and a group's own one (`ChatGroup.freq`, None = the chats follow the global one). A chat follows the frequency of the first of its groups (by `sort`, then id) that has its own
-  frequency, otherwise the global one: that is its **source**. Every slot of a source, each sendable chat following
-  it receives **one** post: the next of its **rotation** (the active rotation posts that target it, inside their
-  campaign dates, in order of creation — or random when `Bot.rotation == "random"`; never the same twice in a row
-  when there are more). `Chat.rot_last_post_id` remembers the last one. UI text: «Cada canal recibe un mensaje en
-  cada turno de su frecuencia; los mensajes en rotación se van turnando.»
-* **Rotation on or off** (`Bot.rotation`: `seq` en orden, `random` al azar, `off` sin rotación; `rotation_on()` in
-  models). Asked in the setup wizard (step 3) and changed in ⏰ Frecuencias. With `off` there is **no pool**: the
-  global and groups' slots still move on (`rot_next_at`, nothing stale when it is turned on again) but send nothing,
-  and every post goes out on its own schedule (⏰ own, 📢 once, ✋ manual). «🔁 En rotación» is not offered for new
-  posts nor in ⏰ Programación; posts already in rotation are kept as they are, **unsent** (never converted), with a
-  warning in the list, the detail and ⏰ Programación, until their mode changes or the rotation is on again.
-* **Schedule modes of a post** (`Post.mode`): 🔁 `rotation` (default, above), ⏰ `own` (its own frequency
-  `Post.freq`: at each of its slots it goes to its whole audience, outside the rotation), 📢 `once` («Difusión
-  puntual»: `Post.send_at`, right now or a date, then status `done`), ✋ `manual` (only with 🚀 Enviar ahora). Campaign dates (`starts_on`, `ends_on`, optional,
-  bot timezone) limit rotation and own posts; after `ends_on` the post becomes `done`.
+* **Schedule of a post** (`Post.mode`, `SchedMode`): there is no rotation, no pool and no turns: every post goes out
+  on its own, always to its **whole audience** (`audience.audience(post)`), never one post per chat.
+  ⏰ `own` («A sus horas», the default): its own schedule `Post.freq` (a frequency dict: every N minutes inside an
+  active window, or fixed times; on chosen weekdays); at each of its slots it goes to every sendable chat of its
+  targets. 📢 `once` («Difusión puntual»: `Post.send_at`, right now or a date, then status `done`). ✋ `manual` (only
+  with 🚀 Enviar ahora). Campaign dates (`starts_on`, `ends_on`, optional, bot timezone) limit ⏰ own posts; after
+  `ends_on` the post becomes `done`. `Post.next_send_at` is its next slot (`freq.refresh_post`).
+* **🕐 Horario por defecto** (`Bot.freq`; a new network starts with once a day at 12:00, `DEFAULT_FREQ`): it sends
+  nothing by itself. It is the schedule every new ⏰ post starts with: the post gets a **copy** (`Post.freq`), so
+  changing the default later never moves the posts that already exist. Set in the setup wizard (step 3) and in
+  ⏰ Horarios. A group of chats (`ChatGroup`) has no schedule: it is only a target.
+* **Old data**: migration `0004_no_rotation` turned the rotation posts into ⏰ own posts with a copy of `Bot.freq` and
+  dropped `Bot.rotation`, `Bot.rot_next_at`, `ChatGroup.freq`, `ChatGroup.rot_next_at` and `Chat.rot_last_post_id`.
+  `RunKind.ROTATION` (and `Run.source`) stay only to read old runs.
 * **💎 Premium (custom) emoji**: bots may use them only in private chats, groups and supergroups when the bot's
   owner has Telegram Premium (or anywhere when the bot has a username bought on Fragment). Posts keep them in the
   text (`<tg-emoji>`) and as button icons (a premium emoji at the start of a button name → `icon` + `emoji`);
@@ -186,7 +183,7 @@ visitors). Times: frequencies and dates are in the workspace timezone (`ctx.bot_
   the prepared message), puts the buttons back if they didn't come (`editMessageReplyMarkup`), links it, deletes
   the previous copy and tells the admin. A copy made from other content (`content.signature`: text, buttons,
   media, link preview, caption above, spoiler) is out of date and not used; 🔄 Actualizar publicados replaces the
-  channel copies (send the new one, delete the old) because a forward can't be edited.
+  channel copies (delete the old one, send the new one) because a forward can't be edited.
 * **🛡 Anti-spam** (per bot, applies to every automatic run and to 🚀 Enviar ahora): at most `max_per_day` posts per
   chat per day (bot timezone), at least `min_gap` minutes between two posts in a chat, `one_at_a_time` (the previous
   post of the network in that chat is deleted before sending a new one). Chats left out are counted as skipped.
@@ -219,16 +216,16 @@ Screen names (owner module in brackets): `home`, `guide`, `settings`, `notificat
 `group`, `group_chats`, `freqs`, `freq_edit`, `antispam` [groups]; `clone`, `mybots`, `panel`, `panel_bots`,
 `panel_bot`, `panel_settings`, `panel_photo`, `panel_blast` [clones].
 
-`freq_edit` arg: `0` = global frequency, `+N` = group N, `-N` = post N (own frequency). Its back button returns to
-`freqs`, `group` (arg N) or `post_sched` (arg N).
+`freq_edit` arg: `0` = the default schedule (`Bot.freq`), `-N` = post N (its own schedule). Its back button returns
+to `freqs` or `post_sched` (arg N). Groups of chats have no schedule, so there is no `+N`.
 
 Deep links (`/start <payload>`, start module): `join` → `join`; `c<pk>` → `chat` (admins) or `my_chat` (partners);
 `p<id>` → `post` (admins); `clone` → `clone`; anything else → `home`.
 
 ### 5.1 Home (start) — `home`
-🖼 The bot image (`brand.BOT`, 👑 › 🖼 Imagen del bot) goes on top of the home (a photo with the text as caption,
-`ui.photos.show_with_photo`): in a main bot for everyone, in a clone for its admins (its visitors see the owner's
-welcome alone). A button on that photo only edits its caption.
+🖼 The bot image (`brand.BOT`, 👑 Panel › 🖼 Imagen del bot) goes on top of the home (a photo with the text as
+caption, `ui.photos.show_with_photo`): in a main bot for everyone, in a clone for its admins (its visitors see the
+owner's welcome alone). A button on that photo only edits its caption. It is only this photo: no profile photo changes.
 Admin view (admins of the network, and a super admin managing a clone):
 ```
 🕸 <b>Tu red de distribución</b>
@@ -236,15 +233,15 @@ Admin view (admins of the network, and a super admin managing a clone):
 📣 Canales y grupos: <b>12</b> (👤 45,320)
    └ 🏠 8 propios · 🤝 4 externos
 📝 Mensajes activos: <b>5</b>
-⏰ Frecuencia global: cada 4 h · 08:00-23:00      (without rotation: «🔁 Sin rotación: cada mensaje se envía con
-📅 Próximo turno: <b>07/11/2026 11:00 AM</b>        su propio horario» + «📅 Próximo envío»: the first post's)
+📅 Próximo envío: <b>07/11/2026 11:00 AM</b>        (earliest `next_send_at` of the active posts; — if none;
+                                                    not shown while the network is paused)
 ⏸ Pausados por su dueño: <b>2</b>          (only when > 0)
 ⏳ Solicitudes pendientes: <b>1</b>        (only when > 0)
 ⚠️ Sin permisos: <b>1</b>                  (only when > 0)
 ⏸ <b>La distribución está pausada.</b> No se envía nada hasta que la reanudes.   (Bot.paused)
 ```
 Buttons: first `[➕ Añadir canal o grupo]` (success, when the network's bot has a username; screen `add_chat`), then
-`[📝 Mensajes][📣 Canales]`, `[🗂 Grupos de canales][⏰ Frecuencias]`, `[📊 Estadísticas][📜 Actividad]`,
+`[📝 Mensajes][📣 Canales]`, `[🗂 Grupos de canales][⏰ Horarios]`, `[📊 Estadísticas][📜 Actividad]`,
 `[⏳ Solicitudes (N)]` / `[⏸ Pausados (N)]` (only when > 0, screens `requests` / `paused`), `[⏸ Pausar todo]` /
 `[▶️ Reanudar todo]` (success) (`StCB` toggles `Bot.paused`, `events.emit(BOT_PAUSED/BOT_RESUMED)`),
 `[⚙️ Ajustes][📖 Guía]`, main bot: `[🤖 Crear mi bot]` (screen `clone`) and `[🤖 Mis bots (N)]` (`mybots`, when
@@ -301,28 +298,25 @@ Step by step, one question per screen, the current value pre-selected (✅), `[�
 2. Only when they are accepted: «⏸ <b>¿Pueden pausar la distribución en sus canales?</b>» (└ «Tú siempre ves quién
    pausa y puedes reanudarlo.») `[Hasta 1 día]`, `[Hasta 3 días]`, `[Hasta 7 días]`, `[Sin límite]`,
    `[🚫 No pueden pausar]` → `partners_can_pause` / `pause_max_hours`.
-3. «🔁 <b>¿Quieres que los mensajes se turnen?</b>», explained with an example of each («🔁 Con rotación: los
-   mensajes forman una cola… └ Ej.: mensajes A, B y C a las 10:00 y 18:00 → hoy A y B, mañana C y A…», «🕐 Sin
-   rotación: no hay cola. Cada mensaje tiene su propio horario… └ Ej.: A a las 10:00 y B a las 18:00»):
-   `[🔁 Sí, en orden]` (the default), `[🎲 Sí, al azar]`, `[🕐 No, cada mensaje con su horario]` → `Bot.rotation`.
-4. Only with rotation: «⏰ <b>¿A qué horas recibe un mensaje cada canal?</b>» + «🕐 <b>3 al día</b>: 09:00, 14:00 y 20:00», «📅 Días:
-   …», «└ Hora de <zone>…». Not a single choice: every change is saved at once (`Bot.freq` + `freq.refresh_bot` +
-   wake the scheduler) and the step is shown again, until `[Continuar ➡️]` (success). Quick options (they set the
-   hours, the days stay) `[1 al día][2 al día][3 al día]` `[4 al día][Cada 2 h][Cada hora]` (12:00 the default;
-   10/20; 9/14/20; 9/13/17/21; every 2 h / every hour from 08:00 to 22:00), then the 24 hours `[00]…[23]` 6 per row
-   (`✅ 09` when it has a time in that hour: a touch unticks all its times or adds `HH:00`; an interval becomes fixed
-   times; never fewer than 1 or more than 24), `[Todos][L-V][S-D]` (the days), `[✏️ Escribir otras horas (9:30…)]`
-   (`freq.parse_times`, the days stay). A frequency made in ⏰ Frecuencias shows its hours ticked: `Continuar` keeps
-   it.
-5. «🗑 <b>¿Cuánto tiempo siguen publicados los mensajes?</b>» `[1 h][6 h][12 h][1 día][2 días]`,
+3. «⏰ <b>¿A qué horas se publican tus mensajes?</b>» (the **default schedule**, `Bot.freq`: the hours every new
+   ⏰ post starts with; each post can change its own later) + «🕐 <b>3 al día</b>: 09:00, 14:00 y 20:00», «📅 Días:
+   …», «└ Hora de <zone>…». Not a single choice: every change is saved at once (`Bot.freq`, a new dict) and the step is
+   shown again, until `[Continuar ➡️]` (success). Quick options (they set the hours, the days stay)
+   `[1 al día][2 al día][3 al día]` `[4 al día][Cada 2 h][Cada hora]` (12:00 the default; 10/20; 9/14/20; 9/13/17/21;
+   every 2 h / every hour from 08:00 to 22:00), then the 24 hours `[00]…[23]` 6 per row (`✅ 09` when it has a time in
+   that hour: a touch unticks all its times or adds `HH:00`; an interval becomes fixed times; never fewer than 1 or
+   more than 24), `[Todos][L-V][S-D]` (the days), `[✏️ Escribir otras horas (9:30…)]` (`freq.parse_times`, the days
+   stay). A schedule made in ⏰ Horarios shows its hours ticked: `Continuar` keeps it.
+4. «🗑 <b>¿Cuánto tiempo siguen publicados los mensajes?</b>» `[1 h][6 h][12 h][1 día][2 días]`,
    `[♾ No se borran]` → `Bot.post_defaults["delete_after"]` (a new dict).
-6. «✅ <b>Todo listo</b>» + a summary of the answers (with «🔁 Rotación: …»; «⏰ Frecuencia global» only with rotation) + `[➕ Añadir canal ↗][➕ Añadir grupo ↗]`,
+5. «✅ <b>Todo listo</b>» + a summary of the answers (external chats, partners' pauses, «🕐 Horario por defecto: …»,
+   auto delete, timezone) + `[➕ Añadir canal ↗][➕ Añadir grupo ↗]`,
    `[📝 Crear el primer mensaje]` (`post_new`), `[🏠 Ir al inicio]`. `setup_done` becomes True.
 It can be run again from ⚙️ Ajustes › `[🧭 Asistente de configuración]` (owner).
 
 ### 5.2 Guide (start) — `guide` (arg = page)
-Admins: 5 short pages (1 Cómo funciona: red, canales, mensajes, grupos de canales, frecuencias; 2 Canales propios y
-externos, pausas; 3 Mensajes, botones con colores y opciones; 4 Frecuencias, rotación y anti-spam; 5 Clones, admins
+Admins: 5 short pages (1 Cómo funciona: red, canales, mensajes, horarios, grupos de canales; 2 Canales propios y
+externos, pausas; 3 Mensajes, botones con colores y opciones; 4 Horarios y anti-spam; 5 Clones, admins
 y ajustes). Partners: 2 pages (cómo unirse y permisos; pausar, categorías y salir). Hub: 2 pages (qué es eMesh;
 crear tu bot). Footer `📄 Página X de N`, `[⬅️ Anterior][Siguiente ➡️]`, `[🔙 Regresar]`.
 
@@ -354,7 +348,7 @@ owner-only (admins see them read only).
   `[🗑 #2 @x]` per admin (owner). The user must have started the bot.
 * `support` (owner): current contact + `[✏️ Cambiar contacto]` (`@user`, `t.me/user`) + `[↩️ Usar mi cuenta]`.
 * `lang` (per user `bu.lang`), `timezone` (admins: the bot's, `Bot.timezone` + `timezone_set`, then
-  `freq.refresh_bot` + refresh every group and own/once post; users: their own `bu.timezone`). The picker:
+  `freq.refresh_post` of every post; users: their own `bu.timezone`). The picker:
   `[🌎 América]` (→ América del Norte / Centroamérica y Caribe / América del Sur), `[🌍 Europa]`, `[🌏 Asia]`,
   `[🌍 África]`, `[🌏 Oceanía]`, `[✍️ Escribir zona]`; then country → zone. Super admins also see `[🖼 Poner imagen |
   Cambiar imagen][🗑 Quitar imagen]` (not in the onboarding nor the first-visit question): **one photo for the whole
@@ -385,31 +379,30 @@ owner-only (admins see them read only).
 Long lists never pass Telegram's limits: target and group names are summarised («Cine, Series +3», at most 2 names
 per row in lists and 10 in a detail, each cut to 30 characters) and the target picker shows at most 60 groups of
 chats (the chosen ones first).
-`posts` (arg page): «📝 <b>Mensajes</b>» + one line «🔁 rotación · ⏰ horario propio · 📆 una vez · ✋ manual», then
-per post `1. ▶️ 🔁 <b>Promo Cine</b> · 🖼` + `   └🎯 Todos · 📤 12 envíos` (or `📅 next send`). Active and paused
+`posts` (arg page): «📝 <b>Mensajes</b>» + one line «⏰ con horario · 📢 puntual · ✋ manual», then
+per post `1. ▶️ ⏰ <b>Promo Cine</b> · 🖼` + `   └🎯 Todos · 📤 12 envíos` (or `📅 next send`). Active and paused
 first, done last. Buttons: one per post (`#1 Promo Cine`, 2 per row), `[➕ Nuevo mensaje]` (success),
 `[⚙️ Opciones por defecto]` (`post_defaults`), nav, `[🔙]` → home. Limit: `limits.can_add_post` (alert when full).
 
 `post_new` — wizard (FSM, create the row only at the end; `[🔙 Regresar][❌ Cancelar]` from step 2):
-1. «📝 <b>Nuevo mensaje</b> · 1/4\n\nEnvía el mensaje tal como quieres que se publique: texto, foto, vídeo, GIF,
+1. «📝 <b>Nuevo mensaje</b> · 1/5\n\nEnvía el mensaje tal como quieres que se publique: texto, foto, vídeo, GIF,
    archivo, audio o nota de voz, con su formato (<b>negrita</b>, <i>cursiva</i>, enlaces, emojis). También puedes
    reenviarlo desde un canal.» `content.from_message` + `content_error`.
-2. «🔘 <b>Botones</b> · 2/4» with the syntax (`Nombre - https://enlace`, `&&` same row, color at the end
+2. «🔘 <b>Botones</b> · 2/5» with the syntax (`Nombre - https://enlace`, `&&` same row, color at the end
    🔵 🟢 🔴, `Código - copiar: PROMO10`) + `[⏭ Sin botones]`. `content.parse_buttons` (error → show it and ask again).
-3. «🎯 <b>¿A quién se envía?</b> · 3/4»: toggles `[🌐 Todos]` (selected by default), `[🏠 Solo propios]`,
+3. «🎯 <b>¿A quién se envía?</b> · 3/5»: toggles `[🌐 Todos]` (selected by default), `[🏠 Solo propios]`,
    `[🤝 Solo externos]`, one per group of chats `[🗂 Cine (5)]`, live count «👥 Lo recibirán: 23 chats · 👤 45,320»
    (`audience.targets_size`), `[✅ Continuar]` (needs a target).
-4. «⏰ <b>¿Cuándo se envía?</b> · 4/5»: `[🔁 En rotación]` (└ «Se turna con los demás mensajes según
-   la frecuencia de cada canal (global: 1 al día a las 12:00).»; not offered without rotation, nor in
-   ⏰ Programación, where an old button gets «⚠️ La rotación está desactivada…»), `[⏰ Con su propio horario]`,
-   `[📢 Difusión puntual]` (still step 4: `[🚀 Ahora mismo]` — created with `send_at` = now, the scheduler sends it
-   once at once — or a typed date: `freq.parse_datetime`), `[✋ Solo cuando lo envíe yo]`.
+4. «⏰ <b>¿Cuándo se envía?</b> · 4/5» (each option explained with a `└` line): `[⏰ A sus horas]` (└ «Se envía a
+   todo su destino a cada hora de su horario (empieza con el horario por defecto: …).»), `[📢 Difusión puntual]`
+   (still step 4: `[🚀 Ahora mismo]` — created with `send_at` = now, the scheduler sends it once at once — or a
+   typed date: `freq.parse_datetime`), `[✋ Solo cuando lo envíe yo]`.
 5. «🗑 <b>¿Cuánto tiempo sigue publicado?</b> · 5/5» (└ «Pasado ese tiempo se borra solo de los canales.»):
    `[1 h][3 h][6 h][12 h][1 día][2 días]`, `[♾ No borrar]`, the default of the network pre-selected
-   (`Bot.post_defaults["delete_after"]`, else `DEFAULT_DELETE_AFTER`: no borrar). Steps 1-3 say «· 1/5» … «· 3/5».
+   (`Bot.post_defaults["delete_after"]`, else `DEFAULT_DELETE_AFTER`: no borrar).
 Then: create the `Post` (`apply` content with `ctx.bot_id`, `name = default_name`, `ws.post_defaults`, `targets`,
-`mode`; own mode starts with a copy of the global frequency), `freq.refresh_post`, `scheduler.wake()`, show «✅
-Mensaje guardado» + the `post` detail; own mode opens `freq_edit` (arg -id) right away.
+`mode`; own mode starts with a copy of the default schedule `Bot.freq`), `freq.refresh_post`, `scheduler.wake()`,
+show «✅ Mensaje guardado» + the `post` detail; own mode opens `freq_edit` (arg -id) right away.
 
 `post` (arg id):
 ```
@@ -417,8 +410,8 @@ Mensaje guardado» + the `post` detail; own mode opens `freq_edit` (arg -id) rig
 📌 Estado: ▶️ Activo
 🧩 Tipo: 🖼 Foto · 🔘 3 botones
 🎯 Destino: 🌐 Todos → 23 chats (👤 45,320)
-⏰ Envío: 🔁 En rotación
-   └ Cada canal lo recibe por turnos según su frecuencia.
+⏰ Envío: ⏰ Horario propio · cada 4 h
+   └ A cada hora de su horario se envía a todos sus chats.
 📅 Próximo envío: <b>07/11/2026 08:00 PM</b>          (own / once)
 📆 Campaña: del 01/11/2026 al 30/11/2026              (when set)
 📤 Enviado: 12 veces · 340 entregas · último 07/11/2026 10:00 AM
@@ -450,7 +443,8 @@ callback that opens its editor (`PbCB`), then `[➕ Añadir botón]`, `[✍️ E
 `[🗑 Quitar botón]`, `[🔙]`. «✍️ Escribirlos todos»: current buttons in a `<pre>` (`format_buttons`) + syntax help;
 the input replaces them. Max `content.MAX_BUTTONS`, `MAX_PER_ROW`.
 `post_targets` (arg id): same toggles and count as wizard step 3, saved at once; at least one target; `[🔙]`.
-`post_sched` (arg id): mode choice rows with a `└` line each; `[⏰ Horario propio: cada 3 h]` → `freq_edit` arg -id;
+`post_sched` (arg id): mode choice rows (⏰ A sus horas / 📢 Difusión puntual / ✋ Solo cuando lo envíe yo) with a
+`└` line each; `[⏰ Horario propio: cada 3 h]` → `freq_edit` arg -id;
 `[📆 Fecha: 07/11 20:00]` → date input; campaign `[📆 Desde: —][📆 Hasta: —]` (input `dd/mm/aaaa`, `0` clears);
 `[🔙]` → `post`. Every change → `freq.refresh_post` + `scheduler.wake()`.
 `post_opts` (arg id): toggles `📌 Fijar`, `🔕 Sin sonido`, `🛡 Proteger contenido`, `🔗 Vista previa de enlaces`
@@ -483,7 +477,6 @@ choice `[Nunca][1 h][3 h][6 h][12 h][1 día][2 días]` + `[✏️ Otro]` (input,
 📌 Estado: ✅ Recibe mensajes | ⏸ Pausado por su dueño hasta 08/11/2026 10:00 AM | ⏸ Pausado por un admin |
            ⏳ Pendiente de aprobación | ⚠️ Faltan permisos: publicar mensajes
 🗂 Grupos de canales: Cine, Estrenos
-⏰ Frecuencia: cada 2 h (🗂 Cine) | 🌐 la global (cada 4 h)
 📨 Recibidos: 120 · últimos 7 días: 14
 🕐 Último: 07/11/2026 10:00 AM
 ```
@@ -554,62 +547,52 @@ Partners (`partners.py`):
   the admins are alerted; toast «⏸ Pausado. Se ha avisado a la administración.». Resuming: event `chat_resumed`
   (by owner). The scheduler ends expired pauses by itself (event by `auto`).
 
-### 5.7 Groups of chats & frequencies (groups module)
-`groups` (arg page): «🗂 <b>Grupos de canales</b>\nAgrupa canales y grupos para enviarles mensajes concretos y darles
-su propia frecuencia.» + `1. 🗂 <b>Cine</b> · 📣 5 · ⏰ cada 2 h · 🤝` per group; one button per group,
+### 5.7 Groups of chats & schedules (groups module)
+`groups` (arg page): «🗂 <b>Grupos de canales</b>\nAgrupa canales y grupos para enviarles mensajes concretos.» +
+`1. 🗂 <b>Cine</b> · 📣 5 · 🤝` per group (legend «📣 chats · 🤝 abierto a externos»); one button per group,
 `[➕ Nuevo grupo de canales]` (name prompt ≤ 64, then `group_chats`; at most 50 groups of chats per network), `[🔙]`
 → home.
 `group` (arg id):
 ```
 🗂 <b>Cine</b>
 📣 Chats: <b>5</b> (👤 23,000)
-⏰ Frecuencia: cada 2 h · 08:00-23:00 (propia) | 🌐 la global (cada 4 h)
-📅 Próximo turno: 07/11/2026 12:00 PM
 📝 Mensajes que lo usan: 3
 🤝 Abierto a externos: ✅
    └ Los canales externos pueden unirse o salir desde su panel, y los nuevos entran solos.
 ```
-`[📣 Elegir chats]` (`group_chats`), `[⏰ Frecuencia]` (`freq_edit` +id), `[🤝 Abierto a externos]` (toggle),
-`[✏️ Nombre]`, `[🗑 Eliminar]` (confirm: the posts that targeted it lose that target; a post left with no target is
-named in the confirmation), `[🔙]` → `groups`.
+A group of chats is only a **target** of posts: it has no schedule of its own.
+`[📣 Elegir chats]` (`group_chats`), `[🤝 Abierto a externos]` (toggle), `[✏️ Nombre]`, `[🗑 Eliminar]` (confirm: the
+posts that targeted it lose that target; a post left with no target is named in the confirmation), `[🔙]` → `groups`.
 `group_chats` (arg id): the network's chats (approved and pending) with `✅`/`⚪` toggles, 10 per page,
 `[✅ Todos][✖️ Ninguno]`, `[🔙]` → `group`.
-`freqs` («⏰ Frecuencias», the place to manage every frequency at once):
+`freqs` («⏰ Horarios», freqs module; the default schedule and the anti-spam):
 ```
-⏰ <b>Frecuencias</b>
-Cada canal recibe un mensaje en cada turno de su frecuencia; los mensajes en rotación se van turnando.
+⏰ <b>Horarios</b>
+Cada mensaje se envía a sus propias horas (📝 Mensajes › ⏰ Programación).
 
-🌐 <b>Global</b>: cada 4 h · 08:00-23:00
-   └ 9 chats · ≈ 6 al día · próximo: 11:00
-🗂 <b>Cine</b>: cada 2 h
-   └ 5 chats · ≈ 8 al día · próximo: 12:00
-🗂 <b>Noticias</b>: 🌐 la global
-⏰ Mensajes con su propio horario: 2
-
-🔀 Orden de la rotación: en orden
+🕐 Horario por defecto: <b>cada 4 h · 08:00-23:00</b>
+   └ Cada mensaje nuevo empieza con este horario; luego se cambia en el suyo.
+⏰ Mensajes programados: <b>2</b>
 🛡 Anti-spam: máx. 6 al día · 30 min entre mensajes · 🧹 uno a la vez ✖️
 ```
-`[🌐 Global: cada 4 h]` (`freq_edit` 0), one button per group `[🗂 Cine: cada 2 h]`,
-`[🔀 En orden][🎲 Al azar][🚫 Sin rotación]` (`Bot.rotation`; the line reads «🔁 Rotación: en orden | al azar |
-desactivada» + its hint), `[🛡 Anti-spam]`, `[🔙]` → home.
-Without rotation the title says «Sin rotación: cada mensaje se envía con su propio horario.», the global and groups'
-lines and buttons are not shown (they send nothing), and «⚠️ N mensajes 🔁 en rotación no se envían mientras esté
-desactivada.» when there are any; `freq_edit` of the global frequency or a group adds «⚠️ La rotación está
-desactivada: esta frecuencia no envía nada ahora.».
-`freq_edit` (arg 0 / +group / -post):
+«⏸ La distribución está pausada…» under the title while `Bot.paused`. «Mensajes programados» = active posts in ⏰ own
+or 📢 once mode. `[🕐 Horario por defecto: cada 4 h]` (`freq_edit` 0), `[🛡 Anti-spam]`, `[🔙]` → home.
+`freq_edit` (arg 0 = the default schedule / -post = that post's own schedule):
 ```
-⏰ <b>Frecuencia</b> · 🌐 Global | 🗂 Cine | 📝 Promo Cine
+🕐 <b>Horario por defecto</b> | ⏰ <b>Frecuencia</b> · 📝 Promo Cine
+   └ Cada mensaje nuevo empieza con este horario. | 📝 A cada hora de su horario se envía a todo su destino.
 🔁 Cada: <b>3 h</b> | 🕐 A las: <b>10:00, 14:00 y 22:00</b>
 🕐 Horario: 08:00-23:00 | todo el día                (interval mode)
 🔄 Días: todos los días
 📅 Próximos: 07/11 11:00 AM, 02:00 PM, 05:00 PM
 ≈ 6 envíos al día por chat
+🗺 Zona horaria: Europe/Madrid
 ```
-Group: `[✅ 🌐 Usar la global]` choice first (on → `freq = None`, the rest hidden). Mode choice
+A post whose mode is not ⏰ own adds «ℹ️ Ahora este mensaje no se envía con su propio horario…». Mode choice
 `[⏱ Cada cierto tiempo][🕐 A horas fijas]`; interval: quick choices `freq.EVERY_CHOICES`
 (`[30 min][1 h][2 h]…[24 h]`, 3 per row) + `[✏️ Otro intervalo]` + `[🕐 Horario activo]` (input, `0` = all day);
 times: `[✏️ Escribir las horas]`; days: `[L][M][X][J][V][S][D]` toggles + `[Todos][L-V][S-D]`; `[🔙]`. Every change:
-`normalize`, store (new dict), `freq.refresh_bot/group/post`, `scheduler.wake()`.
+`normalize`, store a new dict (`Bot.freq`, or `Post.freq` + `freq.refresh_post` and `scheduler.wake()`).
 `antispam`: three settings with a `└` line each: `📊 Máximo al día por chat` (choice `[Sin límite][2][4][6][8][12]`
 + `✏️`), `⏱ Separación mínima` (`[Ninguna][15 min][30 min][1 h][2 h]` + `✏️`), `[🧹 Uno a la vez]` toggle;
 `[🔙]` → `freqs`.
@@ -639,16 +622,21 @@ Managed bot update (`managed_bot`, main bot): `getManagedBotToken` → `connect_
 `[🤖 Clones]` (`panel_bots`) `[⏳ Pendientes (N)]`, `[⚙️ Plataforma]` (`panel_settings`) `[🖼 Imagen del bot]`
 (`panel_photo`), `[📢 Aviso a los dueños]` (`panel_blast`: copy a message to the owners of clones through the main
 bot, `blast.copy_to_users`) `[📄 Errores]` (logbook as a .txt document), `[🔙]`.
-`panel_photo` («🖼 Imagen del bot», `brand.BOT`): the image on top of the home (above) and the profile photo of the
-main bots; the image is shown on top of the panel. «Sale arriba del mensaje de inicio de @main y es su foto de
-perfil. └ Los clones también la llevan: en el inicio de sus admins y como foto de perfil, si no tienen una propia.» `[🖼 Poner imagen | Cambiar imagen]` → prompt for a photo (only
-photos; not readable → asked again) → `brand.set_main_photos` at once (Telegram refuses it → its error, nothing
-stored) → `brand.set_photo` → a background job (`give_to_clones`, after the previous job if one is still running)
-gives it to every running clone without a photo of its own and DMs the report to the super admin («Clones
-actualizados: N · Con foto propia (no se cambian): M»). No delete button. A clone gets the image (`panel.give_image`,
-background) when it starts running: connected with a token or Managed Bots, approved, or enabled / resumed again;
-`brand.give_to_clone` skips a clone whose owner put another photo and never uploads the same image twice. The clone
-screen says «🖼 Tu bot se crea con la imagen de la plataforma…» while there is an image and a new bot can be created.
+`panel_photo` («🖼 Imagen del bot», `brand.BOT`; the image is shown on top of the panel): only the photo on top of the
+home (section 5.1) of @main and, in the clones, of their admins. It changes **no profile photo**. «Sale arriba del
+mensaje de inicio de @main y, en los clones, arriba del inicio de sus admins. └ No cambia ninguna foto de perfil: la
+de los clones es siempre el logo de eMesh.» `[🖼 Poner imagen | Cambiar imagen]` → prompt for a photo (only photos; not
+readable → asked again) → `brand.set_photo` (stored once `brand.fetch_one` can read it) → the panel again with
+«✅ Imagen puesta.». No delete button.
+**Profile photo of every clone** = the bundled square logo `app/assets/clone_avatar.jpg` (`brand.avatar()`), whatever
+the bot image is. `brand.give_to_clone` sets it (`set_my_profile_photo`) unless the owner put a photo of their own;
+it is run in the background (`brand.spawn`): by `panel.give_avatar` when a clone starts running (connected with a token
+or Managed Bots and active, approved, or enabled / resumed again, in the `clone` and `panel_bot` modules) and, for
+every running clone, at startup (`brand.give_to_running_clones` from `app/main.py`, cancelled on shutdown). KV
+`photo:bot:<id>` = `{uid, src}` (`file_unique_id` read back, `asset:<sha1>` of the logo given): no photo
+or one we gave before (an older logo, the old platform image) → replaced when `src` differs; the same logo → nothing
+is uploaded again; another photo → kept (`own`). The `clone` screen says «🖼 Tu bot se crea con el logo de eMesh como
+foto; puedes cambiarla cuando quieras en @BotFather.» while a new bot can be created.
 `panel_bots` (arg page; filter all/active/paused/pending/invalid; `[🔎 Buscar]` by @username or id):
 `1. ✅ @clon_bot · 👤 @owner\n   └📣 12 · 📝 5 · ⏸ 2`. `panel_bot` (arg bot id):
 ```
@@ -658,7 +646,7 @@ screen says «🖼 Tu bot se crea con la imagen de la plataforma…» while ther
 📅 Creado: 01/11/2026
 📣 Chats: 12 (🏠 8 · 🤝 4) · 👤 45,320
 ⏸ Pausados por su dueño: 2 · ⏳ Pendientes: 1
-📝 Mensajes activos: 5 · ⏰ cada 4 h
+📝 Mensajes activos: 5 · 🕐 cada 4 h        (its default schedule)
 📤 Últimas 24 h: 12 envíos · 340 entregas · 3 fallos
 🔒 Límites: 50 chats · 20 mensajes | sin límites
 ```
@@ -687,8 +675,7 @@ default), `[💬 Escribir al dueño]` (prompt → DM via the main bot), `[📜 A
      per run; a file uploaded to a new bot is
      remembered with `content.remember_media` and its file id reused for the next chats).
   4. Success: `sent`, `message_id`, `sent_at`, `delete_at = sent_at + delete_after` (None when 0); pin when
-     `post.pin` (silently; `pinned=True`); chat `posts_total += 1`, `last_post_at`; rotation runs also set
-     `chat.rot_last_post_id = post.id`.
+     `post.pin` (silently; `pinned=True`); chat `posts_total += 1`, `last_post_at`.
   5. Errors: chat gone (`is_chat_gone`, confirmed with `getChatMember` like eButtons: a 403 is final) →
      `chatstate.mark_left`; rights (`is_rights_error`, `is_topic_error`) → `chatstate.mark_rights`; migrated →
      update `chat_id` and retry once; `is_outcome_unknown` → `unknown` (never sent twice); `MediaError` → the whole
@@ -712,21 +699,22 @@ default), `[💬 Escribir al dueño]` (prompt → DM via the main bot), `[📜 A
 * **Scheduler** (`start/stop/wake/tick`, tick every `SCHEDULER_TICK_SECONDS`, each bot in its own task so one slow
   bot never delays the others, `bot_scope(bot_id)`, low priority): for every running bot that runs a network (not a
   hub main bot) and isn't `paused`:
-  1. Global slot due (`rot_next_at <= now`): if more than `LATE_SKIP_MINUTES` late, skip it; else
-     `audience.plan_slot(source=None)` → one `run(kind=rotation, source="global")` per post (nothing when
-     `Bot.rotation == "off"`). Then `freq.refresh_bot`. A missing `rot_next_at` is just computed.
-  2. The same for every group with its own frequency (`source="g<id>"`, `freq.refresh_group`).
-  3. Own / once posts with `next_send_at <= now` (late → skip and refresh) → `run(kind=schedule|once)` to
-     `audience.audience(post)`; then `freq.refresh_post` (once → `done` after its run). Posts past `ends_on` → `done`.
-  4. `publisher.delete_due()` (also for paused bots: announced deletions always happen).
-  5. Owner pauses that expired → clear them, `events.emit(CHAT_RESUMED, data={"by": "auto"})` and DM the partner
+  1. Half-done runs: every few minutes `publisher.resume_bot` (runs left `sending` by a task that died go on, or are
+     closed when too old). Nothing is sent per slot of a global or group frequency.
+  2. Posts: ⏰ campaigns past `ends_on` → `done`; active own / once posts without `next_send_at` get it
+     (`freq.refresh_post`); those with `next_send_at <= now` (more than `LATE_SKIP_MINUTES` late → skipped and
+     refreshed; being sent right now → next tick) are claimed first (next time stored, a once post becomes `done`) and
+     then `run(kind=schedule|once)` to `audience.audience(post)` one after another (their audiences overlap and the
+     anti-spam sees each run before the next).
+  3. `publisher.delete_due()` (also for paused bots: announced deletions always happen).
+  4. Owner pauses that expired → clear them, `events.emit(CHAT_RESUMED, data={"by": "auto"})` and DM the partner
      «▶️ La pausa de tu canal X ha terminado: vuelve a recibir los mensajes de la red.».
-  6. Every `MAINTENANCE_INTERVAL_HOURS` (KV `maint:<bot_id>`): `chatstate.refresh` of every approved and pending
+  5. Every `MAINTENANCE_INTERVAL_HOURS` (KV `maint:<bot_id>`): `chatstate.refresh` of every approved and pending
      chat (a pending chat that got its rights is not approved here: the chats module does it on the next update or
      button).
-  7. Once a day after `SUMMARY_HOUR` (bot timezone, KV `summary:<bot_id>:<date>`): the daily summary to the admins
+  6. Once a day after `SUMMARY_HOUR` (bot timezone, KV `summary:<bot_id>:<date>`): the daily summary to the admins
      with `summary` on (yesterday's runs / deliveries / failures / reach, paused, pending, without rights).
-  8. Once a day: delete runs (and deliveries) and events older than `RETENTION_DAYS` (deliveries waiting for their
+  7. Once a day: delete runs (and deliveries) and events older than `RETENTION_DAYS` (deliveries waiting for their
      auto delete are kept).
   Survives restarts: everything is in the database.
 

@@ -41,6 +41,20 @@ BUTTONS = ("Web - https://example.com 🟢\n"
            "Canal - @micanal && Grupo - t.me/migrupo 🔴\n"
            "Código - copiar: PROMO10 🔵")
 STEP_5 = "🗑 <b>¿Cuánto tiempo sigue publicado?</b> · 5/5\n   └ Pasado ese tiempo se borra solo de los canales."
+MODE_BUTTONS = ["⏰ A sus horas", "📢 Difusión puntual", "✋ Solo cuando lo envíe yo"]
+
+
+def step_4(default: str) -> str:
+    """Step 4 (⏰ ¿Cuándo se envía?) with the default schedule of the network."""
+    return (
+        "⏰ <b>¿Cuándo se envía?</b> · 4/5\n\n"
+        "⏰ <b>A sus horas</b>\n"
+        f"   └ Se envía a todo su destino a cada hora de su horario (empieza con el horario por defecto: {default}).\n"
+        "📢 <b>Difusión puntual</b>\n"
+        "   └ Se envía una sola vez a todo su destino: ahora mismo o en la fecha que elijas.\n"
+        "✋ <b>Solo cuando lo envíes</b>\n"
+        "   └ Únicamente con 🚀 Enviar ahora."
+    )
 
 
 async def start_wizard(app: App, user_id: int = SUPER_ID, bot_id: int = MAIN_BOT_ID) -> None:
@@ -118,11 +132,9 @@ async def test_wizard_text_post_with_colored_buttons_and_defaults(app: App, engi
     assert "👇 Usa los botones de abajo." in app.last_text(SUPER_ID)
     await app.click(SUPER_ID, "Continuar")
 
-    text = app.last_text(SUPER_ID)
-    assert "⏰ <b>¿Cuándo se envía?</b> · 4/5" in text and "(global: a las 12:00)" in text
-    assert button_texts(app)[:4] == ["🔁 En rotación", "⏰ Con su propio horario", "📢 Difusión puntual",
-                                     "✋ Solo cuando lo envíe yo"]
-    await app.click(SUPER_ID, "En rotación")
+    assert app.last_text(SUPER_ID) == step_4("a las 12:00")
+    assert button_texts(app) == [*MODE_BUTTONS, "🔙 Regresar", "❌ Cancelar"]
+    await app.click(SUPER_ID, "Solo cuando lo envíe yo")
 
     assert app.last_text(SUPER_ID) == STEP_5  # the network's default is pre-selected
     assert button_texts(app) == ["⚪ 1 h", "⚪ 3 h", "⚪ 6 h", "✅ 12 h", "⚪ 1 día", "⚪ 2 días", "⚪ No borrar",
@@ -139,7 +151,7 @@ async def test_wizard_text_post_with_colored_buttons_and_defaults(app: App, engi
          {"text": "Grupo", "url": "https://t.me/migrupo", "style": "danger"}],
         [{"text": "Código", "copy": "PROMO10", "style": "primary"}],
     ]
-    assert post.targets == ["own"] and post.mode == SchedMode.ROTATION and post.status == PostStatus.ACTIVE
+    assert post.targets == ["own"] and post.mode == SchedMode.MANUAL and post.status == PostStatus.ACTIVE
     assert (post.pin, post.silent, post.protect, post.link_preview) == (True, True, False, False)
     assert (post.delete_after, post.delete_previous, post.caption_above, post.spoiler) == (720, False, False, False)
     assert (post.bot_id, post.created_by, post.next_send_at) == (MAIN_BOT_ID, SUPER_ID, None)
@@ -198,27 +210,49 @@ async def test_wizard_photo_post_to_a_group_of_chats_once(app: App, engine: Simp
 async def test_wizard_own_schedule_opens_the_frequency_editor(app: App, engine: SimpleNamespace,
                                                               freq_screen: list[int]) -> None:
     await add_chat(app, -1001)
-    global_freq = {"mode": "interval", "every": 120, "window": "08:00-22:00", "days": "0123456"}
+    default_freq = {"mode": "interval", "every": 120, "window": "08:00-22:00", "days": "0123456"}
     async with app.db() as s:
         rec = await s.get(BotRecord, MAIN_BOT_ID)
         assert rec is not None
-        rec.freq = dict(global_freq)
+        rec.freq = dict(default_freq)
     await start_wizard(app)
     await app.send(SUPER_ID, "Noticias del día")
     await app.click(SUPER_ID, "Sin botones")
     await app.click(SUPER_ID, "Continuar")
-    assert "(global: cada 2 h · 08:00-22:00)" in app.last_text(SUPER_ID)
-    await app.click(SUPER_ID, "Con su propio horario")
+    assert app.last_text(SUPER_ID) == step_4("cada 2 h · 08:00-22:00")
+    await app.click(SUPER_ID, "A sus horas")
     assert "✅ No borrar" in button_texts(app) and freq_screen == []  # no default stored: never
     await app.click(SUPER_ID, "1 día")
 
     post = await only_post(app)
     assert freq_screen == [-post.id] and app.last_text(SUPER_ID) == f"FREQ_EDIT {-post.id}"
     assert answers(app)[-1] == "✅ Mensaje guardado"
-    assert post.mode == SchedMode.OWN and post.freq == global_freq  # a copy of the global frequency
+    assert post.mode == SchedMode.OWN and post.freq == default_freq  # a copy of the default schedule
     assert post.delete_after == 1440
     assert post.next_send_at is not None and post.next_send_at > utcnow()
     assert engine.woke == 1
+    async with app.db() as s:  # a copy: a later change of the default schedule doesn't move it
+        rec = await s.get(BotRecord, MAIN_BOT_ID)
+        assert rec is not None
+        rec.freq = {"mode": "times", "times": "09:00", "days": "0123456"}
+    async with app.db() as s:
+        assert (await s.get(Post, post.id)).freq == default_freq
+
+
+async def test_wizard_offers_exactly_the_three_modes(app: App, engine: SimpleNamespace) -> None:
+    await start_wizard(app)
+    await app.send(SUPER_ID, "Promo de estrenos")
+    await app.click(SUPER_ID, "Sin botones")
+    await app.click(SUPER_ID, "Continuar")
+    assert app.last_text(SUPER_ID) == step_4("a las 12:00")
+    rows = keyboard(app)
+    assert [[b["text"] for b in row] for row in rows[:3]] == [[text] for text in MODE_BUTTONS]
+    assert [row[0]["callback_data"] for row in rows[:3]] == [PwCB(a="mode", v=i).pack() for i in range(3)]
+    await app.press(SUPER_ID, PwCB(a="mode", v=3).pack())  # an old or forged index outside the three modes
+    assert answers(app)[-1] == EXPIRED and await all_posts(app) == []
+    await app.send(SUPER_ID, "a sus horas")  # a text: the same step with the buttons again
+    assert app.last_text(SUPER_ID) == "👇 Usa los botones de abajo.\n\n" + step_4("a las 12:00")
+    assert button_texts(app) == [*MODE_BUTTONS, "🔙 Regresar", "❌ Cancelar"]
 
 
 async def test_wizard_from_the_post_new_screen_in_manual_mode(app: App, engine: SimpleNamespace) -> None:
@@ -259,7 +293,7 @@ async def test_wizard_back_goes_to_the_previous_step_keeping_answers(app: App, e
     await app.click(SUPER_ID, "Difusión puntual")
     await app.click(SUPER_ID, "Regresar")
     assert "¿Cuándo se envía?" in app.last_text(SUPER_ID)
-    await app.click(SUPER_ID, "En rotación")
+    await app.click(SUPER_ID, "A sus horas")
     await app.click(SUPER_ID, "Regresar")  # from step 5 to step 4
     assert "⏰ <b>¿Cuándo se envía?</b> · 4/5" in app.last_text(SUPER_ID) and await all_posts(app) == []
     await app.click(SUPER_ID, "Solo cuando lo envíe yo")
@@ -301,7 +335,7 @@ async def test_wizard_respects_the_post_limit(app: App, engine: SimpleNamespace)
     await app.send(OWNER2_ID, "Promo del clon", bot_id=CLONE_ID)
     await app.click(OWNER2_ID, "Sin botones", bot_id=CLONE_ID)
     await app.click(OWNER2_ID, "Continuar", bot_id=CLONE_ID)
-    await app.click(OWNER2_ID, "En rotación", bot_id=CLONE_ID)
+    await app.click(OWNER2_ID, "Solo cuando lo envíe yo", bot_id=CLONE_ID)
     await add_post(app, bot_id=CLONE_ID, name="Otra")  # the limit is reached meanwhile: checked again at the end
     await app.click(OWNER2_ID, "1 día", bot_id=CLONE_ID)
     assert "máximo de mensajes (1)" in answers(app)[-1]
@@ -324,7 +358,7 @@ async def test_super_admin_managing_a_clone_creates_its_posts(app: App, engine: 
     await app.click(SUPER_ID, "Sin botones")
     assert "👥 Lo recibirán: <b>1 chat</b> · 👤 300" in app.last_text(SUPER_ID)
     await app.click(SUPER_ID, "Continuar")
-    await app.click(SUPER_ID, "En rotación")
+    await app.click(SUPER_ID, "Solo cuando lo envíe yo")
     await app.click(SUPER_ID, "1 día")
     created = [p for p in await all_posts(app) if p.bot_id == CLONE_ID]
     assert len(created) == 1
@@ -345,7 +379,7 @@ async def test_wizard_never_widens_the_audience_when_its_group_is_deleted(app: A
         group = await s.get(ChatGroup, gid)
         assert group is not None
         await s.delete(group)
-    await app.click(SUPER_ID, "En rotación")
+    await app.click(SUPER_ID, "Solo cuando lo envíe yo")
     await app.click(SUPER_ID, "1 día")
     text = app.last_text(SUPER_ID)
     assert text.startswith("⚠️ Elige al menos un destino.") and "· 3/5" in text
@@ -353,7 +387,7 @@ async def test_wizard_never_widens_the_audience_when_its_group_is_deleted(app: A
     assert button_texts(app)[:3] == ["⚪ Todos", "⚪ Solo propios", "⚪ Solo externos"]
     await app.click(SUPER_ID, "Solo propios")
     await app.click(SUPER_ID, "Continuar")
-    await app.click(SUPER_ID, "En rotación")
+    await app.click(SUPER_ID, "Solo cuando lo envíe yo")
     await app.click(SUPER_ID, "1 día")
     assert (await only_post(app)).targets == ["own"]
 
@@ -374,8 +408,9 @@ async def test_wizard_step_5_stores_each_choice(app: App, engine: SimpleNamespac
     assert text.startswith("✅ Mensaje guardado") and f"🗑 Borrado automático: {shown}</blockquote>" in text
 
 
-async def test_wizard_step_5_preselects_the_default_of_the_network(app: App, engine: SimpleNamespace) -> None:
-    await to_step_5(app, "En rotación")
+async def test_wizard_step_5_preselects_the_default_of_the_network(app: App, engine: SimpleNamespace,
+                                                                   freq_screen: list[int]) -> None:
+    await to_step_5(app, "A sus horas")
     assert step_5_rows(app) == [["⚪ 1 h", "⚪ 3 h", "⚪ 6 h"], ["⚪ 12 h", "⚪ 1 día", "⚪ 2 días"], ["✅ No borrar"],
                                 ["🔙 Regresar", "❌ Cancelar"]]  # no default stored: never
     for stored, rows in (
@@ -386,13 +421,14 @@ async def test_wizard_step_5_preselects_the_default_of_the_network(app: App, eng
     ):
         await set_default_delete_after(app, stored)
         await app.click(SUPER_ID, "Regresar")
-        await app.click(SUPER_ID, "En rotación")
+        await app.click(SUPER_ID, "A sus horas")
         assert step_5_rows(app)[:-1] == rows, stored
     await app.press(SUPER_ID, PwCB(a="del", v=90).pack())  # not one of the choices
     assert answers(app)[-1] == EXPIRED and await all_posts(app) == []
     await app.click(SUPER_ID, "36 h")
     post = await only_post(app)
-    assert (post.delete_after, post.pin, post.mode) == (2160, True, SchedMode.ROTATION)  # the other defaults apply
+    assert (post.delete_after, post.pin, post.mode) == (2160, True, SchedMode.OWN)  # the other defaults apply
+    assert freq_screen == [-post.id]
 
 
 async def test_wizard_step_5_back_cancel_and_stray_input(app: App, engine: SimpleNamespace,
@@ -403,7 +439,7 @@ async def test_wizard_step_5_back_cancel_and_stray_input(app: App, engine: Simpl
     await app.send(SUPER_ID, "Web - https://example.com")
     await app.click(SUPER_ID, "Cine (0)")
     await app.click(SUPER_ID, "Continuar")
-    await app.click(SUPER_ID, "Con su propio horario")
+    await app.click(SUPER_ID, "A sus horas")
     assert app.last_text(SUPER_ID) == STEP_5
     await app.send(SUPER_ID, "36 h")  # step 5 is answered with its buttons
     assert app.last_text(SUPER_ID) == "👇 Usa los botones de abajo.\n\n" + STEP_5
@@ -412,12 +448,12 @@ async def test_wizard_step_5_back_cancel_and_stray_input(app: App, engine: Simpl
 
     await app.click(SUPER_ID, "Regresar")  # step 4 again, the answers kept
     assert "⏰ <b>¿Cuándo se envía?</b> · 4/5" in app.last_text(SUPER_ID)
-    await app.click(SUPER_ID, "En rotación")
+    await app.click(SUPER_ID, "Solo cuando lo envíe yo")
     await app.click(SUPER_ID, "3 h")
     post = await only_post(app)
     assert (post.name, post.buttons, post.targets) == ("Estreno del viernes",
                                                         [[{"text": "Web", "url": "https://example.com"}]], [f"g{gid}"])
-    assert (post.mode, post.freq, post.delete_after) == (SchedMode.ROTATION, None, 180) and freq_screen == []
+    assert (post.mode, post.freq, post.delete_after) == (SchedMode.MANUAL, None, 180) and freq_screen == []
 
     await open_menu(app, SUPER_ID, "post_new")  # ❌ Cancelar at step 5: nothing is created
     await app.send(SUPER_ID, "Se cancela")

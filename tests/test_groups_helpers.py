@@ -1,4 +1,4 @@
-"""Shared helpers for the groups / frequencies tests (this module has no tests of its own)."""
+"""Shared helpers for the groups / schedules tests (this module has no tests of its own)."""
 from __future__ import annotations
 
 from collections.abc import Sequence
@@ -67,10 +67,10 @@ async def add_chat(app: App, chat_id: int, title: str, *, members: int = 1000, s
         return chat.id
 
 
-async def add_group(app: App, name: str, *, freq: dict[str, Any] | None = None, open: bool = False,
-                    chats: Sequence[int] = (), bot_id: int = MAIN_BOT_ID, sort: int = 0) -> int:
+async def add_group(app: App, name: str, *, open: bool = False, chats: Sequence[int] = (), bot_id: int = MAIN_BOT_ID,
+                    sort: int = 0) -> int:
     async with app.db() as s:
-        group = ChatGroup(bot_id=bot_id, name=name, freq=freq, open=open, sort=sort)
+        group = ChatGroup(bot_id=bot_id, name=name, open=open, sort=sort)
         s.add(group)
         await s.flush()
         for chat_pk in chats:
@@ -78,7 +78,7 @@ async def add_group(app: App, name: str, *, freq: dict[str, Any] | None = None, 
         return group.id
 
 
-async def add_post(app: App, name: str, *, targets: Sequence[str] = ("all",), mode: str = SchedMode.ROTATION,
+async def add_post(app: App, name: str, *, targets: Sequence[str] = ("all",), mode: str = SchedMode.OWN,
                    status: str = PostStatus.ACTIVE, freq: dict[str, Any] | None = None,
                    bot_id: int = MAIN_BOT_ID) -> int:
     async with app.db() as s:

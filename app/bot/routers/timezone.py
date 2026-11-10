@@ -1,6 +1,6 @@
 """🗺 Timezone picker: continent (America -> region) -> country -> zone, or an IANA name typed by the user.
 
-Admins change the timezone of the network (its frequencies and dates are in it, so every next time is recalculated);
+Admins change the timezone of the network (its schedules and dates are in it, so every next time is recalculated);
 users change their own (dates are shown in it). Telegram doesn't tell bots anyone's timezone, so it is asked once, and
 a zone the person already chose anywhere (eButtons, which rules, or eMesh: ``services.zones``) is used instead:
 
@@ -31,7 +31,7 @@ from app.data.timezones import CONTINENTS, COUNTRIES, countries_of, resolve_zone
 from app.db.base import utcnow
 from app.db.models import Bot as BotRecord
 from app.db.models import Post
-from app.services import audience, brand, freq, zones
+from app.services import brand, freq, zones
 from app.ui.common import alert, back_row, btn, grid, kb, nav_row, paginate, prompt, toast
 from app.ui.fmt import esc, hm
 from app.ui.photos import show_with_photo
@@ -106,11 +106,8 @@ async def adopt_known_zone(session: AsyncSession, ctx: Ctx) -> str | None:
 
 
 async def refresh_schedules(session: AsyncSession, ws_rec: BotRecord) -> None:
-    """Recalculates every stored next time of a network after its timezone changed."""
+    """Recalculates the next send time of every post of a network after its timezone changed."""
     now = utcnow()
-    freq.refresh_bot(ws_rec, now)
-    for group in await audience.bot_groups(session, ws_rec.id):
-        freq.refresh_group(group, ws_rec.timezone, now)
     for post in (await session.execute(select(Post).where(Post.bot_id == ws_rec.id))).scalars():
         freq.refresh_post(post, ws_rec.timezone, now)
 

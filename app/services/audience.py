@@ -1,4 +1,4 @@
-"""🎯 Who receives what: targets of posts, groups of chats and the rotation of each chat.
+"""🎯 Who receives what: targets of posts and groups of chats.
 
 Targets of a post (``Post.targets``, a list of tokens):
 
@@ -7,14 +7,9 @@ Targets of a post (``Post.targets``, a list of tokens):
 
 The audience is the union of its targets. Only *sendable* chats receive posts: approved, with the required rights
 and not paused (by an admin or by its owner).
-
-Frequencies: a chat follows the frequency of the first of its groups (by ``sort``, then id) that has its own one,
-otherwise the global frequency of the bot. That frequency is its *source*. At each slot of a source every chat
-following it gets the next post of its rotation: the active rotation posts that target it, inside their dates.
 """
 from __future__ import annotations
 
-import random
 from collections import defaultdict
 from collections.abc import Iterable, Sequence
 from datetime import datetime
@@ -23,8 +18,7 @@ from typing import TYPE_CHECKING
 from sqlalchemy import delete, func, select
 
 from app.db.base import utcnow
-from app.db.models import Chat, ChatGroup, ChatOrigin, ChatStatus, GroupChat, Post, PostStatus, RotationOrder, SchedMode
-from app.services import freq as freq_svc
+from app.db.models import Chat, ChatGroup, ChatOrigin, ChatStatus, GroupChat, Post
 
 if TYPE_CHECKING:
     from sqlalchemy.ext.asyncio import AsyncSession
@@ -33,7 +27,6 @@ ALL = "all"
 OWN = "own"
 EXT = "ext"
 VIRTUAL = (ALL, OWN, EXT)
-GLOBAL_SOURCE = "global"
 
 
 # --------------------------------------------------------------------------- tokens
@@ -62,11 +55,6 @@ def make_targets(virtual: Iterable[str], group_ids: Iterable[int]) -> list[str]:
     if OWN in v and EXT in v:
         return [ALL]
     return [x for x in VIRTUAL if x in v] + [group_token(g) for g in sorted(set(group_ids))]
-
-
-def source_key(group: ChatGroup | None) -> str:
-    """``"global"`` or ``"g<id>"`` (Run.source of rotation runs)."""
-    return GLOBAL_SOURCE if group is None else group_token(group.id)
 
 
 # --------------------------------------------------------------------------- chats
@@ -187,88 +175,3 @@ async def targets_size(session: AsyncSession, bot_id: int, tokens: list[str],
     groups = await memberships(session, bot_id)
     chats = [c for c in await sendable_chats(session, bot_id, now) if targets_chat(tokens, c, groups.get(c.id, set()))]
     return len(chats), sum(c.members or 0 for c in chats)
-
-
-# --------------------------------------------------------------------------- frequency sources
-def source_of(chat_groups: set[int], groups_by_id: dict[int, ChatGroup]) -> ChatGroup | None:
-    """The group whose own frequency the chat follows (the first by sort/id), None = the global one."""
-    own = [groups_by_id[g] for g in chat_groups if g in groups_by_id and groups_by_id[g].freq]
-    if not own:
-        return None
-    return min(own, key=lambda g: (g.sort, g.id))
-
-
-async def chat_source(session: AsyncSession, chat: Chat) -> ChatGroup | None:
-    groups = {g.id: g for g in await bot_groups(session, chat.bot_id)}
-    return source_of(await chat_group_ids(session, chat.id), groups)
-
-
-async def chats_of_source(session: AsyncSession, bot_id: int, source: ChatGroup | None,
-                          now: datetime | None = None) -> list[Chat]:
-    """The sendable chats that follow ``source`` (a group with its own frequency, or None = global)."""
-    now = now or utcnow()
-    groups = {g.id: g for g in await bot_groups(session, bot_id)}
-    members = await memberships(session, bot_id)
-    out: list[Chat] = []
-    for chat in await sendable_chats(session, bot_id, now):
-        src = source_of(members.get(chat.id, set()), groups)
-        if (src is None and source is None) or (src is not None and source is not None and src.id == source.id):
-            out.append(chat)
-    return out
-
-
-async def source_counts(session: AsyncSession, bot_id: int, now: datetime | None = None) -> dict[int | None, int]:
-    """``{group id | None (global): sendable chats following it}``."""
-    now = now or utcnow()
-    groups = {g.id: g for g in await bot_groups(session, bot_id)}
-    members = await memberships(session, bot_id)
-    out: dict[int | None, int] = defaultdict(int)
-    for chat in await sendable_chats(session, bot_id, now):
-        src = source_of(members.get(chat.id, set()), groups)
-        out[src.id if src else None] += 1
-    return dict(out)
-
-
-# --------------------------------------------------------------------------- rotation
-async def rotation_posts(session: AsyncSession, bot_id: int, tz: str, now: datetime | None = None) -> list[Post]:
-    """Active rotation posts inside their dates, in rotation order (oldest first)."""
-    now = now or utcnow()
-    q = (select(Post).where(Post.bot_id == bot_id, Post.status == PostStatus.ACTIVE, Post.mode == SchedMode.ROTATION)
-         .order_by(Post.id))
-    return [p for p in (await session.execute(q)).scalars() if freq_svc.in_dates(p, tz, now)]
-
-
-def rotation_pool(posts: Sequence[Post], chat: Chat, chat_groups: set[int]) -> list[Post]:
-    """The rotation posts that target ``chat``, in rotation order."""
-    return [p for p in posts if targets_chat(p.targets, chat, chat_groups)]
-
-
-def next_in_rotation(pool: Sequence[Post], last_post_id: int | None, order: str = RotationOrder.SEQUENTIAL,
-                     rng: random.Random | None = None) -> Post | None:
-    """The post a chat gets now: the one after ``last_post_id`` (wrapping around), or a random one that isn't the
-    last when there is a choice."""
-    if not pool:
-        return None
-    if order == RotationOrder.RANDOM:
-        choices = [p for p in pool if p.id != last_post_id] or list(pool)
-        return (rng or random).choice(choices)
-    if last_post_id is None:
-        return pool[0]
-    return next((p for p in pool if p.id > last_post_id), pool[0])
-
-
-async def plan_slot(session: AsyncSession, bot_id: int, source: ChatGroup | None, tz: str, order: str,
-                    now: datetime | None = None, rng: random.Random | None = None) -> dict[int, list[Chat]]:
-    """What a slot of ``source`` sends: ``{post id: [chats]}`` (each chat gets the next post of its rotation)."""
-    now = now or utcnow()
-    posts = await rotation_posts(session, bot_id, tz, now)
-    if not posts:
-        return {}
-    members = await memberships(session, bot_id)
-    plan: dict[int, list[Chat]] = defaultdict(list)
-    for chat in await chats_of_source(session, bot_id, source, now):
-        post = next_in_rotation(rotation_pool(posts, chat, members.get(chat.id, set())), chat.rot_last_post_id,
-                                order, rng)
-        if post is not None:
-            plan[post.id].append(chat)
-    return dict(plan)

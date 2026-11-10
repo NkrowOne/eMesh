@@ -884,10 +884,8 @@ class Publisher:
                     await self._migrate(s, r.target.chat_pk, r.chat_id)
                 if r.status == DeliveryStatus.SENT and r.sent_at is not None:
                     d.delete_at = delete_time(r.sent_at, job.post.delete_after)
-                    values: dict[str, Any] = {"posts_total": Chat.posts_total + 1, "last_post_at": r.sent_at}
-                    if job.kind == RunKind.ROTATION:
-                        values["rot_last_post_id"] = job.post_id
-                    await s.execute(update(Chat).where(Chat.id == r.target.chat_pk).values(**values)
+                    await s.execute(update(Chat).where(Chat.id == r.target.chat_pk)
+                                    .values(posts_total=Chat.posts_total + 1, last_post_at=r.sent_at)
                                     .execution_options(synchronize_session=False))
 
     async def _pin(self, job: _Job, results: Sequence[_Result]) -> None:
