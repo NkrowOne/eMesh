@@ -39,9 +39,8 @@ from app.bot.routers.timezone import ASK_HOME as TZ_ASK_HOME
 from app.bot.routers.timezone import ASK_JOIN as TZ_ASK_JOIN
 from app.bot.routers.timezone import adopt_known_zone, must_choose_timezone, needs_timezone
 from app.db.base import utcnow
-from app.db.models import Bot as BotRecord
-from app.db.models import Chat, ChatOrigin, ChatStatus, EventKind, Post, PostStatus, rotation_on
-from app.services import brand, clones, events, freq, limits, stats
+from app.db.models import Chat, ChatOrigin, ChatStatus, EventKind, Post, PostStatus
+from app.services import brand, clones, events, limits, stats
 from app.services.chatinfo import add_to_channel_url, add_to_group_url
 from app.ui.callbacks import MenuCB
 from app.ui.common import alert, back_row, btn, kb, nav_row, show, toast, ws_banner
@@ -123,15 +122,8 @@ def _known_zone_notice(ctx: Ctx, zone: str) -> str:
     return f"{ctx.t('tz.welcome')}\n{known}" if needs_setup(ctx) else known
 
 
-def _next_turn(ws: BotRecord, tz: str, now: datetime) -> datetime | None:
-    """Next slot of the global frequency (the stored one, unless it already passed)."""
-    if ws.rot_next_at is not None and ws.rot_next_at > now:
-        return ws.rot_next_at
-    return freq.next_slot(ws.freq, tz, now)
-
-
 async def _next_send(session: AsyncSession, bot_id: int, now: datetime) -> datetime | None:
-    """Without rotation: the earliest next send of the active posts with their own schedule (⏰ own / 📢 once)."""
+    """The earliest next send of the active posts (⏰ at their own times / 📢 once)."""
     q = select(func.min(Post.next_send_at)).where(
         Post.bot_id == bot_id, Post.status == PostStatus.ACTIVE, Post.next_send_at > now)
     return (await session.execute(q)).scalar()
@@ -169,14 +161,8 @@ async def _admin_home(ctx: Ctx, session: AsyncSession) -> tuple[str, InlineKeybo
     lines.append(ctx.t("home.posts", n=num(s.posts_active)))
     if not s.posts_active:
         lines.append(ctx.t("home.posts.none"))
-    if rotation_on(ws.rotation):
-        lines.append(ctx.t("home.freq", freq=freq.describe(ws.freq, ctx.lang)))
-        if not ws.paused:
-            lines.append(ctx.t("home.next", date=dt(_next_turn(ws, ctx.bot_tz, now), ctx.tz)))
-    else:  # no rotation: the global frequency sends nothing, each post goes out on its own schedule
-        lines.append(ctx.t("home.rot_off"))
-        if not ws.paused:
-            lines.append(ctx.t("home.next_send", date=dt(await _next_send(session, ws.id, now), ctx.tz)))
+    if not ws.paused:
+        lines.append(ctx.t("home.next_send", date=dt(await _next_send(session, ws.id, now), ctx.tz)))
     for key, value in (("home.owner_paused", s.owner_paused), ("home.pending", s.pending),
                        ("home.no_rights", s.no_rights)):
         if value:

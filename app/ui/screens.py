@@ -27,7 +27,7 @@ _SCREENS: dict[str, ScreenFn] = {}
 HUB_HIDDEN = frozenset({
     "posts", "post", "post_content", "post_buttons", "post_targets", "post_sched", "post_opts", "post_defaults",
     "chats", "chat", "requests", "paused", "my_chats", "my_chat", "join", "partners_msg",
-    "groups", "group", "group_chats", "freqs", "freq_edit", "freq_edit_dash", "antispam", "stats", "activity",
+    "groups", "group", "group_chats", "freqs", "freq_edit", "antispam", "stats", "activity",
     "externals", "setup", "add_chat",
 })
 

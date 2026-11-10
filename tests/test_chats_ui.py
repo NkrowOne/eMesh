@@ -128,7 +128,7 @@ async def test_empty_list_and_permissions(app: App) -> None:
 # --------------------------------------------------------------------------- detail
 async def test_chat_detail(app: App) -> None:
     await start(app, SUPER_ID, USER_ID)
-    cine = await make_group(app, "Cine", freq={"mode": "interval", "every": 120, "window": "", "days": "0123456"})
+    cine = await make_group(app, "Cine")
     last = utcnow() - timedelta(hours=2)
     pk = await db_chat(app, CHANNEL, "Cine HD", members=12000, username="cinehd", posts_total=120, last_post_at=last)
     async with app.db() as s:
@@ -151,7 +151,6 @@ async def test_chat_detail(app: App) -> None:
         "🏷 Origen: 🏠 Propio",
         "📌 Estado: ✅ Recibe mensajes",
         "🗂 Grupos de canales: Cine",
-        "⏰ Frecuencia: cada 2 h (🗂 Cine)",
         "📨 Recibidos: 120 · últimos 7 días: 2",
         f"🕐 Último: {dt(last, 'Europe/Madrid')}",
     ])
@@ -168,7 +167,7 @@ async def test_chat_detail(app: App) -> None:
     assert ("📌 Estado: ⚠️ Faltan permisos: fijar mensajes · ⏸ Pausado por su dueño hasta que lo reanude"
             in text)
     assert "   └ Si lo reanudas, se anula su pausa y se le avisa." in text
-    assert "⏰ Frecuencia: 🌐 la global (a las 12:00)" in text and "🕐 Último: —" in text
+    assert "⏰" not in text and "🕐 Último: —" in text
     assert labels(app.last_panel(SUPER_ID))[2:4] == ["▶️ Reanudar (anula la pausa del socio)", "⏸ Pausar"]
 
 

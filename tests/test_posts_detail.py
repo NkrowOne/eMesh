@@ -48,7 +48,8 @@ async def open_post(app: App, post_id: int, user_id: int = SUPER_ID) -> str:
 async def test_list_describes_posts_and_puts_finished_ones_last(app: App, engine: SimpleNamespace) -> None:
     gid = await add_group(app, "Cine")
     await add_post(app, name="Vieja", status=PostStatus.DONE, mode=SchedMode.ONCE, send_at=utcnow() - timedelta(days=1))
-    await add_post(app, name="Promo <Cine>", runs_count=12, kind="photo", media={str(MAIN_BOT_ID): "ph"})
+    await add_post(app, name="Promo <Cine>", runs_count=12, kind="photo", media={str(MAIN_BOT_ID): "ph"},
+                   mode=SchedMode.MANUAL)
     own = await add_post(app, name="Horario", mode=SchedMode.OWN, targets=["own", f"g{gid}"],
                          freq={"mode": "interval", "every": 120, "window": "", "days": "0123456"})
     await add_post(app, name="Pausado", status=PostStatus.PAUSED, targets=[])
@@ -56,10 +57,11 @@ async def test_list_describes_posts_and_puts_finished_ones_last(app: App, engine
     await open_menu(app, SUPER_ID, "posts")
     text = app.last_text(SUPER_ID)
     nxt = fmt.dt((await load(app, Post, own)).next_send_at, TZ)
-    assert text.startswith("📝 <b>Mensajes</b>\n🔁 rotación · ⏰ horario propio · 📢 puntual · ✋ manual")
-    assert "1. ▶️ 🔁 <b>Promo &lt;Cine&gt;</b> · 🖼\n   └🎯 Todos · 📤 12 envíos" in text
+    assert text.startswith("📝 <b>Mensajes</b>\n⏰ con horario · 📢 puntual · ✋ manual\n\n1. ")
+    assert "rotación" not in text and "🔁" not in text
+    assert "1. ▶️ ✋ <b>Promo &lt;Cine&gt;</b> · 🖼\n   └🎯 Todos · 📤 12 envíos" in text
     assert f"2. ▶️ ⏰ <b>Horario</b> · 📝\n   └🎯 Propios, Cine · 📅 {nxt}" in text
-    assert "3. ⏸ 🔁 <b>Pausado</b> · 📝\n   └🎯 ⚠️ nadie · 📤 0 envíos" in text
+    assert "3. ⏸ ⏰ <b>Pausado</b> · 📝\n   └🎯 ⚠️ nadie · 📤 0 envíos" in text  # paused: no next send
     assert "4. ✅ 📢 <b>Vieja</b> · 📝" in text  # finished posts last
     assert button_texts(app) == ["#1 Promo <Cine>", "#2 Horario", "#3 Pausado", "#4 Vieja", "➕ Nuevo mensaje",
                                  "⚙️ Opciones por defecto", "🔙 Regresar"]
@@ -79,7 +81,7 @@ async def test_list_pages_and_empty_list(app: App, engine: SimpleNamespace) -> N
     assert "📄 Página 1 de 2" in app.last_text(SUPER_ID) and "10. ▶️" in app.last_text(SUPER_ID)
     await app.click(SUPER_ID, "Siguiente")
     text = app.last_text(SUPER_ID)
-    assert "11. ▶️ 🔁 <b>Mensaje 11</b>" in text and "📄 Página 2 de 2" in text and "\n1. ▶️" not in text
+    assert "11. ▶️ ⏰ <b>Mensaje 11</b>" in text and "📄 Página 2 de 2" in text and "\n1. ▶️" not in text
     assert "#12 Mensaje 12" in button_texts(app) and "⬅️ Anterior" in button_texts(app)
 
 
@@ -90,14 +92,15 @@ async def test_detail_panel(app: App, engine: SimpleNamespace) -> None:
     today = utcnow().astimezone(fmt.zone(TZ)).date()
     last = utcnow() - timedelta(hours=1)
     pid = await add_post(app, buttons=TWO_BUTTONS, runs_count=12, sent_count=340, last_sent_at=last, pin=True,
-                         starts_on=today - timedelta(days=5), ends_on=today + timedelta(days=30))
+                         starts_on=today - timedelta(days=5), ends_on=today + timedelta(days=30),
+                         mode=SchedMode.MANUAL)
     text = await open_post(app, pid)
     for expected in (
         "📝 <b>Promo Cine</b>",
         "📌 Estado: ▶️ Activo",
         "🧩 Tipo: 📝 Texto · 🔘 2 botones",
         "🎯 Destino: 🌐 Todos → 2 chats (👤 2,000)",
-        "⏰ Envío: 🔁 En rotación\n   └ Cada canal lo recibe por turnos según su frecuencia.",
+        "⏰ Envío: ✋ Manual\n   └ Solo se envía al pulsar 🚀 Enviar ahora.",
         f"📆 Campaña: del {(today - timedelta(days=5)):%d/%m/%Y} al {(today + timedelta(days=30)):%d/%m/%Y}",
         f"📤 Enviado: 12 veces · 340 entregas · último {fmt.dt(last, TZ)}",
         "<blockquote expandable>⚙️ <b>Opciones</b>\n📌 Fijar: ✅\n🔕 Sin sonido: ✖️\n🛡 Proteger contenido: ✖️\n"
@@ -130,7 +133,7 @@ async def test_detail_of_own_and_once_posts(app: App, engine: SimpleNamespace) -
     text = await open_post(app, own)
     nxt = (await load(app, Post, own)).next_send_at
     assert nxt is not None
-    assert "⏰ Envío: ⏰ Horario propio · cada 2 h\n   └ En cada turno de su horario se envía a todos sus chats." in text
+    assert "⏰ Envío: ⏰ Horario propio · cada 2 h\n   └ A cada hora de su horario se envía a todos sus chats." in text
     assert f"📅 Próximo envío: <b>{fmt.dt(nxt, TZ)}</b>" in text
 
     text = await open_post(app, once)
@@ -392,7 +395,7 @@ async def test_partner_cannot_open_or_change_posts(app: App, engine: SimpleNames
         MenuCB(screen="post_opts", arg=pid), MenuCB(screen="post_defaults"),
         PwCB(a="start"), PwCB(a="mode", v=0), PwCB(a="del", v=60), PoCB(a="pause", id=pid), PoCB(a="send_ok", id=pid),
         PoCB(a="del_one", id=pid), PoCB(a="del_all", id=pid), PoCB(a="dup", id=pid), PoCB(a="tg", id=pid, t="own"),
-        PoCB(a="mode", id=pid, v=3), PoCB(a="opt", id=pid, v=0), PoCB(a="opt", id=0, v=0), PoCB(a="ad", id=0, v=60),
+        PoCB(a="mode", id=pid, v=2), PoCB(a="opt", id=pid, v=0), PoCB(a="opt", id=0, v=0), PoCB(a="ad", id=0, v=60),
         PoCB(a="cname", id=pid), PoCB(a="nomedia_ok", id=pid), PoCB(a="ret_ok", id=pid), PoCB(a="upd_ok", id=pid),
         PoCB(a="prev", id=pid), PbCB(a="add", id=pid), PbCB(a="del", id=pid), PbCB(a="clear_ok", id=pid),
         PbCB(a="mv", id=pid, v=1), PbCB(a="bulk", id=pid), PbCB(a="acol", id=pid, v=1),
@@ -402,7 +405,7 @@ async def test_partner_cannot_open_or_change_posts(app: App, engine: SimpleNames
     assert answers(app).count(NO_PERMISSION) == len(forged)
     post = await load(app, Post, pid)
     assert (post.status, post.targets, post.mode, post.pin, post.name) == (PostStatus.ACTIVE, ["all"],
-                                                                           SchedMode.ROTATION, False, "Promo Cine")
+                                                                           SchedMode.OWN, False, "Promo Cine")
     assert engine.sent == [] and engine.retired == [] and engine.woke == 0 and len(await all_posts(app)) == 1
     assert (await load(app, BotRecord, MAIN_BOT_ID)).post_defaults == {}
     assert not any("Promo Cine" in str(c.params.get("text") or "") for c in app.panels(USER_ID))
@@ -455,7 +458,7 @@ async def test_hub_main_bot_has_no_posts(app: App, engine: SimpleNamespace) -> N
 async def test_counts_use_the_singular_for_one(app: App, engine: SimpleNamespace) -> None:
     await add_chat(app, -1001, "Cine HD", 1200)
     pid = await add_post(app, buttons=[[{"text": "Web", "url": "https://example.com"}]], runs_count=1, sent_count=1,
-                         last_sent_at=utcnow())
+                         last_sent_at=utcnow(), mode=SchedMode.MANUAL)
     engine.live = 1
     text = await open_post(app, pid)
     assert "🧩 Tipo: 📝 Texto · 🔘 1 botón" in text and "🎯 Destino: 🌐 Todos → 1 chat (👤 1,200)" in text

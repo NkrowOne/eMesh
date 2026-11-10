@@ -1,4 +1,4 @@
-"""Engine: the scheduler (rotation slots, group frequencies, own and one-time posts, late slots, paused networks, hub
+"""Engine: the scheduler (own-schedule and one-time posts, groups of chats as targets, late posts, paused networks, hub
 mode, pauses that end, chat refresh, daily summary, cleanup, the loop)."""
 from __future__ import annotations
 
@@ -25,7 +25,6 @@ from app.db.models import (
     Post,
     PostStatus,
     Role,
-    RotationOrder,
     Run,
     RunKind,
     RunStatus,
@@ -44,7 +43,6 @@ from tests.test_engine import (
     get,
     make_chats,
     make_post,
-    set_bot,
     start_user,
     texts_in,
 )
@@ -60,10 +58,9 @@ def quiet(monkeypatch: pytest.MonkeyPatch) -> None:
     monkeypatch.setattr(Scheduler, "_summary", AsyncMock())
 
 
-async def slot_due(app: App, *, bot_id: int = MAIN_BOT_ID, group_id: int | None = None, minutes: int = 1) -> None:
+async def post_due(app: App, post_id: int, *, minutes: int = 1) -> None:
     async with app.db() as s:
-        target: Any = await s.get(ChatGroup, group_id) if group_id else await s.get(BotRecord, bot_id)
-        target.rot_next_at = utcnow() - timedelta(minutes=minutes)
+        (await s.get(Post, post_id)).next_send_at = utcnow() - timedelta(minutes=minutes)
 
 
 async def all_runs(app: App) -> list[Run]:
@@ -71,124 +68,54 @@ async def all_runs(app: App) -> list[Run]:
         return list((await s.execute(select(Run).order_by(Run.id))).scalars())
 
 
-# ------------------------------------------------------------------ rotation
-async def test_rotation_gives_each_chat_its_next_post(app: App, quiet: None) -> None:
-    a, b, c = await make_chats(app, 3)
-    p1, p2, p3 = [await make_post(app, name=f"P{i}", text=f"Mensaje {i}") for i in (1, 2, 3)]
-    async with app.db() as s:
-        (await s.get(Chat, a)).rot_last_post_id = p1
-        (await s.get(Chat, b)).rot_last_post_id = p3  # wraps around
-    cids = [await chat_id_of(app, pk) for pk in (a, b, c)]
-    await slot_due(app)
+# ------------------------------------------------------- own and one-time posts
+async def test_an_own_post_without_next_time_gets_it_and_goes_out_on_time(app: App, quiet: None,
+                                                                         monkeypatch: pytest.MonkeyPatch) -> None:
+    await make_chats(app, 2)
+    own = await make_post(app, freq=dict(HOURLY))  # no next time yet (e.g. a post converted by a migration)
+    assert (await get(app, Post, own)).next_send_at is None
     await app.scheduler.tick()
-    assert [texts_in(app, cid) for cid in cids] == [["Mensaje 2"], ["Mensaje 1"], ["Mensaje 1"]]
-    runs = await all_runs(app)
-    assert sorted((r.post_id, r.sent) for r in runs) == sorted([(p1, 2), (p2, 1)])
-    assert {(r.kind, r.source, r.status) for r in runs} == {(RunKind.ROTATION, "global", RunStatus.DONE)}
-    assert [(await get(app, Chat, pk)).rot_last_post_id for pk in (a, b, c)] == [p2, p1, p1]
-    assert (await get(app, BotRecord, MAIN_BOT_ID)).rot_next_at > utcnow()
+    due = (await get(app, Post, own)).next_send_at
+    assert utcnow() < due <= utcnow() + timedelta(minutes=61)
+    assert not app.fake.calls_of("sendMessage") and await all_runs(app) == []
 
-    await slot_due(app)
+    monkeypatch.setattr("app.services.scheduler.utcnow", lambda: due + timedelta(seconds=30))
     await app.scheduler.tick()
-    assert [texts_in(app, cid)[-1] for cid in cids] == ["Mensaje 3", "Mensaje 2", "Mensaje 2"]
-    await app.scheduler.tick()  # no slot due: nothing more
-    assert [len(texts_in(app, cid)) for cid in cids] == [2, 2, 2]
-
-
-async def test_random_rotation_never_repeats_a_post(app: App, quiet: None) -> None:
-    await set_bot(app, rotation=RotationOrder.RANDOM)
-    [pk] = await make_chats(app)
-    for text in ("A", "B", "C"):
-        await make_post(app, name=text, text=text)
-    for _ in range(8):
-        await slot_due(app)
-        await app.scheduler.tick()
-    got = texts_in(app, await chat_id_of(app, pk))
-    assert len(got) == 8 and set(got) <= {"A", "B", "C"}
-    assert all(x != y for x, y in zip(got, got[1:]))
-
-
-async def test_without_rotation_slots_send_nothing_but_own_posts_go_out(app: App, quiet: None) -> None:
-    await set_bot(app, rotation=RotationOrder.OFF)
-    pks = await make_chats(app, 2)
-    await make_post(app, name="Rotación", text="En la cola")
-    async with app.db() as s:
-        group = ChatGroup(bot_id=MAIN_BOT_ID, name="Cine", freq=dict(HOURLY), sort=0)
-        s.add(group)
-        await s.flush()
-        s.add(GroupChat(group_id=group.id, chat_pk=pks[0]))
-        group_id = group.id
-    own = await make_post(app, name="Propio", text="A su hora", mode=SchedMode.OWN, freq=dict(HOURLY),
-                          next_send_at=utcnow() - timedelta(minutes=1))
-    await slot_due(app)
-    await slot_due(app, group_id=group_id)
-    await app.scheduler.tick()
-    # No turns: the slots move on and send nothing; the post with its own schedule goes to everyone.
-    cids = [await chat_id_of(app, pk) for pk in pks]
-    assert [texts_in(app, cid) for cid in cids] == [["A su hora"], ["A su hora"]]
-    assert [(r.post_id, r.kind) for r in await all_runs(app)] == [(own, RunKind.SCHEDULE)]
-    assert (await get(app, BotRecord, MAIN_BOT_ID)).rot_next_at > utcnow()
-    assert (await get(app, ChatGroup, group_id)).rot_next_at > utcnow()
-    # With the rotation on again, the next due slot sends the rotation post.
-    await set_bot(app, rotation=RotationOrder.SEQUENTIAL)
-    await slot_due(app)
-    await app.scheduler.tick()
-    assert texts_in(app, cids[1])[-1] == "En la cola"
-
-
-async def test_group_frequency_and_global_frequency(app: App, quiet: None) -> None:
-    a, b, c, d = await make_chats(app, 4)
-    async with app.db() as s:
-        cine = ChatGroup(bot_id=MAIN_BOT_ID, name="Cine", freq=dict(HOURLY), sort=0)
-        noticias = ChatGroup(bot_id=MAIN_BOT_ID, name="Noticias", freq=None, sort=1)  # follows the global one
-        s.add_all([cine, noticias])
-        await s.flush()
-        s.add_all([GroupChat(group_id=cine.id, chat_pk=a), GroupChat(group_id=cine.id, chat_pk=b),
-                   GroupChat(group_id=noticias.id, chat_pk=c)])
-        cine.rot_next_at = utcnow() - timedelta(minutes=1)
-        (await s.get(BotRecord, MAIN_BOT_ID)).rot_next_at = utcnow() + timedelta(hours=1)
-        cine_id = cine.id
-    await make_post(app)
-    cids = [await chat_id_of(app, pk) for pk in (a, b, c, d)]
-    await app.scheduler.tick()
-    assert [len(texts_in(app, cid)) for cid in cids] == [1, 1, 0, 0]
     [run] = await all_runs(app)
-    assert (run.source, run.sent) == (f"g{cine_id}", 2)
-    nxt = (await get(app, ChatGroup, cine_id)).rot_next_at
-    assert utcnow() < nxt <= utcnow() + timedelta(minutes=61)
+    assert (run.post_id, run.kind, run.sent) == (own, RunKind.SCHEDULE, 2)
+    assert (await get(app, Post, own)).next_send_at == due + timedelta(hours=1)
 
-    await slot_due(app)  # now the global slot: only the chats that follow it
+
+async def test_an_own_post_aimed_at_a_group_of_chats_goes_to_its_chats(app: App, quiet: None) -> None:
+    a, b, c = await make_chats(app, 3)
+    async with app.db() as s:
+        cine = ChatGroup(bot_id=MAIN_BOT_ID, name="Cine", sort=0)
+        s.add(cine)
+        await s.flush()
+        s.add_all([GroupChat(group_id=cine.id, chat_pk=a), GroupChat(group_id=cine.id, chat_pk=b)])
+        cine_id = cine.id
+    post_id = await make_post(app, targets=[f"g{cine_id}"], freq=dict(HOURLY),
+                              next_send_at=utcnow() - timedelta(minutes=1))
+    cids = [await chat_id_of(app, pk) for pk in (a, b, c)]
     await app.scheduler.tick()
-    assert [len(texts_in(app, cid)) for cid in cids] == [1, 1, 1, 1]
-    assert [(r.source, r.sent) for r in await all_runs(app)][-1] == ("global", 2)
+    assert [len(texts_in(app, cid)) for cid in cids] == [1, 1, 0]
+    [run] = await all_runs(app)
+    assert (run.post_id, run.kind, run.sent) == (post_id, RunKind.SCHEDULE, 2)
 
 
-async def test_late_slots_and_posts_are_skipped_not_sent_late(app: App, quiet: None) -> None:
+async def test_late_posts_are_skipped_not_sent_late(app: App, quiet: None) -> None:
     await make_chats(app)
-    await make_post(app, name="Rotación")
     late = utcnow() - timedelta(hours=2)
     own = await make_post(app, name="Propio", mode=SchedMode.OWN, freq=dict(HOURLY), next_send_at=late)
     once = await make_post(app, name="Una vez", mode=SchedMode.ONCE, send_at=late, next_send_at=late)
-    await slot_due(app, minutes=120)
     await app.scheduler.tick()
     assert not app.fake.calls_of("sendMessage") and await all_runs(app) == []
-    assert (await get(app, BotRecord, MAIN_BOT_ID)).rot_next_at > utcnow()
     p = await get(app, Post, own)
     assert p.status == PostStatus.ACTIVE and p.next_send_at > utcnow()
     p = await get(app, Post, once)
     assert (p.status, p.next_send_at, p.runs_count) == (PostStatus.DONE, None, 0)
 
 
-async def test_a_missing_next_slot_is_just_computed(app: App, quiet: None) -> None:
-    await make_chats(app)
-    await make_post(app)
-    assert (await get(app, BotRecord, MAIN_BOT_ID)).rot_next_at is None
-    await app.scheduler.tick()
-    assert (await get(app, BotRecord, MAIN_BOT_ID)).rot_next_at > utcnow()
-    assert not app.fake.calls_of("sendMessage")
-
-
-# ------------------------------------------------------- own and one-time posts
 async def test_own_frequency_post_goes_to_its_audience_and_is_rescheduled(app: App, quiet: None) -> None:
     pks = await make_chats(app, 2)
     own = await make_post(app, name="Propio", mode=SchedMode.OWN, freq={**HOURLY, "every": 120},
@@ -199,7 +126,7 @@ async def test_own_frequency_post_goes_to_its_audience_and_is_rescheduled(app: A
     post = await get(app, Post, own)
     assert post.status == PostStatus.ACTIVE and post.runs_count == 1
     assert utcnow() < post.next_send_at <= utcnow() + timedelta(minutes=121)
-    assert (await get(app, Chat, pks[0])).rot_last_post_id is None  # outside the rotation
+    assert (await get(app, Chat, pks[0])).posts_total == 1
     await app.scheduler.tick()
     assert len(await all_runs(app)) == 1
 
@@ -236,39 +163,35 @@ async def test_a_paused_network_sends_nothing_but_still_deletes_and_ends_pauses(
         d.delete_at = utcnow() - timedelta(seconds=5)
         rec = await s.get(BotRecord, MAIN_BOT_ID)
         rec.paused = True
-        rec.rot_next_at = utcnow() - timedelta(minutes=1)
         chat = await s.get(Chat, ext)
         chat.owner_paused, chat.owner_paused_until = True, utcnow() - timedelta(minutes=1)
-    await make_post(app, name="Propio", mode=SchedMode.OWN, freq=dict(HOURLY),
-                    next_send_at=utcnow() - timedelta(minutes=1))
+    due = await make_post(app, name="Propio", mode=SchedMode.OWN, freq=dict(HOURLY),
+                          next_send_at=utcnow() - timedelta(minutes=1))
     app.fake.reset_calls()
     await app.scheduler.tick()
     assert not app.fake.calls_of("sendMessage")
     assert app.fake.calls_of("deleteMessage", chat_id=await chat_id_of(app, pk))
     assert (await deliveries(app, run_id))[0].status == DeliveryStatus.DELETED
     assert len(await all_runs(app)) == 1
-    assert (await get(app, BotRecord, MAIN_BOT_ID)).rot_next_at < utcnow()  # left for when it is resumed
+    assert (await get(app, Post, due)).next_send_at < utcnow()  # left for when it is resumed
     assert not (await get(app, Chat, ext)).owner_paused
 
 
 async def test_a_hub_main_bot_runs_no_network(app: App, quiet: None) -> None:
     app.settings.MAIN_BOT_MODE = "hub"
     await make_chats(app)
-    await make_post(app)
-    await slot_due(app)
+    post_id = await make_post(app, freq=dict(HOURLY), next_send_at=utcnow() - timedelta(minutes=1))
     await app.scheduler.tick()
     assert not app.fake.calls_of("sendMessage")
-    assert (await get(app, BotRecord, MAIN_BOT_ID)).rot_next_at < utcnow()
+    assert (await get(app, Post, post_id)).next_send_at < utcnow()
 
 
 async def test_a_slow_bot_never_delays_the_others(app: App, quiet: None, monkeypatch: pytest.MonkeyPatch) -> None:
     await app.add_clone(CLONE_ID, "clon_cine_bot", OWNER2_ID)
     [mine] = await make_chats(app)
     [theirs] = await make_chats(app, bot_id=CLONE_ID)
-    await make_post(app)
-    await make_post(app, bot_id=CLONE_ID)
-    await slot_due(app)
-    await slot_due(app, bot_id=CLONE_ID)
+    for bot_id in (MAIN_BOT_ID, CLONE_ID):
+        await make_post(app, bot_id=bot_id, freq=dict(HOURLY), next_send_at=utcnow() - timedelta(minutes=1))
     main_cid, clone_cid = await chat_id_of(app, mine), await chat_id_of(app, theirs)
     gate = asyncio.Event()
     deliver = content.deliver
@@ -340,7 +263,7 @@ async def test_daily_summary_is_sent_once(app: App, monkeypatch: pytest.MonkeyPa
     yesterday = today - timedelta(days=1)
     async with app.db() as s:
         for day, sent in ((yesterday, 10), (today - timedelta(days=3), 99)):
-            s.add(Run(bot_id=MAIN_BOT_ID, post_name="Promo", kind=RunKind.ROTATION, status=RunStatus.DONE, total=12,
+            s.add(Run(bot_id=MAIN_BOT_ID, post_name="Promo", kind=RunKind.SCHEDULE, status=RunStatus.DONE, total=12,
                       sent=sent, failed=2, skipped=1, reach=20_000,
                       started_at=freq.day_start(day, TZ) + timedelta(hours=10)))
     await app.scheduler.tick()
@@ -405,16 +328,16 @@ async def test_a_run_whose_task_died_goes_on(app: App, quiet: None) -> None:
 async def test_the_loop_ticks_and_wakes_up(app: App, quiet: None) -> None:
     app.settings.SCHEDULER_TICK_SECONDS = 3600  # only wake() can trigger the next tick
     [pk] = await make_chats(app)
-    await make_post(app)
+    post_id = await make_post(app, freq=dict(HOURLY))
     cid = await chat_id_of(app, pk)
 
-    async def next_slot_known() -> bool:
-        return (await get(app, BotRecord, MAIN_BOT_ID)).rot_next_at is not None
+    async def next_time_known() -> bool:
+        return (await get(app, Post, post_id)).next_send_at is not None
 
     await app.scheduler.start()
-    await app.wait_for(next_slot_known)  # the first tick ran
+    await app.wait_for(next_time_known)  # the first tick ran
     await app.wait_for(lambda: not app.scheduler._jobs)  # noqa: SLF001
-    await slot_due(app)
+    await post_due(app, post_id)
     app.scheduler.wake()
     await app.wait_for(lambda: app.fake.messages_to(cid))
     await app.scheduler.stop()

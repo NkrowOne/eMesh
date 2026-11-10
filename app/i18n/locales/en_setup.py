@@ -23,28 +23,16 @@ STRINGS = {
     ),
     "setup.pause.upto": "Up to {t}",
     "setup.pause.no": "🚫 They can't pause",
-    # --- 3. Rotation -------------------------------------------------------------------------------
+    # --- 3. Default schedule -----------------------------------------------------------------------
     "setup.q.3": (
-        "🔁 <b>Do you want the posts to take turns?</b>\n\n"
-        "🔁 <b>With rotation</b>: the posts make a queue. At each time you choose, every channel gets <b>one</b>: "
-        "the next in the queue, in order or at random.\n"
-        "   └ E.g.: posts A, B and C at 10:00 and 18:00 → today A and B, tomorrow C and A…\n\n"
-        "🕐 <b>No rotation</b>: no queue. Each post has its own schedule and goes out at all its times.\n"
-        "   └ E.g.: A at 10:00 and B at 18:00, every day.\n\n"
-        "It can be changed later in ⏰ Frequencies."
-    ),
-    "setup.rot.seq": "🔁 Yes, in order",
-    "setup.rot.random": "🎲 Yes, at random",
-    "setup.rot.off": "🕐 No, each post on its own schedule",
-    # --- 4. Rotation times -------------------------------------------------------------------------
-    "setup.q.4": (
-        "⏰ <b>At what times does each channel get a post?</b>\n"
-        "Tap an hour to tick or untick it, or pick a quick option. On each ticked hour every channel gets the next "
-        "post of the rotation."
+        "⏰ <b>At what times are your posts published?</b>\n"
+        "Each post goes to its whole target at its own times. Choose the times every new post starts with; then "
+        "each one can change them in its ⏰ Schedule.\n"
+        "   └ Tap an hour to tick or untick it, or pick a quick option."
     ),
     "setup.freq.now": "🕐 <b>{n} a day</b>: {times}",
     "setup.freq.days": "📅 Days: {days}",
-    "setup.freq.tz": "   └ {tz} time. It can be fine-tuned later in ⏰ Frequencies.",
+    "setup.freq.tz": "   └ {tz} time.",
     "setup.freq.n": "{n} a day",
     "setup.freq.every": "Every {t}",
     "setup.freq.hourly": "Every hour",
@@ -60,8 +48,8 @@ STRINGS = {
     ),
     "setup.freq.saved": "✅ Saved: {freq}",
     "setup.btn.next": "Continue ➡️",
-    # --- 5. Auto delete ----------------------------------------------------------------------------
-    "setup.q.5": (
+    # --- 4. Auto delete ----------------------------------------------------------------------------
+    "setup.q.4": (
         "🗑 <b>How long do the posts stay published?</b>\n"
         "After that time they are deleted from the channels on their own.\n"
         "   └ New posts take this value; each one can be changed in its ⚙️ Options."
@@ -69,22 +57,19 @@ STRINGS = {
     "setup.delete.never": "♾ Never deleted",
     "setup.keep": "Keep: {v}",
     "setup.btn.skip": "⏭ Skip the wizard",
-    # --- 6. Summary --------------------------------------------------------------------------------
+    # --- 5. Summary --------------------------------------------------------------------------------
     "setup.done": "✅ <b>All set</b>\nThe network is set up like this:",
     "setup.sum.pause": "⏸ Partners' pauses: {v}",
     "setup.sum.pause.upto": "up to {t}",
     "setup.sum.pause.free": "no limit",
     "setup.sum.pause.no": "they can't pause",
-    "setup.sum.rot": "🔁 Rotation: {v}",
-    "setup.sum.rot.seq": "yes, in order",
-    "setup.sum.rot.random": "yes, at random",
-    "setup.sum.rot.off": "no, each post on its own schedule",
+    "setup.sum.freq": "🕐 Default schedule: {freq}",
     "setup.sum.delete": "🗑 Auto delete: {v}",
     "setup.sum.after": "after {t}",
     "setup.sum.never": "never",
     "setup.done.next": (
         "👇 Now add the bot to your channels and groups and create a post.\n"
-        "   └ Everything can be changed in ⚙️ Settings, ⏰ Frequencies and 📝 Posts."
+        "   └ Everything can be changed in ⚙️ Settings, ⏰ Schedules and 📝 Posts."
     ),
     "setup.btn.first_post": "📝 Create the first post",
     "setup.btn.new_post": "📝 Create a post",

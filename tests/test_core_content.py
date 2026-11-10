@@ -1,9 +1,9 @@
-"""Content of posts (services/content.py) and the audience / rotation helpers (services/audience.py)."""
+"""Content of posts (services/content.py) and the audience helpers (services/audience.py)."""
 from __future__ import annotations
 
 import pytest
 
-from app.db.models import Chat, ChatOrigin, ChatStatus, ChatGroup, Post, PostStatus, SchedMode
+from app.db.models import Chat, ChatGroup, ChatOrigin, ChatStatus, GroupChat, Post, PostStatus, SchedMode
 from app.services import audience, content
 from tests.conftest import MAIN_BOT_ID, SUPER_ID, App
 
@@ -51,44 +51,31 @@ def _chat(pk: int, origin: str = ChatOrigin.OWN) -> Chat:
                 admin_paused=False, owner_paused=False)
 
 
-def test_targets_and_rotation() -> None:
+def test_targets() -> None:
     own, ext = _chat(1), _chat(2, ChatOrigin.EXTERNAL)
     assert audience.targets_chat(["all"], ext, set())
     assert audience.targets_chat(["own"], own, set()) and not audience.targets_chat(["own"], ext, set())
     assert audience.targets_chat(["g7"], ext, {7}) and not audience.targets_chat(["g7"], own, {3})
     assert audience.make_targets(["own", "ext"], [3]) == ["all"]
     assert audience.make_targets(["own"], [5, 3]) == ["own", "g3", "g5"]
-    p1, p2, p3 = (Post(id=i, targets=["all"]) for i in (1, 2, 3))
-    pool = audience.rotation_pool([p1, p2, p3], own, set())
-    assert audience.next_in_rotation(pool, None).id == 1
-    assert audience.next_in_rotation(pool, 1).id == 2
-    assert audience.next_in_rotation(pool, 3).id == 1  # wraps around
-    assert audience.next_in_rotation(pool, 2, "random").id != 2
 
 
-def test_source_is_the_first_group_with_own_frequency() -> None:
-    a = ChatGroup(id=1, name="A", freq=None, sort=0)
-    b = ChatGroup(id=2, name="B", freq={"mode": "interval", "every": 60}, sort=5)
-    c = ChatGroup(id=3, name="C", freq={"mode": "interval", "every": 30}, sort=1)
-    groups = {g.id: g for g in (a, b, c)}
-    assert audience.source_of({1}, groups) is None
-    assert audience.source_of({1, 2, 3}, groups) is c
-
-
-async def test_plan_slot_gives_each_chat_its_next_post(app: App) -> None:
+async def test_audience_is_the_sendable_chats_it_targets(app: App) -> None:
     async with app.db() as s:
         chats = [Chat(bot_id=MAIN_BOT_ID, chat_id=-1001 - i, title=f"C{i}", status=ChatStatus.APPROVED,
                       rights_ok=True, origin=ChatOrigin.OWN) for i in range(3)]
         s.add_all(chats)
+        group = ChatGroup(bot_id=MAIN_BOT_ID, name="Cine")
+        s.add(group)
         await s.flush()
-        chats[1].rot_last_post_id = None
-        posts = [Post(bot_id=MAIN_BOT_ID, name=f"P{i}", text="x", targets=["all"], mode=SchedMode.ROTATION,
-                      status=PostStatus.ACTIVE) for i in range(2)]
-        s.add_all(posts)
-        await s.flush()
-        chats[0].rot_last_post_id = posts[0].id
+        s.add_all([GroupChat(group_id=group.id, chat_pk=chats[i].id) for i in (0, 2)])
         chats[2].admin_paused = True
-        plan = await audience.plan_slot(s, MAIN_BOT_ID, None, "Europe/Madrid", "seq")
-    assert {pid: sorted(c.title for c in cs) for pid, cs in plan.items()} == {posts[1].id: ["C0"],
-                                                                                posts[0].id: ["C1"]}
+        post = Post(bot_id=MAIN_BOT_ID, name="P", text="x", targets=[f"g{group.id}"], mode=SchedMode.OWN,
+                    status=PostStatus.ACTIVE)
+        s.add(post)
+        await s.flush()
+        assert [c.title for c in await audience.audience(s, post)] == ["C0"]
+        assert [c.title for c in await audience.audience(s, post, sendable_only=False)] == ["C0", "C2"]
+        post.targets = ["all"]
+        assert [c.title for c in await audience.audience(s, post)] == ["C0", "C1"]
     assert SUPER_ID  # the fixture user exists

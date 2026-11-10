@@ -11,7 +11,6 @@ from sqlalchemy import func, select
 from app.bot.routers.groups import MAX_GROUPS, GrCB
 from app.bot.routers.posts import parse_minutes
 from app.db.base import utcnow
-from app.db.models import Bot as BotRecord
 from app.db.models import ChatGroup, Post, PostStatus, Run, SchedMode
 from app.services import freq
 from app.services.scheduler import Scheduler
@@ -59,8 +58,8 @@ async def test_far_end_dates_stored_before_the_fix_keep_working(app: App, monkey
     forever = await make_post(app, name="Para siempre", ends_on=date(9999, 12, 31))
     paused = await make_post(app, name="En pausa", ends_on=date(9999, 12, 31), status=PostStatus.PAUSED)
     async with app.db() as s:
-        rec = await s.get(BotRecord, MAIN_BOT_ID)
-        rec.rot_next_at = utcnow() - timedelta(minutes=1)  # a global slot is due
+        for pid in (forever, paused):
+            (await s.get(Post, pid)).next_send_at = utcnow() - timedelta(minutes=1)  # due (the paused one never goes)
     await app.scheduler.tick()
     async with app.db() as s:
         assert [run.post_id for run in (await s.execute(select(Run))).scalars()] == [forever]

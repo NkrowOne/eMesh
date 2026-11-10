@@ -183,19 +183,35 @@ async def test_targets_are_saved_at_once(app: App, engine: SimpleNamespace) -> N
 
 
 # --------------------------------------------------------------------------- ⏰ Programación
+SCHED_MODES = (
+    "⏰ <b>A sus horas</b>\n"
+    "   └ Se envía a todo su destino a cada hora de su horario.\n"
+    "📢 <b>Difusión puntual</b>\n"
+    "   └ Se envía una sola vez, en la fecha elegida; después queda terminado.\n"
+    "✋ <b>Solo cuando lo envíe yo</b>\n"
+    "   └ Únicamente con 🚀 Enviar ahora."
+)
+CAMPAIGN_HINT = "   └ Opcional. Fuera de esas fechas no se envía a sus horas; pasado el último día queda terminado."
+
+
 async def test_schedule_modes(app: App, engine: SimpleNamespace, freq_screen: list[int]) -> None:
     async with app.db() as s:
         rec = await s.get(BotRecord, MAIN_BOT_ID)
         assert rec is not None
         rec.freq = {"mode": "interval", "every": 180, "window": "", "days": "0123456"}
-    pid = await add_post(app)
+    pid = await add_post(app, mode=SchedMode.MANUAL, freq=None)
     text = await open_screen_of(app, "post_sched", pid)
-    assert "⏰ <b>Programación</b> · Promo Cine" in text and "(global: cada 3 h)" in text
-    assert "📆 Campaña: sin fechas" in text and "Próximo envío" not in text
-    assert button_texts(app) == ["✅ En rotación", "⚪ Con su propio horario", "⚪ Difusión puntual",
-                                 "⚪ Solo cuando lo envíe yo", "📆 Desde: —", "📆 Hasta: —", "🔙 Regresar"]
+    assert text == f"⏰ <b>Programación</b> · Promo Cine\n\n{SCHED_MODES}\n\n📆 Campaña: sin fechas\n{CAMPAIGN_HINT}"
+    assert button_texts(app) == ["⚪ A sus horas", "⚪ Difusión puntual", "✅ Solo cuando lo envíe yo",
+                                 "📆 Desde: —", "📆 Hasta: —", "🔙 Regresar"]  # exactly the three modes
+    assert [app.find_button(SUPER_ID, label)[0]["callback_data"] for label in ("A sus horas", "Difusión puntual",
+                                                                               "Solo cuando lo envíe yo")] == [
+        PoCB(a="mode", id=pid, v=i).pack() for i in range(3)]
+    await app.press(SUPER_ID, PoCB(a="mode", id=pid, v=3).pack())  # an old or forged index outside the modes
+    assert answers(app)[-1] == EXPIRED and (await load(app, Post, pid)).mode == SchedMode.MANUAL
+    assert engine.woke == 0
 
-    await app.click(SUPER_ID, "Con su propio horario")
+    await app.click(SUPER_ID, "A sus horas")  # it starts with a copy of the default schedule
     post = await load(app, Post, pid)
     assert post.mode == SchedMode.OWN and post.freq == {"mode": "interval", "every": 180, "window": "",
                                                         "days": "0123456"}
@@ -227,9 +243,11 @@ async def test_schedule_modes(app: App, engine: SimpleNamespace, freq_screen: li
     await app.click(SUPER_ID, "📆 Fecha")
     await app.click(SUPER_ID, "Cancelar")
     assert "⏰ <b>Programación</b>" in app.last_text(SUPER_ID)
-    await app.click(SUPER_ID, "En rotación")
+    await app.click(SUPER_ID, "A sus horas")  # back to its own times: the schedule it had is kept
     post = await load(app, Post, pid)
-    assert post.mode == SchedMode.ROTATION and post.next_send_at is None and post.send_at is not None
+    assert post.mode == SchedMode.OWN and post.freq == {"mode": "interval", "every": 180, "window": "",
+                                                        "days": "0123456"}
+    assert post.next_send_at is not None and post.next_send_at != post.send_at and post.send_at is not None
     await app.click(SUPER_ID, "Difusión puntual")  # its date is still in the future: no question
     post = await load(app, Post, pid)
     assert post.mode == SchedMode.ONCE and post.next_send_at == post.send_at

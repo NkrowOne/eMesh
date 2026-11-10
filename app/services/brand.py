@@ -1,30 +1,35 @@
-"""🖼 Platform images, chosen by a super admin and used by every bot of the platform.
+"""🖼 Platform images, chosen by a super admin and used by every bot of the platform, and the clones' avatar.
 
-* ``bot`` (:data:`BOT`): the profile photo of the main bots. Clones get it too, unless they have a photo of their own:
-  a new clone as soon as it runs (:func:`give_to_clone`), every clone when the image changes (:func:`give_to_clones`).
+* ``bot`` (:data:`BOT`): the photo on top of the home message (main bots for everyone, clones for their admins). It
+  changes no profile photo.
 * ``tz`` (:data:`TZ`): the photo on top of the 🗺 timezone picker, in every bot.
 
 Each image is stored in KV ``platform:photo:<name>`` as ``{"<bot id>": "<file id>"}``: Telegram file ids belong to one
 bot, so a bot without one gets the file downloaded through a bot that has it (:func:`photo_for`) and, once it has sent
-it, remembers its own id (:func:`remember`). The profile photo a clone got from the platform is remembered in KV
-``photo:bot:<bot id>`` (its ``file_unique_id``): a clone whose photo is still that one (or that has none) follows the
-platform image; a clone whose owner put another photo keeps it.
+it, remembers its own id (:func:`remember`).
+
+The profile photo of every clone is the eMesh logo bundled with the app (:data:`AVATAR_FILE`, :func:`avatar`): a clone
+gets it when it starts running and every running clone at startup (:func:`give_to_clone`,
+:func:`give_to_running_clones`). What a clone got is remembered in KV ``photo:bot:<bot id>`` (``uid``: the
+``file_unique_id`` of its photo, ``src``: what it was): a clone without a photo, or still showing one we gave (an older
+logo, or the platform image clones got before), gets the avatar; one that already shows it gets nothing again; a clone
+whose owner put another photo keeps it.
 """
 from __future__ import annotations
 
 import asyncio
+import functools
+import hashlib
 import logging
+from collections import Counter
 from collections.abc import Coroutine
-from dataclasses import dataclass
+from pathlib import Path
 from typing import TYPE_CHECKING, Any
 
 from aiogram import Bot
 from aiogram.exceptions import TelegramAPIError
 from aiogram.types import BufferedInputFile, InputProfilePhotoStatic
-from sqlalchemy import select
 
-from app.db.models import Bot as BotRecord
-from app.db.models import BotStatus
 from app.db.session import session_scope
 from app.services import kv
 from app.telegram.context import set_low_priority
@@ -38,11 +43,12 @@ if TYPE_CHECKING:
 
 log = logging.getLogger(__name__)
 
-BOT = "bot"  # profile photo of the bots
+BOT = "bot"  # photo on top of the home
 TZ = "tz"  # photo of the 🗺 timezone picker
 NAMES = (BOT, TZ)
 FILE_NAME = "photo.jpg"
 DOWNLOAD_LIMIT = 20 * 1024 * 1024  # getFile: Telegram lets bots download files up to 20 MB
+AVATAR_FILE = Path(__file__).resolve().parent.parent / "assets" / "clone_avatar.jpg"  # profile photo of the clones
 
 _tasks: set[asyncio.Task[Any]] = set()  # background work started here (kept so it isn't garbage collected)
 
@@ -170,80 +176,63 @@ async def set_profile_photo(bot: Bot, raw: bytes) -> str | None:
         return None
 
 
-async def set_main_photos(manager: BotManager, raw: bytes) -> int:
-    """The bot image on every running main bot (copies too). Returns how many changed; raises ``TelegramAPIError``
-    when Telegram refuses the photo (nothing else is tried then)."""
-    done = 0
-    for bot_id in sorted(manager.main_bot_ids):
-        bot = manager.get(bot_id)
-        if bot is not None:
-            await set_profile_photo(bot, raw)
-            done += 1
-    return done
+@functools.cache
+def avatar() -> tuple[bytes, str]:
+    """The clones' profile photo (:data:`AVATAR_FILE`, a square JPEG) and its marker ``asset:<sha1>`` (a new file is
+    given again). Raises ``OSError`` when the file can't be read."""
+    raw = AVATAR_FILE.read_bytes()
+    return raw, f"asset:{hashlib.sha1(raw, usedforsecurity=False).hexdigest()}"
 
 
-async def give_to_clone(manager: BotManager, sm: SessionMaker, bot_id: int, *, raw: bytes | None = None,
-                        source: str | None = None) -> str:
-    """Gives the bot image to the clone ``bot_id`` unless its owner put a photo of their own. ``raw``: the image and
-    ``source`` the file id it comes from (downloaded when None). Returns ``set``, ``same`` (it already shows this
-    image: nothing is uploaded again), ``own`` (it keeps its photo), ``none`` (no image, or a newer one replaced
-    ``source``; not running; a main bot) or ``failed``. Background work (low priority): run it with :func:`spawn`."""
+async def give_to_clone(manager: BotManager, sm: SessionMaker, bot_id: int) -> str:
+    """Gives the clones' avatar (:func:`avatar`) to the clone ``bot_id`` unless its owner put a photo of their own (a
+    photo we gave earlier, like an older platform image, is replaced). Returns ``set``, ``same`` (it already shows it:
+    nothing is uploaded again), ``own`` (it keeps its photo), ``none`` (not running; a main bot) or ``failed``.
+    Background work (low priority): run it with :func:`spawn`."""
     set_low_priority()
     bot = manager.get(bot_id)
     if bot is None or bot_id in manager.main_bot_ids:
         return "none"
+    try:
+        raw, src = avatar()
+    except OSError as exc:
+        log.error("The clones' avatar %s can't be read: %s", AVATAR_FILE, exc)
+        return "failed"
     async with session_scope(sm) as s:
         given = await kv.get(s, _given_key(bot_id))
-        ids = await photo_ids(s, BOT)
-    if not ids or (source is not None and source not in ids.values()):
-        return "none"
     given_uid, given_src = (given.get("uid"), given.get("src")) if isinstance(given, dict) else (None, None)
     try:
         current = await current_photo(bot)
-        if current is not None and current != given_uid:
+        # Its owner's photo: one we never gave. A photo we gave but couldn't read back right after the upload
+        # (``uid`` None) counts as ours.
+        if current is not None and (given_src is None or (given_uid is not None and current != given_uid)):
             return "own"
-        if current is not None and given_src in ids.values():
+        if current is not None and given_src == src:
             return "same"
-        if raw is None or source is None:
-            got = await fetch(ids, manager)
-            if got is None:
-                return "none"
-            raw, source = got
         uid = await set_profile_photo(bot, raw)
     except TelegramAPIError as exc:
-        log.warning("The bot image could not be given to bot %s: %s", bot_id, short(exc))
+        log.warning("The avatar could not be given to bot %s: %s", bot_id, short(exc))
         return "failed"
     async with session_scope(sm) as s:
-        await kv.put(s, _given_key(bot_id), {"uid": uid, "src": source})
-    log.info("Bot %s got the platform's bot image", bot_id)
+        await kv.put(s, _given_key(bot_id), {"uid": uid, "src": src})
+    log.info("Bot %s got the clones' avatar", bot_id)
     return "set"
 
 
-@dataclass
-class Given:
-    """What :func:`give_to_clones` did."""
-
-    set: int = 0  # clones that show the image (they got it now or already had it)
-    own: int = 0  # clones that keep a photo of their own
-    failed: int = 0
-
-
-async def give_to_clones(manager: BotManager, sm: SessionMaker, raw: bytes, source: str) -> Given:
-    """The new bot image (``raw``, from the file id ``source``) on every running clone without a photo of its own
-    (the clones left are skipped when a newer image replaces it meanwhile). Background work (low priority): run it
-    with :func:`spawn`."""
+async def give_to_running_clones(manager: BotManager, sm: SessionMaker) -> Counter[str]:
+    """Startup: the avatar on every running clone (:func:`give_to_clone`: one that already shows it or has a photo of
+    its own is left as it is). Returns how many got each outcome. Background work (low priority): run it with
+    :func:`spawn`."""
     set_low_priority()
-    async with session_scope(sm) as s:
-        ids = list((await s.execute(
-            select(BotRecord.id).where(BotRecord.is_main.is_(False), BotRecord.status == BotStatus.ACTIVE)
-            .order_by(BotRecord.id))).scalars())
-    result = Given()
-    for bot_id in ids:
-        outcome = await give_to_clone(manager, sm, int(bot_id), raw=raw, source=source)
-        if outcome in ("set", "same"):
-            result.set += 1
-        elif outcome == "own":
-            result.own += 1
-        elif outcome == "failed":
-            result.failed += 1
-    return result
+    outcomes: Counter[str] = Counter()
+    for bot_id in sorted(manager.bots):
+        if bot_id in manager.main_bot_ids or not manager.is_running(bot_id):
+            continue
+        try:
+            outcomes[await give_to_clone(manager, sm, bot_id)] += 1
+        except Exception:  # one clone never stops the others
+            log.exception("The avatar could not be given to bot %s", bot_id)
+            outcomes["failed"] += 1
+    if outcomes:
+        log.info("Clones' avatar at startup: %s", ", ".join(f"{k} {n}" for k, n in sorted(outcomes.items())))
+    return outcomes

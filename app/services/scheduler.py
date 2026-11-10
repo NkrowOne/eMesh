@@ -1,16 +1,16 @@
 """⏰ The scheduler: every ``SCHEDULER_TICK_SECONDS`` (or right after :meth:`Scheduler.wake`) it starts the due work of
 every running bot as background jobs, each bot in its own tasks so a slow or flooded bot never delays the others:
 
-* ``send`` (not while the network is paused, not for a hub main bot): the slot of the global frequency and of every
-  group with its own one (each chat gets the next post of its rotation), then the own-frequency and one-time posts;
-  every few minutes, the runs left half-done by a task that died go on (or are closed when too old).
+* ``send`` (not while the network is paused, not for a hub main bot): the due own-schedule and one-time posts, each
+  to its whole audience; every few minutes, the runs left half-done by a task that died go on (or are closed when
+  too old).
 * ``delete``: the auto deletions that are due (also while paused: announced deletions always happen).
 * ``maint``: owner pauses that ended (also while paused), the daily summary and, every
   ``MAINTENANCE_INTERVAL_HOURS``, the refresh of every chat (title, members, rights).
 
 Plus, once a day, the cleanup of old runs and activity. Everything is in the database, so after a restart the ticks
-simply pick up what is due; a slot or post found more than ``LATE_SKIP_MINUTES`` late is skipped, not sent late. A slot
-is claimed (its next time stored) before its posts are sent, so a crash never sends it twice.
+simply pick up what is due; a post found more than ``LATE_SKIP_MINUTES`` late is skipped, not sent late. A post is
+claimed (its next time stored) before it is sent, so a crash never sends it twice.
 
 Bookkeeping in the KV table: ``maint:<bot id>`` / ``maint:cleanup`` (last run, ISO time) and
 ``summary:<bot id>:<local date>`` (sent once).
@@ -29,8 +29,8 @@ from typing import TYPE_CHECKING, Any
 from sqlalchemy import delete, exists, func, select, update
 
 from app.db.base import utcnow
-from app.db.models import KV, BotStatus, BotUser, Chat, ChatGroup, ChatStatus, Delivery, DeliveryStatus, Event, \
-    EventKind, Post, PostStatus, Run, RunKind, SchedMode, rotation_on
+from app.db.models import KV, BotStatus, BotUser, Chat, ChatStatus, Delivery, DeliveryStatus, Event, EventKind, Post, \
+    PostStatus, Run, RunKind, SchedMode
 from app.db.models import Bot as BotRecord
 from app.db.session import session_scope
 from app.i18n import t
@@ -134,7 +134,7 @@ class Scheduler:
         await self.publisher.wait_idle(timeout=STOP_TIMEOUT)
 
     def wake(self) -> None:
-        """Runs a tick as soon as possible (after a frequency or a schedule changed)."""
+        """Runs a tick as soon as possible (after a schedule changed)."""
         self._wake.set()
 
     async def _loop(self) -> None:
@@ -218,76 +218,14 @@ class Scheduler:
 
     # ----------------------------------------------------------------- sends
     async def _sends(self, bot_id: int) -> None:
-        now = utcnow()
         last = self._swept.get(bot_id)
         if last is None or time.monotonic() - last >= ORPHANS_EVERY:
             # Runs left "sending" with no task behind them (it died): they go on, or are closed when too old.
             self._swept[bot_id] = time.monotonic()
             await self._guard(self.publisher.resume_bot(bot_id), f"half-done runs of bot {bot_id}")
-        await self._guard(self._slot(bot_id, None, now), f"global slot of bot {bot_id}")
-        # A slot may take minutes on a big network: every next step reads the clock again (a stale "now" would
-        # compute next times already past and send the same slot twice).
-        async with session_scope(self.sm) as s:
-            # A JSON column may hold a JSON null instead of NULL: the groups with their own frequency are picked here.
-            groups = [group_id for group_id, own, next_at in (await s.execute(
-                select(ChatGroup.id, ChatGroup.freq, ChatGroup.rot_next_at).where(ChatGroup.bot_id == bot_id)
-                .order_by(ChatGroup.sort, ChatGroup.id))).all() if own or next_at is not None]
-        for group_id in groups:
-            await self._guard(self._slot(bot_id, group_id, utcnow()), f"slot of group {group_id}")
+        # The half-done runs may take minutes: the clock is read again (a stale "now" would compute next times already
+        # past and send the same post twice).
         await self._guard(self._posts(bot_id, utcnow()), f"scheduled posts of bot {bot_id}")
-
-    async def _slot(self, bot_id: int, group_id: int | None, now: datetime) -> None:
-        """A due slot of the global frequency (``group_id`` None) or of a group's own one: each chat following it gets
-        the next post of its rotation. The slot is claimed (next time stored) before sending."""
-        async with session_scope(self.sm) as s:
-            ws = await s.get(BotRecord, bot_id)
-            if ws is None or ws.paused or not self.manager.is_running(bot_id):
-                return
-            tz = self._tz(ws)
-            group: ChatGroup | None = None
-            if group_id is None:
-                due = ws.rot_next_at
-            else:
-                group = await s.get(ChatGroup, group_id)
-                if group is None or group.bot_id != bot_id:
-                    return
-                if not group.freq:  # its chats follow the global frequency now
-                    group.rot_next_at = None
-                    return
-                due = group.rot_next_at
-
-            def advance() -> None:
-                if group is None:
-                    freq.refresh_bot(ws, now)
-                else:
-                    freq.refresh_group(group, tz, now)
-
-            if due is None or due > now:
-                if due is None:
-                    advance()  # a missing next slot is just computed
-                return
-            if now - due > self._late:
-                log.warning("Bot %s: the slot of %s at %s is %s late (downtime?): skipped", bot_id,
-                            audience.source_key(group), due.isoformat(), now - due)
-                advance()
-                return
-            # Without rotation the slots still move on (nothing stale when it is turned on again) but send nothing.
-            plan = await audience.plan_slot(s, bot_id, group, tz, ws.rotation, now) if rotation_on(ws.rotation) else {}
-            advance()
-            source = audience.source_key(group)
-            jobs = [(post_id, [c.id for c in chats]) for post_id, chats in plan.items()]
-        if not jobs:
-            return
-        log.info("Bot %s: slot of %s, %d post(s) to %d chat(s)", bot_id, source, len(jobs),
-                 sum(len(pks) for _, pks in jobs))
-        # Each chat gets one post: the runs of a slot never share a chat, so they go out together.
-        results = await asyncio.gather(*(self.publisher.run(post_id, pks, kind=RunKind.ROTATION, source=source,
-                                                            wait=True) for post_id, pks in jobs),
-                                       return_exceptions=True)
-        for (post_id, _), res in zip(jobs, results):
-            if isinstance(res, BaseException):
-                log.error("Bot %s: the run of post %s in the slot of %s failed", bot_id, post_id, source,
-                          exc_info=res)
 
     async def _posts(self, bot_id: int, now: datetime) -> None:
         """Campaigns that are over become done; due own-frequency and one-time posts go to their whole audience

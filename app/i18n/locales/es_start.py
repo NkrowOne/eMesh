@@ -11,9 +11,6 @@ STRINGS = {
     ),
     "home.posts": "📝 Mensajes activos: <b>{n}</b>",
     "home.posts.none": "   └ Crea el primero en 📝 Mensajes.",
-    "home.freq": "⏰ Frecuencia global: {freq}",
-    "home.next": "📅 Próximo turno: <b>{date}</b>",
-    "home.rot_off": "🔁 Sin rotación: cada mensaje se envía con su propio horario",
     "home.next_send": "📅 Próximo envío: <b>{date}</b>",
     "home.owner_paused": "⏸ Pausados por su dueño: <b>{n}</b>",
     "home.pending": "⏳ Solicitudes pendientes: <b>{n}</b>",
@@ -31,7 +28,7 @@ STRINGS = {
     "home.btn.posts": "📝 Mensajes",
     "home.btn.chats": "📣 Canales",
     "home.btn.groups": "🗂 Grupos de canales",
-    "home.btn.freqs": "⏰ Frecuencias",
+    "home.btn.freqs": "⏰ Horarios",
     "home.btn.stats": "📊 Estadísticas",
     "home.btn.activity": "📜 Actividad",
     "home.btn.requests": "⏳ Solicitudes ({n})",
@@ -91,11 +88,11 @@ STRINGS = {
     # --- Inicio: bot principal en modo hub ---------------------------------------------------------
     "home.hub": (
         "🕸 <b>eMesh · Tu propia red de distribución</b>\n\n"
-        "Crea tu propio bot y publica mensajes en tus canales y grupos de forma automática: cada canal recibe un "
-        "mensaje en cada turno de su frecuencia y los mensajes se van turnando.\n\n"
+        "Crea tu propio bot y publica mensajes en tus canales y grupos de forma automática: cada mensaje sale a "
+        "las horas que elijas.\n\n"
         "✨ <b>Con tu bot podrás:</b>\n"
         "• Publicar texto, fotos y vídeos con botones de colores.\n"
-        "• Elegir cada cuánto se publica, para todos o por grupos de canales.\n"
+        "• Elegir a qué horas se publica cada mensaje y en qué canales.\n"
         "• Dejar que otras personas añadan sus canales a tu red, si quieres.\n"
         "• Ver las estadísticas y la actividad de la red.\n\n"
         "👑 <b>El bot es tuyo</b>: tu nombre, tus canales y tus reglas. La plataforma se encarga de que funcione.\n\n"
@@ -109,13 +106,11 @@ STRINGS = {
         "El bot publica tus mensajes en tus canales y grupos de forma automática.\n\n"
         "• 📣 <b>Canales y grupos</b>: los chats donde el bot es administrador. Juntos forman tu <b>red</b>.\n"
         "• 📝 <b>Mensajes</b>: lo que se publica: texto, foto, vídeo… con botones.\n"
-        "• ⏰ <b>Frecuencias</b>: cada cuánto recibe un mensaje cada canal.\n"
-        "• 🗂 <b>Grupos de canales</b>: conjuntos de canales para enviarles mensajes concretos o darles su propia "
-        "frecuencia.\n\n"
-        "En cada turno de su frecuencia, cada canal recibe <b>un</b> mensaje; los mensajes en rotación se van "
-        "turnando.\n\n"
-        "👉 <b>Primeros pasos</b>: añade el bot a un canal con ➕ <b>Añadir canal o grupo</b>, crea un mensaje en "
-        "📝 <b>Mensajes</b> y ajusta la frecuencia en ⏰ <b>Frecuencias</b>."
+        "• ⏰ <b>Horarios</b>: cada mensaje se envía a sus horas; aquí está el horario con el que empiezan los "
+        "nuevos y el anti-spam.\n"
+        "• 🗂 <b>Grupos de canales</b>: conjuntos de canales para enviarles mensajes concretos.\n\n"
+        "👉 <b>Primeros pasos</b>: añade el bot a un canal con ➕ <b>Añadir canal o grupo</b> y crea un mensaje en "
+        "📝 <b>Mensajes</b> con sus horas."
     ),
     "guide.admin.2": (
         "📣 <b>Canales propios y externos</b>\n\n"
@@ -142,25 +137,21 @@ STRINGS = {
         "<code>&amp;&amp;</code>, un color al final (🔵 🟢 🔴) o un texto para copiar: "
         "<code>Código - copiar: PROMO10</code>.\n"
         "3. 🎯 <b>Destino</b>: 🌐 todos, 🏠 solo propios, 🤝 solo externos o un 🗂 grupo de canales.\n"
-        "4. ⏰ <b>Cuándo</b>: 🔁 en rotación, ⏰ con su propio horario, 📢 difusión puntual (una sola vez: ahora "
-        "mismo o en una fecha) o ✋ solo cuando lo envíes.\n"
+        "4. ⏰ <b>Cuándo</b>: ⏰ a sus horas, 📢 difusión puntual (una sola vez: ahora mismo o en una fecha) o "
+        "✋ solo cuando lo envíes.\n"
         "5. 🗑 <b>Cuánto tiempo sigue publicado</b>: de 1 h a 2 días, o no se borra.\n\n"
         "⚙️ <b>Opciones</b>: 📌 fijar, 🔕 sin sonido, 🛡 proteger el contenido, 🗑 borrar pasado un tiempo "
         "(máx. 48 h), ♻️ borrar su envío anterior…\n"
         "👁 <b>Vista previa</b> lo muestra tal cual; 🚀 <b>Enviar ahora</b> lo publica al momento."
     ),
     "guide.admin.4": (
-        "⏰ <b>Frecuencias, rotación y anti-spam</b>\n\n"
-        "• 🌐 <b>Frecuencia global</b>: la siguen todos los canales. Por defecto, 1 al día (a las 12:00); también "
-        "cada cierto tiempo (por ejemplo, cada 4 h de 08:00 a 22:00) o a horas fijas, los días que elijas.\n"
-        "• 🗂 Un <b>grupo de canales</b> puede tener su propia frecuencia: sus canales la siguen en lugar de la "
-        "global.\n"
-        "• 🔁 <b>Rotación</b>: en cada turno, cada canal recibe el siguiente mensaje que le toca, en orden o al "
-        "azar, nunca el mismo dos veces seguidas.\n"
-        "• 🚫 <b>Sin rotación</b>: si la desactivas, no hay turnos y cada mensaje se envía con su propio horario.\n"
-        "• ⏰ Un mensaje con <b>horario propio</b> se envía a todo su destino a sus horas, fuera de la rotación.\n"
+        "⏰ <b>Horarios y anti-spam</b>\n\n"
+        "• ⏰ Cada mensaje se envía <b>a sus horas</b> a todo su destino: por ejemplo, a las 10:00 y a las 18:00, "
+        "o cada 4 h de 08:00 a 22:00, los días que elijas.\n"
+        "• 🕐 El <b>horario por defecto</b> (⏰ Horarios) es con el que empieza cada mensaje nuevo; luego se cambia "
+        "en su ⏰ Programación.\n"
         "• 📆 Las <b>fechas de campaña</b> limitan cuándo se envía un mensaje.\n\n"
-        "🛡 <b>Anti-spam</b> (⏰ Frecuencias › 🛡 Anti-spam): máximo de mensajes al día por canal, separación "
+        "🛡 <b>Anti-spam</b> (⏰ Horarios › 🛡 Anti-spam): máximo de mensajes al día por canal, separación "
         "mínima entre dos mensajes y 🧹 uno a la vez (se borra el anterior antes de publicar)."
     ),
     "guide.admin.5": (
@@ -170,7 +161,7 @@ STRINGS = {
         "soporte y los admins solo los cambia el propietario.\n"
         "• 🔔 <b>Mis avisos</b>: alertas de la red, resumen diario e informe de cada envío. Cada admin elige los "
         "suyos.\n"
-        "• 🗺 <b>Zona horaria</b>: las frecuencias y las fechas se calculan con ella.\n"
+        "• 🗺 <b>Zona horaria</b>: los horarios y las fechas se calculan con ella.\n"
         "• 🤝 <b>Canales externos</b>: admitirlos o no, aprobación manual, mínimo de miembros, texto de bienvenida, "
         "las pausas de los socios y el enlace para invitar.\n"
         "• 🧭 <b>Asistente de configuración</b>: repasa paso a paso lo principal de la red.\n"
@@ -206,8 +197,7 @@ STRINGS = {
         "eMesh crea <b>tu propio bot</b> para publicar mensajes en tus canales y grupos de forma automática.\n\n"
         "1. Añades tu bot a tus canales y grupos (y, si quieres, otras personas añaden los suyos).\n"
         "2. Escribes los mensajes: texto, foto o vídeo, con botones de colores.\n"
-        "3. Eliges cada cuánto se publica: cada canal recibe un mensaje en cada turno y los mensajes se van "
-        "turnando.\n\n"
+        "3. Eliges a qué horas se publica cada mensaje.\n\n"
         "👑 <b>El bot es tuyo</b>: tu nombre, tus canales y tus reglas."
     ),
     "guide.hub.2": (
@@ -353,7 +343,7 @@ STRINGS = {
     "adm.dm.demoted": "ℹ️ Ya no eres admin de @{bot}.",
     # --- Zona horaria ------------------------------------------------------------------------------
     "tz.title": "🗺 <b>Zona horaria</b>",
-    "tz.intro.admin": "Con ella se calculan las frecuencias y las fechas de envío de la red.",
+    "tz.intro.admin": "Con ella se calculan los horarios y las fechas de envío de la red.",
     "tz.intro.user": "Las fechas y las horas se muestran en tu zona horaria.",
     "tz.intro.onboarding": (
         "👋 <b>¡Te damos la bienvenida a tu bot!</b>\n"

@@ -1,6 +1,6 @@
 """🤖 Crear mi bot (main bot): a clone created with Telegram Managed Bots or a @BotFather token, the platform's
 clone policy (open / approval / closed) and limits, and 🤖 Mis bots (pause, resume, disconnect). A clone that starts
-running gets the platform's bot image (👑 › 🖼 Imagen del bot) unless it has a photo of its own."""
+running gets the eMesh logo as its profile photo (``brand.give_to_clone``) unless it has a photo of its own."""
 from __future__ import annotations
 
 import logging
@@ -15,12 +15,12 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.bot.context import Ctx
 from app.bot.filters import MainBotFilter
-from app.bot.routers.panel import approval_markup, give_image
+from app.bot.routers.panel import approval_markup, give_avatar
 from app.config import Settings
 from app.db.models import Bot as BotRecord
 from app.db.models import BotStatus
 from app.db.session import SessionMaker
-from app.services import brand, clones, limits
+from app.services import clones, limits
 from app.services.notify import send_dm
 from app.telegram.manager import BotManager, BotTokenError
 from app.ui.callbacks import MenuCB
@@ -110,7 +110,7 @@ async def clone_screen(event: Message | CallbackQuery, ctx: Ctx, session: AsyncS
         how.append(ctx.t("cl.how.create"))
     if room.token_ok:
         how.append(ctx.t("cl.how.token" if room.new_ok else "cl.how.reconnect"))
-    if room.new_ok and await brand.has_photo(session, brand.BOT):
+    if room.new_ok:
         how.append(ctx.t("cl.photo"))
     if how:
         parts.append("\n".join(how))
@@ -223,7 +223,7 @@ async def on_token(message: Message, ctx: Ctx, session: AsyncSession, state: FSM
     await state.clear()
     await show(message, *_result_view(ctx, rec))
     if rec.status == BotStatus.ACTIVE:
-        await give_image(session, manager, sm, rec.id)
+        give_avatar(manager, sm, rec.id)
     if is_new and ctx.user is not None:
         await clones.notify_new_clone(bot, session, settings, rec, owner_name=ctx.user.full_name,
                                       owner_username=ctx.user.username, managed=False,
@@ -255,7 +255,7 @@ async def on_managed_bot(event: ManagedBotUpdated, bot: Bot, ctx: Ctx, session: 
         return
     await send_dm(bot, session, creator.id, *_result_view(ctx, rec))
     if rec.status == BotStatus.ACTIVE:
-        await give_image(session, manager, sm, rec.id)
+        give_avatar(manager, sm, rec.id)
     if is_new:
         await clones.notify_new_clone(bot, session, settings, rec, owner_name=creator.full_name,
                                       owner_username=creator.username, managed=True, markup=approval_markup(rec))
@@ -306,7 +306,7 @@ async def on_resume(call: CallbackQuery, callback_data: CloneCB, ctx: Ctx, sessi
     if clones.status_key(rec) == "paused":
         if await manager.enable_bot(rec.id):
             await toast(call, ctx.t("cl.resumed"))
-            await give_image(session, manager, sm, rec.id)  # the image may have changed while it was paused
+            give_avatar(manager, sm, rec.id)  # the avatar may have changed while it was paused
         else:
             await alert(call, ctx.t("cl.resume_failed"))
     await open_screen("mybots", call, ctx, session, arg=callback_data.page)

@@ -10,7 +10,8 @@ from sqlalchemy import select
 
 from app.db.base import utcnow
 from app.db.models import Bot as BotRecord
-from app.db.models import BotUser, Chat, ChatGroup, ChatOrigin, ChatStatus, GroupChat, Post, PostStatus, SchedMode
+from app.db.models import (DEFAULT_FREQ, BotUser, Chat, ChatGroup, ChatOrigin, ChatStatus, GroupChat, Post,
+                            PostStatus, SchedMode)
 from app.services import freq
 from app.ui import screens
 from app.ui.callbacks import MenuCB
@@ -57,10 +58,10 @@ async def add_group(app: App, name: str, chat_pks: tuple[int, ...] = (), *, bot_
 
 
 async def add_post(app: App, *, bot_id: int = MAIN_BOT_ID, **values: Any) -> int:
-    """A text post «Promo Cine» to everyone, in rotation, plus ``values``."""
+    """A text post «Promo Cine» to everyone, ⏰ at its own times (the default schedule), plus ``values``."""
     base: dict[str, Any] = {"name": "Promo Cine", "kind": "text", "text": "<b>Promo</b> de cine", "targets": ["all"],
-                            "mode": SchedMode.ROTATION, "status": PostStatus.ACTIVE, "buttons": [], "media": {},
-                            "delete_previous": True, "delete_after": 0}
+                            "mode": SchedMode.OWN, "freq": dict(DEFAULT_FREQ), "status": PostStatus.ACTIVE,
+                            "buttons": [], "media": {}, "delete_previous": True, "delete_after": 0}
     async with app.db() as s:
         post = Post(bot_id=bot_id, **{**base, **values})
         s.add(post)

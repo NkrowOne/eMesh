@@ -15,7 +15,7 @@ from app import i18n
 from app.bot.routers import setup_dispatcher
 from app.config import Settings, get_settings
 from app.db.session import LeaderLock, create_engine, create_sessionmaker
-from app.services import clones, logbook, zones
+from app.services import brand, clones, logbook, zones
 from app.services.publisher import Publisher
 from app.services.scheduler import Scheduler
 from app.telegram.fsm_storage import SQLStorage
@@ -108,10 +108,13 @@ async def amain() -> None:
             pass
 
     web_runner = None
+    avatars = None
     try:
         await manager.start()
         await publisher.resume()
         await scheduler.start()
+        # Every running clone gets the eMesh logo as its profile photo (once: then it already shows it).
+        avatars = brand.spawn(brand.give_to_running_clones(manager, sm))
         if settings.MODE == "webhook":
             from aiohttp import web
 
@@ -130,6 +133,8 @@ async def amain() -> None:
         await stop.wait()
     finally:
         log.info("Shutting down...")
+        if avatars is not None:
+            avatars.cancel()
         try:
             await scheduler.stop()
         except Exception:  # noqa: BLE001

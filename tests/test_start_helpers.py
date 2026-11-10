@@ -130,7 +130,7 @@ async def add_chat_row(app: App, *, bot_id: int = MAIN_BOT_ID, title: str = "Can
 
 
 async def add_post(app: App, *, bot_id: int = MAIN_BOT_ID, name: str = "Promo Cine", status: str = PostStatus.ACTIVE,
-                   mode: str = SchedMode.ROTATION, freq: dict[str, Any] | None = None,
+                   mode: str = SchedMode.OWN, freq: dict[str, Any] | None = None,
                    send_at: datetime | None = None) -> int:
     async with app.db() as s:
         post = Post(bot_id=bot_id, name=name, text=name, status=status, mode=mode, freq=freq, send_at=send_at)
@@ -139,10 +139,9 @@ async def add_post(app: App, *, bot_id: int = MAIN_BOT_ID, name: str = "Promo Ci
         return post.id
 
 
-async def add_group(app: App, *, bot_id: int = MAIN_BOT_ID, name: str = "Cine", freq: dict[str, Any] | None = None,
-                    open: bool = False) -> int:
+async def add_group(app: App, *, bot_id: int = MAIN_BOT_ID, name: str = "Cine", open: bool = False) -> int:
     async with app.db() as s:
-        group = ChatGroup(bot_id=bot_id, name=name, freq=freq, open=open)
+        group = ChatGroup(bot_id=bot_id, name=name, open=open)
         s.add(group)
         await s.flush()
         return group.id

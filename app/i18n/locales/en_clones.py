@@ -14,7 +14,7 @@ STRINGS = {
         "🔑 <b>Use token</b>: if the token of one of your bots changed, paste the new one here to connect it again."
     ),
     "cl.photo": (
-        "🖼 Your bot is created with the platform's image; you can change it whenever you want in @BotFather."
+        "🖼 Your bot is created with the eMesh logo as its photo; you can change it any time in @BotFather."
     ),
     "cl.count": "🤖 Your bots: <b>{count}</b>/{limit}",
     "cl.limit_reached": "⚠️ The maximum number of bots was reached. Disconnect one in «🤖 My bots» to add another.",
@@ -161,7 +161,7 @@ STRINGS = {
         "📅 Created: {created}\n"
         "📣 Chats: <b>{chats}</b> (🏠 {own} · 🤝 {ext}) · 👤 {members}\n"
         "⏸ Paused by their owner: {owner_paused} · ⏳ Pending: {pending}\n"
-        "📝 Active posts: <b>{posts}</b> · ⏰ {freq}\n"
+        "📝 Active posts: <b>{posts}</b> · 🕐 {freq}\n"
         "📤 Last 24 h: {runs} sends · {sent} deliveries · {failed} failed\n"
         "🔒 Limits: {limits}"
     ),
@@ -248,28 +248,19 @@ STRINGS = {
     # --- 🖼 Bot image ---
     "sa.photo": (
         "🖼 <b>Bot image</b>\n\n"
-        "It is shown on top of the start message of @{main} and it is its profile photo.\n"
-        "   └ The clones get it too: on the start message of their admins and as their profile photo, unless they "
-        "have one of their own."
+        "It is shown on top of the start message of @{main} and, in the clones, on top of their admins' start "
+        "message.\n"
+        "   └ It changes no profile photo: the clones' one is always the eMesh logo."
     ),
     "sa.photo.none": "📌 There is no image right now.",
     "sa.btn.photo_set": "🖼 Set image",
     "sa.btn.photo_change": "🖼 Change image",
     "sa.photo.ask": (
-        "🖼 Send the <b>photo</b> of the bot (as a photo, not as a file).\n"
-        "   └ Square works best: Telegram crops it into a circle."
+        "🖼 Send the <b>photo</b> that will be shown on top of the start message (as a photo, not as a file)."
     ),
     "sa.photo.err_type": "⚠️ That is not a photo. Send it as a photo, not as a file.",
     "sa.photo.err_read": "⚠️ The photo couldn't be read. Try another one.",
-    "sa.photo.err_refused": "⚠️ Telegram didn't accept the photo ({error}). Try another one.",
-    "sa.photo.saved": "✅ Image set on @{main}.",
-    "sa.photo.saved_clones": "The clones are being updated now; a report will follow when it is done.",
-    "sa.photo.done": (
-        "🖼 <b>Bot image set</b>\n"
-        "🤖 Clones updated: <b>{set}</b>\n"
-        "🖼 With a photo of their own (not changed): <b>{own}</b>"
-    ),
-    "sa.photo.done_failed": "⚠️ With errors: <b>{failed}</b>",
+    "sa.photo.saved": "✅ Image set.",
     # --- 📢 Notice to owners ---
     "sa.blast.intro": (
         "📢 <b>Notice to owners</b>\n\nA message for the owners of the platform's bots (<b>{n}</b> people), sent "

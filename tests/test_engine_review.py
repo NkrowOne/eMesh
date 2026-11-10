@@ -11,7 +11,7 @@ from sqlalchemy import select
 
 from app.db.base import utcnow
 from app.db.models import Bot as BotRecord
-from app.db.models import BotStatus, ChatGroup, Delivery, DeliveryStatus, GroupChat, Post, RunKind
+from app.db.models import BotStatus, Delivery, DeliveryStatus, Post, RunKind
 from app.services import content, freq
 from app.services.publisher import delete_time
 from tests.conftest import MAIN_BOT_ID, OWNER2_ID, App
@@ -82,14 +82,14 @@ async def test_review_media_changed_during_an_upload_is_not_mixed_up(app: App,
 
 
 async def test_review_pausing_the_network_stops_a_run_in_progress(app: App, monkeypatch: pytest.MonkeyPatch) -> None:
-    """⏸ Pausar todo: «no se enviará nada hasta que la reanudes». A run in progress (e.g. a slot to thousands of
+    """⏸ Pausar todo: «no se enviará nada hasta que la reanudes». A run in progress (e.g. a post to thousands of
     chats) re-checks the chats' own pauses before every batch, but never ``Bot.paused``: it goes on to every chat."""
     monkeypatch.setattr("app.services.publisher.BATCH_SIZE", 1)
     pks = await make_chats(app, 3)
     cids = [await chat_id_of(app, pk) for pk in pks]
     post_id = await make_post(app)
     gate, started = hold_deliver(monkeypatch)
-    assert await app.publisher.run(post_id, pks, kind=RunKind.ROTATION, source="global") is not None
+    assert await app.publisher.run(post_id, pks, kind=RunKind.SCHEDULE) is not None
     await asyncio.wait_for(started.wait(), 5)  # the first chat's batch is out
     await set_bot(app, paused=True)  # the owner presses ⏸ Pausar todo
     gate.set()
@@ -97,40 +97,30 @@ async def test_review_pausing_the_network_stops_a_run_in_progress(app: App, monk
     assert [len(texts_in(app, cid)) for cid in cids] == [1, 0, 0]
 
 
-async def test_review_a_group_slot_is_not_sent_twice_after_a_long_global_slot(app: App,
-                                                                              monkeypatch: pytest.MonkeyPatch) -> None:
-    """``_sends`` takes ``now`` once and keeps it while the global slot's runs are sent (``wait=True``: minutes in a
-    big network). The group slots (and own posts) after it are claimed with that old ``now``: their next time can
-    already be past, so the next tick sends the same group again right away."""
+async def test_review_a_post_is_not_sent_twice_after_long_half_done_runs(app: App,
+                                                                         monkeypatch: pytest.MonkeyPatch) -> None:
+    """``_sends`` first resumes the half-done runs (``wait``: minutes in a big network). The posts after them must be
+    claimed with a fresh ``now``: with the old one their next time can already be past, so the next tick sends the
+    same post again right away."""
     real_now = utcnow()
     [pk] = await make_chats(app)
-    async with app.db() as s:
-        group = ChatGroup(bot_id=MAIN_BOT_ID, name="Cine", sort=0,
-                          freq={"mode": "interval", "every": 10, "window": "", "days": "0123456"})
-        s.add(group)
-        await s.flush()
-        s.add(GroupChat(group_id=group.id, chat_pk=pk))
-        group.rot_next_at = real_now - timedelta(minutes=21)
-        group_id = group.id
-    await make_post(app)
+    post_id = await make_post(app, freq={"mode": "interval", "every": 10, "window": "", "days": "0123456"},
+                              next_send_at=real_now - timedelta(minutes=21))
     cid = await chat_id_of(app, pk)
-    # The tick starts 20 minutes ago and its global slot (a big network) takes those 20 minutes.
+    # The tick starts 20 minutes ago and the half-done runs (a big network) take those 20 minutes.
     clock = {"now": real_now - timedelta(minutes=20)}
     monkeypatch.setattr("app.services.scheduler.utcnow", lambda: clock["now"])
-    slot = app.scheduler._slot  # noqa: SLF001
 
-    async def long_global_slot(bot_id: int, group_id: int | None, now: datetime) -> None:
-        await slot(bot_id, group_id, now)
-        if group_id is None:
-            clock["now"] = real_now
+    async def long_resume(bot_id: int) -> None:
+        clock["now"] = real_now
 
-    monkeypatch.setattr(app.scheduler, "_slot", long_global_slot)
+    monkeypatch.setattr(app.publisher, "resume_bot", long_resume)
     await app.scheduler._sends(MAIN_BOT_ID)  # noqa: SLF001
     assert len(texts_in(app, cid)) == 1
     monkeypatch.setattr("app.services.scheduler.utcnow", utcnow)
     await app.scheduler._sends(MAIN_BOT_ID)  # noqa: SLF001 - the very next tick
-    nxt = (await get(app, ChatGroup, group_id)).rot_next_at
-    assert len(texts_in(app, cid)) == 1, f"sent again at once (next slot {nxt}, now {utcnow()})"
+    nxt = (await get(app, Post, post_id)).next_send_at
+    assert len(texts_in(app, cid)) == 1, f"sent again at once (next time {nxt}, now {utcnow()})"
 
 
 def test_review_next_slot_never_skips_a_slot_on_the_dst_change() -> None:
