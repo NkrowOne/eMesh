@@ -13,6 +13,8 @@ STRINGS = {
     "home.posts.none": "   └ Create the first one in 📝 Posts.",
     "home.freq": "⏰ Global frequency: {freq}",
     "home.next": "📅 Next turn: <b>{date}</b>",
+    "home.rot_off": "🔁 No rotation: each post goes out on its own schedule",
+    "home.next_send": "📅 Next send: <b>{date}</b>",
     "home.owner_paused": "⏸ Paused by their owner: <b>{n}</b>",
     "home.pending": "⏳ Pending requests: <b>{n}</b>",
     "home.no_rights": "⚠️ Missing rights: <b>{n}</b>",
@@ -154,6 +156,7 @@ STRINGS = {
         "• 🗂 A <b>channel group</b> can have its own frequency: its channels follow it instead of the global one.\n"
         "• 🔁 <b>Rotation</b>: on each turn, every channel gets its next post, in order or at random, never the "
         "same one twice in a row.\n"
+        "• 🚫 <b>No rotation</b>: if you turn it off there are no turns and each post goes out on its own schedule.\n"
         "• ⏰ A post with <b>its own schedule</b> goes to its whole target at its own times, outside the rotation.\n"
         "• 📆 <b>Campaign dates</b> limit when a post is sent.\n\n"
         "🛡 <b>Anti-spam</b> (⏰ Frequencies › 🛡 Anti-spam): maximum posts a day per channel, minimum gap between "

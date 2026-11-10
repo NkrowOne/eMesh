@@ -4,6 +4,7 @@ from __future__ import annotations
 from datetime import datetime, timezone
 
 import pytest
+from sqlalchemy import select
 
 from app.bot.routers.freqs import FqCB, slots_text, toggle_day, when_text
 from app.db.base import utcnow
@@ -79,13 +80,13 @@ async def test_dashboard_shows_every_frequency_and_its_chats(app: App) -> None:
     assert "🗂 <b>Estrenos</b>: a las 10:00 y 22:00 · de lunes a viernes\n   └ 1 chat · ≈ 2 al día · próximo: " in text
     assert "💡 Un canal sigue la frecuencia del primero de sus grupos de canales (en este orden)" in text
     assert "⏰ Mensajes con su propio horario: <b>2</b>" in text
-    assert "🔀 Orden de la rotación: <b>en orden</b>" in text
+    assert "🔁 Rotación: <b>en orden</b>" in text
     assert "🛡 Anti-spam: sin máximo diario · sin separación mínima · 🧹 uno a la vez ✖️" in text
     assert "pausada" not in text
     assert button_texts(app) == [
         "🌐 Global: a las 12:00", "🗂 Cine: cada 2 h", "🗂 Noticias: 🌐 la global",
-        "🗂 Estrenos: a las 10:00 y 22:00 · de lunes a viernes", "✅ En orden", "⚪ Al azar", "🛡 Anti-spam",
-        "🔙 Regresar",
+        "🗂 Estrenos: a las 10:00 y 22:00 · de lunes a viernes", "✅ En orden", "⚪ Al azar", "⚪ Sin rotación",
+        "🛡 Anti-spam", "🔙 Regresar",
     ]
     assert button_data(app, "Global") == MenuCB(screen="freq_edit").pack()
     assert button_data(app, "Regresar") == MenuCB(screen="home").pack()
@@ -117,6 +118,11 @@ async def test_dashboard_pages(app: App) -> None:
     assert "<b>Grupo 12</b>" in text and "Grupo 10" not in text and "🌐 <b>Global</b>" in text
     await app.click(SUPER_ID, "Al azar")  # stays on the same page
     assert "📄 Página 2 de 2" in app.last_text(SUPER_ID)
+    await app.click(SUPER_ID, "Sin rotación")  # no groups' frequencies, no pages
+    assert "Grupo" not in app.last_text(SUPER_ID) and "Página" not in app.last_text(SUPER_ID)
+    assert not any("Anterior" in b or "Siguiente" in b for b in button_texts(app))
+    await app.click(SUPER_ID, "Al azar")  # the page is kept
+    assert "<b>Grupo 12</b>" in app.last_text(SUPER_ID) and "📄 Página 2 de 2" in app.last_text(SUPER_ID)
 
 
 async def test_rotation_order(app: App) -> None:
@@ -125,13 +131,64 @@ async def test_rotation_order(app: App) -> None:
     await app.click(SUPER_ID, "Al azar")
     assert (await load(app, BotRecord, MAIN_BOT_ID)).rotation == "random"
     text = app.last_text(SUPER_ID)
-    assert "🔀 Orden de la rotación: <b>al azar</b>\n   └ Cada canal recibe uno al azar" in text
+    assert "🔁 Rotación: <b>al azar</b>\n   └ Cada canal recibe uno al azar" in text
     assert "✅ Al azar" in button_texts(app) and "✅ Al azar" in answers(app)
     await app.click(SUPER_ID, "En orden")
     assert (await load(app, BotRecord, MAIN_BOT_ID)).rotation == "seq"
     assert "del más antiguo al más nuevo" in app.last_text(SUPER_ID)
-    await app.press(SUPER_ID, FqCB(a="rot", v=5).pack())
+    for forged in (3, 5):
+        await app.press(SUPER_ID, FqCB(a="rot", v=forged).pack())
     assert (await load(app, BotRecord, MAIN_BOT_ID)).rotation == "seq"
+    async with app.db() as s:
+        (await s.get(BotRecord, MAIN_BOT_ID)).rotation = "bogus"  # an unknown value shows as in order
+    await open_menu(app, SUPER_ID, "freqs")
+    assert "🔁 Rotación: <b>en orden</b>" in app.last_text(SUPER_ID) and "✅ En orden" in button_texts(app)
+
+
+async def test_no_rotation_hides_the_global_and_groups_frequencies(app: App) -> None:
+    clone = 7_000_000_202
+    await app.add_clone(clone, "clon_off_bot", OWNER2_ID)
+    await add_group(app, "Cine", freq=TWO_HOURS)
+    await add_group(app, "Noticias")
+    await add_chat(app, -1001, "Sin grupo")
+    await add_post(app, "Propio", mode=SchedMode.OWN)
+    await add_post(app, "Rotación 1")
+    await add_post(app, "Rotación 2")
+    await add_post(app, "Rotación pausada", status=PostStatus.PAUSED)  # not counted: not active
+    await add_post(app, "Rotación del clon", bot_id=clone)  # another network
+    await started(app, SUPER_ID)
+    await open_menu(app, SUPER_ID, "freqs")
+    await app.click(SUPER_ID, "Sin rotación")
+    assert (await load(app, BotRecord, MAIN_BOT_ID)).rotation == "off"
+    assert answers(app)[-1] == "✅ Sin rotación"
+    text = app.last_text(SUPER_ID)
+    assert text == (
+        "⏰ <b>Frecuencias</b>\nSin rotación: cada mensaje se envía con su propio horario.\n\n"
+        "⏰ Mensajes con su propio horario: <b>1</b>\n"
+        "   └ Van a todo su destino en cada turno de su horario, fuera de la rotación (📝 Mensajes › ⏰ Programación)."
+        "\n\n🔁 Rotación: <b>desactivada</b>\n"
+        "   └ No hay turnos: cada mensaje se envía a sus propias horas (📝 Mensajes › ⏰ Programación).\n"
+        "⚠️ 2 mensajes 🔁 en rotación no se envían mientras esté desactivada.\n"
+        "🛡 Anti-spam: sin máximo diario · sin separación mínima · 🧹 uno a la vez ✖️")
+    assert button_texts(app) == ["⚪ En orden", "⚪ Al azar", "✅ Sin rotación", "🛡 Anti-spam", "🔙 Regresar"]
+
+    async with app.db() as s:
+        rec = await s.get(BotRecord, MAIN_BOT_ID)
+        rec.paused = True
+        for post in (await s.execute(select(Post).where(Post.bot_id == MAIN_BOT_ID))).scalars():
+            if post.mode == SchedMode.ROTATION:
+                post.status = PostStatus.PAUSED
+    await open_menu(app, SUPER_ID, "freqs")
+    text = app.last_text(SUPER_ID)
+    assert "⏸ <b>La distribución está pausada.</b>" in text and "🔁 Rotación: <b>desactivada</b>" in text
+    assert "no se envían mientras" not in text and "🌐 <b>Global</b>" not in text
+
+    await app.click(SUPER_ID, "En orden")
+    assert (await load(app, BotRecord, MAIN_BOT_ID)).rotation == "seq"
+    text = app.last_text(SUPER_ID)
+    assert text.startswith("⏰ <b>Frecuencias</b>\nCada canal recibe un mensaje en cada turno de su frecuencia")
+    assert "🌐 <b>Global</b>: a las 12:00" in text and "🗂 <b>Cine</b>: cada 2 h" in text
+    assert "🌐 Global: a las 12:00" in button_texts(app) and "✅ En orden" in button_texts(app)
 
 
 async def test_antispam_choices_and_custom_values(app: App) -> None:

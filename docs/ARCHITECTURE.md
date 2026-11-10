@@ -221,8 +221,8 @@ Admin view (admins of the network, and a super admin managing a clone):
 📣 Canales y grupos: <b>12</b> (👤 45,320)
    └ 🏠 8 propios · 🤝 4 externos
 📝 Mensajes activos: <b>5</b>
-⏰ Frecuencia global: cada 4 h · 08:00-23:00
-📅 Próximo turno: <b>07/11/2026 11:00 AM</b>
+⏰ Frecuencia global: cada 4 h · 08:00-23:00      (without rotation: «🔁 Sin rotación: cada mensaje se envía con
+📅 Próximo turno: <b>07/11/2026 11:00 AM</b>        su propio horario» + «📅 Próximo envío»: the first post's)
 ⏸ Pausados por su dueño: <b>2</b>          (only when > 0)
 ⏳ Solicitudes pendientes: <b>1</b>        (only when > 0)
 ⚠️ Sin permisos: <b>1</b>                  (only when > 0)
@@ -385,7 +385,8 @@ first, done last. Buttons: one per post (`#1 Promo Cine`, 2 per row), `[➕ Nuev
    `[🤝 Solo externos]`, one per group of chats `[🗂 Cine (5)]`, live count «👥 Lo recibirán: 23 chats · 👤 45,320»
    (`audience.targets_size`), `[✅ Continuar]` (needs a target).
 4. «⏰ <b>¿Cuándo se envía?</b> · 4/5»: `[🔁 En rotación]` (└ «Se turna con los demás mensajes según
-   la frecuencia de cada canal (global: 1 al día a las 12:00).»), `[⏰ Con su propio horario]`,
+   la frecuencia de cada canal (global: 1 al día a las 12:00).»; not offered without rotation, nor in
+   ⏰ Programación, where an old button gets «⚠️ La rotación está desactivada…»), `[⏰ Con su propio horario]`,
    `[📢 Difusión puntual]` (still step 4: `[🚀 Ahora mismo]` — created with `send_at` = now, the scheduler sends it
    once at once — or a typed date: `freq.parse_datetime`), `[✋ Solo cuando lo envíe yo]`.
 5. «🗑 <b>¿Cuánto tiempo sigue publicado?</b> · 5/5» (└ «Pasado ese tiempo se borra solo de los canales.»):
@@ -573,8 +574,13 @@ Cada canal recibe un mensaje en cada turno de su frecuencia; los mensajes en rot
 🔀 Orden de la rotación: en orden
 🛡 Anti-spam: máx. 6 al día · 30 min entre mensajes · 🧹 uno a la vez ✖️
 ```
-`[🌐 Global: cada 4 h]` (`freq_edit` 0), one button per group `[🗂 Cine: cada 2 h]`, `[🔀 En orden | Al azar]`
-(toggle `Bot.rotation`), `[🛡 Anti-spam]`, `[🔙]` → home.
+`[🌐 Global: cada 4 h]` (`freq_edit` 0), one button per group `[🗂 Cine: cada 2 h]`,
+`[🔀 En orden][🎲 Al azar][🚫 Sin rotación]` (`Bot.rotation`; the line reads «🔁 Rotación: en orden | al azar |
+desactivada» + its hint), `[🛡 Anti-spam]`, `[🔙]` → home.
+Without rotation the title says «Sin rotación: cada mensaje se envía con su propio horario.», the global and groups'
+lines and buttons are not shown (they send nothing), and «⚠️ N mensajes 🔁 en rotación no se envían mientras esté
+desactivada.» when there are any; `freq_edit` of the global frequency or a group adds «⚠️ La rotación está
+desactivada: esta frecuencia no envía nada ahora.».
 `freq_edit` (arg 0 / +group / -post):
 ```
 ⏰ <b>Frecuencia</b> · 🌐 Global | 🗂 Cine | 📝 Promo Cine

@@ -328,6 +328,34 @@ async def test_post_frequency_starts_from_a_copy_of_the_global_one(app: App, wak
     assert post.freq["every"] == 120 and post.next_send_at is None  # only own-schedule posts get a next send
 
 
+async def test_editor_says_when_rotation_is_off(app: App, wakes: list[int]) -> None:
+    rot_off = "\n\n⚠️ La rotación está desactivada: esta frecuencia no envía nada ahora."
+    own = await add_group(app, "Cine", freq=OWN_2H)
+    follows = await add_group(app, "Noticias")
+    p = await add_post(app, "Promo", mode=SchedMode.OWN)
+    rot = await add_post(app, "En rotación")
+    await started(app, SUPER_ID)
+    await global_every_4h(app)
+    async with app.db() as s:
+        (await s.get(BotRecord, MAIN_BOT_ID)).rotation = "off"
+    for arg in (0, own, follows):
+        await open_menu(app, SUPER_ID, "freq_edit", arg)
+        assert app.last_text(SUPER_ID).endswith(f"🗺 Zona horaria: {TZ}{rot_off}"), arg
+    await app.click(SUPER_ID, "Usar la global")  # it can still be edited
+    assert (await load(app, ChatGroup, follows)).freq == EVERY_4H
+    assert app.last_text(SUPER_ID).endswith(rot_off) and wakes == [1]
+    await open_menu(app, SUPER_ID, "freq_edit", -p)  # a post's own schedule sends without rotation
+    assert app.last_text(SUPER_ID).endswith(f"🗺 Zona horaria: {TZ}")
+    await open_menu(app, SUPER_ID, "freq_edit", -rot)
+    text = app.last_text(SUPER_ID)
+    assert "ℹ️ Ahora este mensaje no se envía con su propio horario" in text and "La rotación está" not in text
+    async with app.db() as s:
+        (await s.get(BotRecord, MAIN_BOT_ID)).rotation = "random"
+    for arg in (0, own):
+        await open_menu(app, SUPER_ID, "freq_edit", arg)
+        assert "La rotación está desactivada" not in app.last_text(SUPER_ID)
+
+
 async def test_post_campaign_dates_limit_the_next_sends(app: App) -> None:
     p = await add_post(app, "Campaña", mode=SchedMode.OWN)
     start = fmt.to_local(utcnow(), TZ).date() + timedelta(days=3)
