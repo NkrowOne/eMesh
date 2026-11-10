@@ -351,7 +351,8 @@ def _report_text(o: _Outcome, lang: str) -> str:
     if o.no_buttons:
         text += "\n" + t("eng.report.no_buttons", lang, error=esc(o.no_buttons.removeprefix(NO_BUTTONS)))
     if o.forwarded:
-        text += "\n" + t("eng.report.premium", lang, channels=num(o.channels), groups=num(o.groups))
+        text += "\n" + t("eng.report.premium", lang, forwarded=num(o.forwarded), channels=num(o.channels),
+                          groups=num(o.groups))
     return text
 
 
@@ -1246,6 +1247,14 @@ class Publisher:
                     media.append(await content.media_for(bot, post, self.manager))
             return media[0]
 
+        async def uploaded(file: InputFile, file_id: str) -> None:
+            """A file taken from another bot was uploaded: the next sends use its file id (remembered)."""
+            async with media_lock:
+                if media and media[0] is file:
+                    media[0] = file_id
+                    await content.remember_media(self.sm, post.id, post.bot_id, file_id,
+                                                 source=content.media_source(file))
+
         async def send(chat_id: int) -> Message:
             file = await get_media()
             msg = await content.deliver(bot, chat_id, post, media=file, premium=ChatType.CHANNEL not in plain,
@@ -1303,7 +1312,10 @@ class Publisher:
             async with sem:
                 if chat_type == ChatType.CHANNEL:
                     try:  # the media first: a message is never deleted when its new version can't be sent
-                        src = None if source.off and not live.forwarded else await source.get(await get_media())
+                        file = await get_media()
+                        src = None if source.off and not live.forwarded else await source.get(file)
+                        if src is not None and isinstance(file, InputFile) and source.file_id:
+                            await uploaded(file, source.file_id)
                     except Exception as exc:  # noqa: BLE001 - e.g. a media that can't be used any more
                         log.info("Delivery %s in %s not updated: %s", live.id, live.chat_id, short(exc))
                         return "failed", None, False

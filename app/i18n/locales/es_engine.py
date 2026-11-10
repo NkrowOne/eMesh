@@ -8,8 +8,8 @@ STRINGS = {
     "eng.report.unknown": "{n} sin respuesta de Telegram",
     "eng.report.no_buttons": "🔘 Telegram ha rechazado un botón, así que se ha enviado sin botones. Revisa los botones "
                              "del mensaje: <code>{error}</code>",
-    "eng.report.premium": "💎 📣 Canales: {channels} (reenviado para conservar los emojis premium) · 👥 Grupos: "
-                          "{groups}",
+    "eng.report.premium": "💎 Reenviado para conservar los emojis premium: {forwarded} de {channels} canales · "
+                          "👥 Grupos: {groups}",
     "eng.report.cancelled": "🔚 <b>{post}</b>: se ha detenido el envío (mensaje retirado o eliminado). Había llegado a "
                             "{sent} de {total} chats.",
     "eng.report.media": "⚠️ <b>{post}</b> no se ha podido enviar: {reason}",

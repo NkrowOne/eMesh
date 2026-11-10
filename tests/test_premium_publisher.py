@@ -34,8 +34,8 @@ PLAIN = "🔥 Hola"  # TEXT with its custom emoji turned into the normal one
 
 
 def sources(app: App, uid: int = SUPER_ID) -> list[Call]:
-    """What the bot sent to the private chat of ``uid`` (source messages, refused ones included)."""
-    return app.fake.calls_of("sendMessage", chat_id=uid)
+    """What the bot sent to the private chat of ``uid`` (source messages, refused ones included; not run reports)."""
+    return [c for c in app.fake.calls_of("sendMessage", chat_id=uid) if not str(c.params.get("text")).startswith("📤")]
 
 
 def mid_of(call: Call) -> int:
@@ -222,6 +222,7 @@ async def test_when_no_admin_can_get_the_source_message_the_channels_get_the_nor
 
 async def test_a_source_message_deleted_meanwhile_means_normal_sends(app: App, monkeypatch: pytest.MonkeyPatch) -> None:
     monkeypatch.setattr("app.services.publisher.BATCH_SIZE", 1)
+    await start_user(app, SUPER_ID, run_reports=True)
     channels = await make_chats(app, 3)
     cids = [await chat_id_of(app, pk) for pk in channels]
     post_id = await make_post(app, text=TEXT)
@@ -242,6 +243,7 @@ async def test_a_source_message_deleted_meanwhile_means_normal_sends(app: App, m
     assert [(d.status, d.forwarded) for d in ds] == [(DeliveryStatus.SENT, True), (DeliveryStatus.SENT, False),
                                                      (DeliveryStatus.SENT, False)]
     assert len(sources(app)) == 1
+    assert dm_texts(app, SUPER_ID)[-1].endswith("emojis premium: 1 de 3 canales · 👥 Grupos: 0")  # what was forwarded
 
 
 async def test_a_forward_refused_by_the_chat_is_its_usual_failure(app: App, monkeypatch: pytest.MonkeyPatch) -> None:
@@ -323,7 +325,7 @@ async def test_the_run_report_tells_what_was_forwarded(app: App) -> None:
     await run_post(app, post_id, [*channels, group])
 
     assert dm_texts(app, SUPER_ID)[-1] == ("📤 <b>Promo Cine</b> enviado a 3/3 chats.\n"
-                                           "💎 📣 Canales: 2 (reenviado para conservar los emojis premium) · "
+                                           "💎 Reenviado para conservar los emojis premium: 2 de 2 canales · "
                                            "👥 Grupos: 1")
 
     app.fake.premium_owners = False  # nothing forwarded: no 💎 line
@@ -352,13 +354,13 @@ async def test_update_live_replaces_the_forwards_and_edits_the_groups(app: App) 
     ch = ds[channel]
     first, second = sources(app)  # a new source message, with the new text
     assert second.params["text"] == new_text and mid_of(second) != mid_of(first)
-    fwd = forwards_to(app, cid)[-1]
+    _, fwd = forwards_to(app, cid)
     assert origin_of(fwd) == (SUPER_ID, mid_of(second))
     [delete] = app.fake.calls_of("deleteMessage", chat_id=cid, message_id=old[channel].message_id)
     assert app.fake.calls.index(delete) < app.fake.calls.index(fwd)  # the old one goes first: never two copies
     assert_dropped(app, SUPER_ID, second)
     assert ch.message_id != old[channel].message_id
-    assert old[channel].message_id not in app.fake.chats[cid].messages
+    assert list(app.fake.chats[cid].messages) == [ch.message_id]
     out = app.fake.chats[cid].messages[ch.message_id]
     assert out["text"] == new_text and out["entities"][0]["type"] == "custom_emoji"
     assert (ch.status, ch.forwarded, ch.pinned) == (DeliveryStatus.SENT, True, True)
@@ -467,5 +469,5 @@ async def test_update_live_reports_a_replacement_that_could_not_be_sent(app: App
     assert (after.message_id, after.status) == (before.message_id, DeliveryStatus.DELETED)
     assert before.message_id not in app.fake.chats[cid].messages
     assert len(forwards_to(app, cid)) == 2 and app.fake.calls_of("sendMessage", chat_id=cid)  # both tried
-    first, second = sources(app)
+    _, second = sources(app)  # the run's source message, then the update's
     assert_dropped(app, SUPER_ID, second)
