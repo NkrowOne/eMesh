@@ -480,7 +480,7 @@ async def test_super_admin_manages_the_chats_of_a_clone(app: App, monkeypatch: p
     assert (await get_chat(app, CHANNEL, CLONE_ID)).status == ChatStatus.LEFT
     assert (await get_chat(app, GROUP)).status == ChatStatus.APPROVED
     # The removal alert reaches the clone's owner through the clone.
-    assert any("de la red. El bot ha salido." in t for t in dms(app, OWNER2_ID, clone_token))
+    assert any("de la red. El bot ha salido" in t for t in dms(app, OWNER2_ID, clone_token))
 
 
 async def test_message_to_the_partners_of_a_managed_clone(app: App) -> None:
