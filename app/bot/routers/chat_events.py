@@ -29,7 +29,7 @@ from app.db.models import BotStatus, Chat, ChatOrigin, ChatStatus, ChatType, Del
 from app.db.session import SessionMaker, session_scope
 from app.services import chats as chat_svc
 from app.services import chatstate, clones, limits
-from app.services.chatinfo import apply_rights, chat_type_of, missing_rights
+from app.services.chatinfo import apply_rights, chat_type_of, ensure_invite_link, missing_rights
 from app.services.notify import send_dm
 from app.telegram.context import set_low_priority
 from app.telegram.errors import short
@@ -172,6 +172,7 @@ async def _on_present(event: ChatMemberUpdated, bot: Bot, ctx: Ctx, session: Asy
     chat.reject_reason = None
     _apply_info(chat, event.chat)
     missing = apply_rights(chat, event.new_chat_member)
+    await ensure_invite_link(bot, chat, event.new_chat_member)
     # A new row has no count yet: one that can't be read must not reject it.
     counted = await chat_svc.count_members(bot, chat) or chat.members_at is not None
     await session.flush()
@@ -188,6 +189,7 @@ async def _on_present(event: ChatMemberUpdated, bot: Bot, ctx: Ctx, session: Asy
 async def _on_rights(event: ChatMemberUpdated, bot: Bot, ctx: Ctx, session: AsyncSession, chat: Chat) -> None:
     """The bot is still in a chat of the network and its rights may have changed."""
     _apply_info(chat, event.chat)
+    await ensure_invite_link(bot, chat, event.new_chat_member)
     missing = missing_rights(event.new_chat_member, chat.type)
     if chat.status == ChatStatus.APPROVED:
         if missing:

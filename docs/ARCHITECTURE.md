@@ -105,7 +105,7 @@ never confused with a Telegram group (👥).
 | `app/i18n` | `t(key, lang, **kw)`, `LANG_NAMES`, `LANG_FLAGS`, `SUPPORTED_LANGS` (es, en), `normalize_lang`. Core keys: `common.*`, `weekday.*`, `color.*`, `rights.*`, `ws.banner`, `ev.*`, `cs.*`, `freq.*`, `content.*`. |
 | `app/services/users.py` | `admin_ids(session, bot_rec)` (owner first), `admins`, `find_bot_user(session, bot_id, "@user"/id)`, `get_lang`. |
 | `app/services/notify.py` | `send_dm(bot, session, user_id, text, markup)` (never raises, marks blocked), `notify_admins(bot, session, bot_rec, render(lang)->(text, markup))`. |
-| `app/services/chatinfo.py` | `add_to_channel_url(username)`, `add_to_group_url(username)` (rights pre-selected: channels post+edit+delete, groups delete+pin), `inspect_chat(bot, chat)`, `check_access(bot, chat)`, `missing_rights`, `apply_rights(chat, member)`, `chat_type_of`, `REQUIRED_CHANNEL/GROUP`. |
+| `app/services/chatinfo.py` | `add_to_channel_url(username)`, `add_to_group_url(username)` (rights pre-selected: channels post+edit+delete, groups delete+pin, both plus the optional invite_users for the invite link), `inspect_chat(bot, chat)`, `check_access(bot, chat)`, `missing_rights`, `apply_rights(chat, member)`, `chat_type_of`, `REQUIRED_CHANNEL/GROUP`. |
 | `app/services/chatstate.py` | `mark_left(bot, session, ws_rec, chat)` (a conditional update: only an approved or pending chat becomes left, never a banned one; it closes its request notices), `mark_rights(bot, session, ws_rec, chat, missing)`, `rights_restored(...)`, `refresh(bot, session, ws_rec, chat) -> RefreshResult` (title, members, rights; gone → left), `rights_text(missing, lang)`, `kind_word(chat, lang)`. They log events, alert admins and DM partners. |
 | `app/services/events.py` | `emit(bot, session, ws_rec, kind, chat=, actor_id=, data=, notify=, skip_user=, markup=)` stores an `Event` and alerts the owner + admins with 🔔 alerts on (defaults per kind: `ALERT_KINDS`); `describe(session, ev, lang, tz)` one entry for 📜 Actividad; `recent(session, bot_id, limit=, offset=, chat_pk=, kinds=)`. Data conventions: pause `{"by": "owner"|"admin", "until": iso|None}`, resume `{"by": "owner"|"admin"|"auto"}`, removed `{"by": "owner"|"admin"}`. |
 | `app/services/freq.py` | Schedules ("frequencies", dict in JSON: `Post.freq`; `Bot.freq` is the default one new posts copy): `normalize`, `next_slot(freq, tz, after)`, `upcoming(freq, tz, after, n)`, `per_day`, `refresh_post(post, tz, now)`, `in_dates(post, tz, now)`, `ended`, parsers `parse_every` / `parse_times` / `parse_window` / `parse_date` / `parse_datetime` (ValueError with an i18n key), `describe(freq, lang)`, `every_text`, `days_text`, `times_text`, `join_list`, `day_times(freq)` (the (h, m) of a
@@ -139,7 +139,8 @@ visitors). Times: schedules and dates are in the workspace timezone (`ctx.bot_tz
   **Explain what isn't obvious in the menu text itself**, in one short line.
 * Pagination: `⬅️ Anterior` / `Siguiente ➡️` and `📄 Página 1 de 6` (`common.page`).
 * Lists of chats: `1. 📣 <a href="link">Name</a> ✅` + new line `   └👤 1,234 · …` (📣 channel, 👥 group; link =
-  `chat.public_link` when it has one: the bot creates no invite links).
+  `chat.join_link`: the public link, or the invite link the bot creates in a private chat when it has the optional
+  right to invite — `chatinfo.ensure_invite_link`, column `em_chats.invite_link`).
 * **Nothing is cut on a phone**: `kb()` splits a row whose labels don't fit side by side (`ROW_WIDTHS`: 16 width units
   for 2 buttons, 12 for 3, 9 for 4; an emoji counts 2) in pairs or one per row, and `grid()` uses fewer columns. Rows
   of a list (`#1 name`) are left as they are. Url buttons carry no `↗` in their text: Telegram draws it.
