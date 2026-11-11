@@ -200,7 +200,7 @@ async def test_an_admin_resumes_a_partner_pause_from_the_chat_detail(app: App) -
     assert f"📌 Estado: ⏸ Pausado por su asociado hasta {dt(until, TZ)}\n" in text
     assert "   └ Si lo reanudas, se anula su pausa y se le avisa." in text
     assert labels(app.last_panel(OWNER2_ID)) == ["🗂 Grupos de canales", "🔄 Comprobar permisos", LIFT, "⏸ Pausar",
-                                                 "🗑 Quitar de la red", "🚫 Bloquear", "↗️ Abrir", "🔙 Regresar"]
+                                                 "🗑 Quitar de la red", "🚫 Bloquear", "🔙 Regresar"]
     await app.click(OWNER2_ID, LIFT)
     assert app.last_text(OWNER2_ID) == ("▶️ ¿Reanudar el canal <b>Cine HD</b>?\n\nEl dueño lo ha pausado hasta "
                                         f"{dt(until, TZ)}. Se le avisará.")
@@ -383,7 +383,7 @@ async def test_a_super_admin_managing_a_clone_resumes_a_partner_pause(app: App) 
     await app.press(SUPER_ID, "m:paused:0")
     text = app.last_text(SUPER_ID)
     assert text.startswith("🛠 Gestionando <b>@clon_cine_bot</b>")
-    assert f"Cine HD</a>\n   └🤝 @pepe · hasta {dt(until, TZ)} · desde " in text
+    assert f"1. 📣 Cine HD\n   └🤝 @pepe · hasta {dt(until, TZ)} · desde " in text
     assert "Grupo Principal" not in text
     await app.click(SUPER_ID, "▶️ #1")
     assert f"El dueño lo ha pausado hasta {dt(until, TZ)}. Se le avisará." in app.last_text(SUPER_ID)

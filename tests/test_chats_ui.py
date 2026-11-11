@@ -12,7 +12,6 @@ from app.db.base import utcnow
 from app.db.models import BotUser, Chat, ChatOrigin, ChatStatus, Delivery, DeliveryStatus, EventKind, GroupChat, Run
 from app.ui.callbacks import MenuCB
 from tests.conftest import MAIN_BOT_ID, OWNER2_ID, SUPER_ID, USER_ID, App
-from tests.fake_tg import ADMIN_RIGHTS_FULL
 from tests.test_chats_support import (  # noqa: F401  (reset_chat_caches is an autouse fixture)
     CHANNEL,
     CLONE_ID,
@@ -501,27 +500,3 @@ async def test_message_to_the_partners_of_a_managed_clone(app: App) -> None:
     assert not app.fake.calls_of("copyMessage"), "the clone can't copy a message of the main bot's chat"
     main_token = next(tok for tok, b in app.fake.bots.items() if b["id"] == MAIN_BOT_ID)
     assert any("Entregados: 1" in t for t in dms(app, SUPER_ID, main_token))
-
-
-# --------------------------------------------------------------------------- 🔗 how the admins enter a chat
-async def test_private_chat_gets_the_bots_invite_link(app: App) -> None:
-    await start(app, SUPER_ID, USER_ID)
-    await add_chat(app, user=SUPER_ID)  # a private channel: the bot may invite
-    chat = await get_chat(app)
-    assert chat.invite_link == "https://t.me/+1001000000001x1" and chat.join_link == chat.invite_link
-    await app.press(SUPER_ID, "m:chats:0")
-    assert f'📣 <a href="{chat.invite_link}">Cine HD</a>' in app.last_text(SUPER_ID)
-    await press(app, SUPER_ID, "op", chat.id)
-    assert f"🔗 {chat.invite_link}" in app.last_text(SUPER_ID)
-    assert button(app.last_panel(SUPER_ID), "Abrir")["url"] == chat.invite_link
-
-
-async def test_no_invite_link_without_the_right_and_public_chats_use_their_username(app: App) -> None:
-    await start(app, SUPER_ID, USER_ID)
-    rights = {**ADMIN_RIGHTS_FULL, "can_invite_users": False}
-    await add_chat(app, user=SUPER_ID, rights=rights)  # the required rights only: nothing is created
-    chat = await get_chat(app)
-    assert chat.rights_ok and chat.invite_link is None and chat.join_link is None
-    await add_chat(app, GROUP, "Grupo Series", user=SUPER_ID, type="group", username="series")
-    public = await get_chat(app, GROUP)
-    assert public.invite_link is None and public.join_link == "https://t.me/series"
