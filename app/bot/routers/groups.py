@@ -109,7 +109,7 @@ def chat_line(ctx: Ctx, n: int, chat: Chat) -> str:
     else:
         state = ""
     return ctx.t("gr.c.line", n=n, icon="📣" if chat.is_channel else "👥",
-                 title=fmt.link(chat.join_link, chat.display_title), members=fmt.num(chat.members),
+                 title=fmt.link(chat.public_link, chat.display_title), members=fmt.num(chat.members),
                  origin="🤝" if chat.is_external else "🏠", state=state)
 
 

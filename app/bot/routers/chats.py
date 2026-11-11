@@ -43,7 +43,7 @@ from app.ui.common import (
     toast,
     toggle_label,
 )
-from app.ui.fmt import dt, esc, num, truncate
+from app.ui.fmt import dt, esc, link, num, truncate
 from app.ui.screens import open_screen, screen
 
 log = logging.getLogger(__name__)
@@ -174,7 +174,8 @@ async def render_list(event: Message | CallbackQuery, ctx: Ctx, session: AsyncSe
     for i, chat in enumerate(items, start=page * PER_PAGE + 1):
         icon = chat_svc.chat_icon(chat)
         names = [groups[g] for g in sorted(members.get(chat.id, set())) if g in groups]
-        lines.append(ctx.t("ch.list.row", n=i, icon=icon, chat=chat_svc.chat_name(chat, 48),
+        # The name opens the chat: a private one through the bot's own invite link, so an admin can look at it.
+        lines.append(ctx.t("ch.list.row", n=i, icon=icon, chat=link(chat.join_link, truncate(chat.display_title, 48)),
                            status=chat_svc.status_icon(chat), details=_row_details(ctx, chat, owners, names)))
         buttons.append(btn(f"#{i} {icon} {truncate(chat.display_title, 24)}", ChCB(a="op", id=chat.id, f=flt, p=page)))
     if not shown:
@@ -216,8 +217,8 @@ async def on_list(call: CallbackQuery, callback_data: ChCB, ctx: Ctx, session: A
 # --------------------------------------------------------------------------- detail
 async def detail_text(ctx: Ctx, session: AsyncSession, chat: Chat) -> str:
     lines = [f"{chat_svc.chat_icon(chat)} <b>{esc(chat.display_title)}</b>", ctx.t("ch.d.id", id=chat.chat_id)]
-    if chat.join_link:
-        lines.append(ctx.t("ch.d.link", link=esc(chat.join_link)))
+    if chat.public_link:
+        lines.append(ctx.t("ch.d.link", link=esc(chat.public_link)))
     lines.append(ctx.t("ch.d.members", n=num(chat.members)))
     if chat.is_external:
         owners = await chat_svc.users_by_id(session, {chat.owner_user_id})
@@ -262,8 +263,8 @@ def detail_markup(ctx: Ctx, chat: Chat, f: int = 0, p: int = 0) -> InlineKeyboar
         rows.append([btn(ctx.t("ch.btn.unban"), cb("ub"))])
     else:
         rows.append([btn(ctx.t("ch.btn.ban"), cb("bn"), style="danger")])
-    if chat.join_link:
-        rows.append([btn(ctx.t("ch.btn.open"), url=chat.join_link)])
+    if chat.public_link:
+        rows.append([btn(ctx.t("ch.btn.open"), url=chat.public_link)])
     rows.append([btn(ctx.t("common.back"), ChCB(a="ls", f=f, p=p))])
     return kb(*rows)
 

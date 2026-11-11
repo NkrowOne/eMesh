@@ -68,9 +68,9 @@ def chat_icon(chat: Chat) -> str:
 
 
 def chat_name(chat: Chat, limit: int = 0) -> str:
-    """The title as HTML, a link when the chat can be opened (public, or a private one with the bot's invite link)."""
+    """The title as HTML, a link when the chat is public."""
     title = truncate(chat.display_title, limit) if limit else chat.display_title
-    return link(chat.join_link, title)
+    return link(chat.public_link, title)
 
 
 def missing_list(chat: Chat) -> list[str]:
@@ -236,7 +236,7 @@ def notice_view(chat: Chat, owner: User | None, lang: str) -> tuple[str, InlineK
         lines.append(t("rq.notice.who", lang, user=who))
     lines.append(t("rq.notice.chat", lang, icon=chat_icon(chat), chat=esc(chat.display_title),
                    members=num(chat.members)))
-    lines.append(t("rq.notice.id_link", lang, id=chat.chat_id, link=esc(chat.join_link)) if chat.join_link
+    lines.append(t("rq.notice.id_link", lang, id=chat.chat_id, link=esc(chat.public_link)) if chat.public_link
                  else t("rq.notice.id", lang, id=chat.chat_id))
     markup = kb([btn(t("rq.btn.accept", lang), RqCB(a="ok", pk=chat.id), style="success"),
                  btn(t("rq.btn.reject", lang), RqCB(a="no", pk=chat.id), style="danger")])

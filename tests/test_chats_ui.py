@@ -511,9 +511,8 @@ async def test_private_chat_gets_the_bots_invite_link(app: App) -> None:
     assert chat.invite_link == "https://t.me/+1001000000001x1" and chat.join_link == chat.invite_link
     await app.press(SUPER_ID, "m:chats:0")
     assert f'📣 <a href="{chat.invite_link}">Cine HD</a>' in app.last_text(SUPER_ID)
-    await press(app, SUPER_ID, "op", chat.id)
-    assert f"🔗 {chat.invite_link}" in app.last_text(SUPER_ID)
-    assert button(app.last_panel(SUPER_ID), "Abrir")["url"] == chat.invite_link
+    await press(app, SUPER_ID, "op", chat.id)  # only the name in the list: no line, no button
+    assert "🔗" not in app.last_text(SUPER_ID) and "↗️ Abrir" not in labels(app.last_panel(SUPER_ID))
 
 
 async def test_no_invite_link_without_the_right_and_public_chats_use_their_username(app: App) -> None:

@@ -139,8 +139,9 @@ visitors). Times: schedules and dates are in the workspace timezone (`ctx.bot_tz
   **Explain what isn't obvious in the menu text itself**, in one short line.
 * Pagination: `⬅️ Anterior` / `Siguiente ➡️` and `📄 Página 1 de 6` (`common.page`).
 * Lists of chats: `1. 📣 <a href="link">Name</a> ✅` + new line `   └👤 1,234 · …` (📣 channel, 👥 group; link =
-  `chat.join_link`: the public link, or the invite link the bot creates in a private chat when it has the optional
-  right to invite — `chatinfo.ensure_invite_link`, column `em_chats.invite_link`).
+  `chat.public_link` when it has one). Only in the admins' 📣 Canales y grupos list the name of a private chat is a link
+  too (`chat.join_link`): an invite link the bot creates when it has the optional right to invite
+  (`chatinfo.ensure_invite_link`, column `em_chats.invite_link`), so an admin can look at it. No button, no other use.
 * **Nothing is cut on a phone**: `kb()` splits a row whose labels don't fit side by side (`ROW_WIDTHS`: 16 width units
   for 2 buttons, 12 for 3, 9 for 4; an emoji counts 2) in pairs or one per row, and `grid()` uses fewer columns. Rows
   of a list (`#1 name`) are left as they are. Url buttons carry no `↗` in their text: Telegram draws it.

@@ -75,7 +75,7 @@ async def test_my_chats_lists_only_my_external_chats(app: App) -> None:
     await app.press(USER_ID, "m:my_chats:0")
     text = app.last_text(USER_ID)
     assert "📣 <b>Mis canales</b>" in text
-    assert "Cine HD</a> ✅\n   └👤 1,200 · ✅ Recibe los mensajes de la red" in text
+    assert "1. 📣 Cine HD ✅\n   └👤 1,200 · ✅ Recibe los mensajes de la red" in text
     assert "2. 👥 Grupo Pendiente ⏳\n   └👤 300 · ⏳ Pendiente de aprobación" in text
     assert "Se fue" not in text and "De Otro" not in text and "Propio del admin" not in text
     assert button(app.last_panel(USER_ID), "#1 📣 Cine HD")["callback_data"] == PaCB(a="op", id=mine.id).pack()
