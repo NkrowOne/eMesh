@@ -58,7 +58,7 @@ STRINGS = {
     "home.welcome": (
         "👋 <b>¡Hola, {name}!</b> Te damos la bienvenida a <b>eMesh</b>.\n\n"
         "🕸 eMesh publica mensajes en canales y grupos de Telegram de forma automática: escribes el mensaje, eliges "
-        "cada cuánto se publica y el bot lo envía solo.\n\n"
+        "cada cuánto se publica y el bot lo envía automáticamente.\n\n"
         "🤖 <b>Para publicar en tus canales necesitas tu propio bot.</b> Créalo en un minuto con "
         "<b>🤖 Crear mi bot</b>: es tuyo, con tu nombre, tus canales y tus reglas."
     ),
@@ -219,7 +219,7 @@ STRINGS = {
     "set.notif.user": "🔔 Mis avisos: alertas {a}",
     "set.line.ext_closed": "🤝 Canales externos: ✖️ no admitidos (red privada)",
     "set.line.ext_approval": "🤝 Canales externos: ✅ admitidos (con aprobación)",
-    "set.line.ext_auto": "🤝 Canales externos: ✅ admitidos (entran solos)",
+    "set.line.ext_auto": "🤝 Canales externos: ✅ admitidos (entran automáticamente)",
     "set.support": "🛟 Soporte: {user}",
     "set.owner_only": "🔒 Los canales externos y el soporte solo los cambia el propietario.",
     "set.btn.tz": "🗺 Zona horaria",
@@ -261,7 +261,7 @@ STRINGS = {
     "set.ext.text.custom": "personalizado",
     "set.ext.hint.text": "   └ Lo ve quien abre el bot, sobre los botones para añadirlo a su canal.",
     "set.ext.groups": "🗂 Grupos abiertos: <b>{n}</b>",
-    "set.ext.hint.groups": "   └ Los canales externos entran solos en ellos y pueden salir desde su panel.",
+    "set.ext.hint.groups": "   └ Los canales externos entran automáticamente en ellos y pueden salir desde su panel.",
     "set.ext.link": "🔗 Enlace para invitar: {link}",
     "set.ext.hint.link": "   └ Compártelo con los dueños de canales: les explica cómo unirse.",
     "set.ext.pause": "⏸ Los socios pueden pausar: {v}",

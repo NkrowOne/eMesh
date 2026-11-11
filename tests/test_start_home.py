@@ -51,7 +51,7 @@ ADD_CHAT = ("➕ <b>Añadir canal o grupo</b>\n\n"
             "3. Listo: entra en la red al momento y se te avisa por aquí.")
 WELCOME = ("👋 <b>¡Hola, Pepe!</b> Te damos la bienvenida a <b>eMesh</b>.\n\n"
            "🕸 eMesh publica mensajes en canales y grupos de Telegram de forma automática: escribes el mensaje, eliges "
-           "cada cuánto se publica y el bot lo envía solo.\n\n"
+           "cada cuánto se publica y el bot lo envía automáticamente.\n\n"
            "🤖 <b>Para publicar en tus canales necesitas tu propio bot.</b> Créalo en un minuto con "
            "<b>🤖 Crear mi bot</b>: es tuyo, con tu nombre, tus canales y tus reglas.")
 JOIN_STEPS = ("🤝 <b>Únete a la red de @{bot}</b>\n"

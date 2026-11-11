@@ -119,7 +119,7 @@ async def test_group_detail(app: App) -> None:
         "📣 Chats: <b>2</b> (👤 1,500)\n"
         "📝 Mensajes que lo usan: <b>2</b>\n"
         "🤝 Abierto a externos: ✅\n"
-        "   └ Los canales externos pueden unirse o salir desde su panel, y los nuevos entran solos.")
+        "   └ Los canales externos pueden unirse o salir desde su panel, y los nuevos entran automáticamente.")
     assert button_texts(app) == ["📣 Elegir chats", "✅ Abierto a externos", "✏️ Cambiar nombre", "🗑 Eliminar", "🔙 Regresar"]
     assert button_data(app, "Elegir chats") == MenuCB(screen="group_chats", arg=g).pack()
 

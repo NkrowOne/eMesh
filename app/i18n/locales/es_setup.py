@@ -13,7 +13,7 @@ STRINGS = {
         "   └ Con aprobación, cada canal nuevo llega como solicitud a los admins."
     ),
     "setup.join.approval": "✅ Sí, con mi aprobación",
-    "setup.join.auto": "⚡ Sí, entran solos",
+    "setup.join.auto": "⚡ Sí, entran automáticamente",
     "setup.join.closed": "🔒 No, solo los míos",
     # --- 2. Pausas de los socios -------------------------------------------------------------------
     "setup.q.2": (
@@ -51,7 +51,7 @@ STRINGS = {
     # --- 4. Borrado automático ---------------------------------------------------------------------
     "setup.q.4": (
         "🗑 <b>¿Cuánto tiempo siguen publicados los mensajes?</b>\n"
-        "Pasado ese tiempo se borran solos de los canales.\n"
+        "Pasado ese tiempo se borran automáticamente de los canales.\n"
         "   └ Es lo que toman los mensajes nuevos; cada uno se puede cambiar en sus ⚙️ Opciones."
     ),
     "setup.delete.never": "♾ No se borran",

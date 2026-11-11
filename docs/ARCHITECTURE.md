@@ -392,7 +392,7 @@ first, done last. Buttons: one per post (`#1 Promo Cine`, 2 per row), `[➕ Nuev
    todo su destino a cada hora de su horario (empieza con el horario por defecto: …).»), `[📢 Difusión puntual]`
    (still step 4: `[🚀 Ahora mismo]` — created with `send_at` = now, the scheduler sends it once at once — or a
    typed date: `freq.parse_datetime`), `[✋ Solo cuando lo envíe yo]`.
-5. «🗑 <b>¿Cuánto tiempo sigue publicado?</b> · 5/5» (└ «Pasado ese tiempo se borra solo de los canales.»):
+5. «🗑 <b>¿Cuánto tiempo sigue publicado?</b> · 5/5» (└ «Pasado ese tiempo se borra automáticamente de los canales.»):
    `[1 h][3 h][6 h][12 h][1 día][2 días]`, `[♾ No borrar]`, the default of the network pre-selected
    (`Bot.post_defaults["delete_after"]`, else `DEFAULT_DELETE_AFTER`: no borrar).
 Then: create the `Post` (`apply` content with `ctx.bot_id`, `name = default_name`, `ws.post_defaults`, `targets`,
@@ -553,7 +553,7 @@ Partners (`partners.py`):
 📣 Chats: <b>5</b> (👤 23,000)
 📝 Mensajes que lo usan: 3
 🤝 Abierto a externos: ✅
-   └ Los canales externos pueden unirse o salir desde su panel, y los nuevos entran solos.
+   └ Los canales externos pueden unirse o salir desde su panel, y los nuevos entran automáticamente.
 ```
 A group of chats is only a **target** of posts: it has no schedule of its own.
 `[📣 Elegir chats]` (`group_chats`), `[🤝 Abierto a externos]` (toggle), `[✏️ Nombre]`, `[🗑 Eliminar]` (confirm: the

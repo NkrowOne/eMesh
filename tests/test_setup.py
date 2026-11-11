@@ -107,7 +107,7 @@ async def test_the_whole_wizard(app: App) -> None:
     assert app.last_text(OWNER2_ID) == (
         f"{INTRO}\n\n{STEP_1}\nPodrán añadir el bot a sus canales y grupos para recibir los mensajes de la red.\n"
         "   └ Con aprobación, cada canal nuevo llega como solicitud a los admins.")
-    assert button_rows(app, OWNER2_ID) == [["⚪ Sí, con mi aprobación"], ["⚪ Sí, entran solos"],
+    assert button_rows(app, OWNER2_ID) == [["⚪ Sí, con mi aprobación"], ["⚪ Sí, entran automáticamente"],
                                            ["✅ No, solo los míos"], ["⏭ Saltar el asistente"]]
     assert callback_of(app, OWNER2_ID, "Saltar el asistente") == SuCB(s=0).pack()
     assert_buttons_valid(app)
@@ -147,7 +147,7 @@ async def test_the_whole_wizard(app: App) -> None:
     assert button_rows(app, OWNER2_ID) == step_3_rows(None, (14, 20, 22))
     await click(app, "Continuar")
     # 4. How long posts stay published: never deleted by default.
-    assert app.last_text(OWNER2_ID).startswith(f"{STEP_4}\nPasado ese tiempo se borran solos de los canales.")
+    assert app.last_text(OWNER2_ID).startswith(f"{STEP_4}\nPasado ese tiempo se borran automáticamente de los canales.")
     assert button_rows(app, OWNER2_ID) == [["⚪ 1 h", "⚪ 6 h", "⚪ 12 h"], ["⚪ 1 día", "⚪ 2 días"],
                                            ["✅ No se borran"], ["🔙 Regresar"]]
     assert callback_of(app, OWNER2_ID, "Regresar") == MenuCB(screen="setup", arg=3).pack()
@@ -186,7 +186,7 @@ async def test_every_choice_is_saved_and_then_ticked(app: App) -> None:
         assert (rec.join_open, rec.join_approval) == expected, index
         assert app.last_text(OWNER2_ID).startswith(STEP_2 if expected[0] else STEP_3)
         assert len(await ticked(app, 1)) == 1
-    labels_1 = ["✅ Sí, con mi aprobación", "✅ Sí, entran solos", "✅ No, solo los míos"]
+    labels_1 = ["✅ Sí, con mi aprobación", "✅ Sí, entran automáticamente", "✅ No, solo los míos"]
     await answer(app, 1, 1)
     assert await ticked(app, 1) == [labels_1[1]]
     # 2. (partners_can_pause, pause_max_hours): «No pueden pausar» keeps the longest pause for later.
@@ -256,7 +256,7 @@ async def test_skip_keeps_the_defaults(app: App) -> None:
 async def test_back_goes_to_the_previous_step_with_the_answers_given(app: App) -> None:
     await new_clone(app)
     await start(app)
-    await click(app, "Sí, entran solos")
+    await click(app, "Sí, entran automáticamente")
     await click(app, "Sin límite")
     await click(app, "Cada 2 h")
     assert app.last_text(OWNER2_ID).startswith(STEP_3)  # the hours stay on screen until «Continuar»
@@ -267,7 +267,7 @@ async def test_back_goes_to_the_previous_step_with_the_answers_given(app: App) -
     await click(app, "Regresar")
     assert app.last_text(OWNER2_ID).startswith(STEP_2) and has_button(app, OWNER2_ID, "✅ Sin límite")
     await click(app, "Regresar")
-    assert STEP_1 in app.last_text(OWNER2_ID) and has_button(app, OWNER2_ID, "✅ Sí, entran solos")
+    assert STEP_1 in app.last_text(OWNER2_ID) and has_button(app, OWNER2_ID, "✅ Sí, entran automáticamente")
     assert not has_button(app, OWNER2_ID, "Regresar")  # the first step can only be skipped
     rec = await get_bot(app, CLONE_ID)
     assert (rec.join_open, rec.join_approval, rec.pause_max_hours, rec.freq["every"]) == (True, False, 0, 120)
@@ -414,8 +414,8 @@ async def test_running_it_again_from_the_settings_keeps_custom_values(app: App) 
     await click(app, "Ajustes")
     await click(app, "Asistente de configuración")
     assert app.last_text(OWNER2_ID).startswith(f"{INTRO}\n\n{STEP_1}")
-    assert has_button(app, OWNER2_ID, "✅ Sí, entran solos")
-    await click(app, "Sí, entran solos")
+    assert has_button(app, OWNER2_ID, "✅ Sí, entran automáticamente")
+    await click(app, "Sí, entran automáticamente")
     assert has_button(app, OWNER2_ID, "✅ No pueden pausar")
     await click(app, "No pueden pausar")
     # A frequency made elsewhere is shown with its hours ticked and kept with «Continuar».
@@ -429,7 +429,7 @@ async def test_running_it_again_from_the_settings_keeps_custom_values(app: App) 
     await click(app, "Mantener")
     text = app.last_text(OWNER2_ID)
     assert text.startswith(DONE)
-    assert ("🤝 Canales externos: ✅ admitidos (entran solos)\n⏸ Pausas de los socios: no pueden pausar\n"
+    assert ("🤝 Canales externos: ✅ admitidos (entran automáticamente)\n⏸ Pausas de los socios: no pueden pausar\n"
             "🕐 Horario por defecto: cada 3 h · 08:00-23:00 · de lunes a viernes\n"
             "🗑 Borrado automático: al cabo de 3 h\n") in text
     assert has_button(app, OWNER2_ID, "📝 Crear un mensaje")  # the network has posts already

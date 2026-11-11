@@ -19,7 +19,7 @@ STRINGS = {
     "gr.d.chats": "📣 Chats: <b>{n}</b> (👤 {members})",
     "gr.d.posts": "📝 Mensajes que lo usan: <b>{n}</b>",
     "gr.d.open": "🤝 Abierto a externos: {value}",
-    "gr.d.open_hint": "   └ Los canales externos pueden unirse o salir desde su panel, y los nuevos entran solos.",
+    "gr.d.open_hint": "   └ Los canales externos pueden unirse o salir desde su panel, y los nuevos entran automáticamente.",
     "gr.d.closed_hint": "   └ Solo los admins eligen sus chats.",
     "gr.b.chats": "📣 Elegir chats",
     "gr.b.open": "🤝 Abierto a externos",

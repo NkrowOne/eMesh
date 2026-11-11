@@ -91,7 +91,7 @@ python -m app
 Para saber tu ID de Telegram: arranca el bot y escribe `/id`.
 
 ### 3. Primeros pasos
-1. `/start` en tu bot → **➕ Añadir canal** (y grupo). Tus canales entran solos.
+1. `/start` en tu bot → **➕ Añadir canal** (y grupo). Tus canales entran automáticamente.
 2. **📝 Mensajes → ➕ Nuevo mensaje**: envía el mensaje, añade botones, elige a quién y cuándo.
 3. **⏰ Frecuencias**: elige cada cuánto recibe un mensaje cada canal (global o por grupo de canales).
 4. ¿Quieres socios? **⚙️ Ajustes → 🤝 Canales externos** y comparte el enlace `https://t.me/<tu_bot>?start=join`.
