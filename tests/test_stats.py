@@ -171,7 +171,7 @@ async def test_activity_describes_each_event(app: App) -> None:
     await app.click(SUPER_ID, "Actividad")
     text = app.last_text(SUPER_ID)
     assert "⏸ <i>" in text
-    assert "El socio @pepe ha pausado <b>Cine &lt;HD&gt;</b> hasta que la reanude." in text
+    assert "Tu asociado @pepe ha pausado <b>Cine &lt;HD&gt;</b> hasta que la reanude." in text
     assert "Distribución de toda la red pausada (@superadmin)." in text
     assert "Página" not in text  # a single page
 

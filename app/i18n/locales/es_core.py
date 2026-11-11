@@ -29,10 +29,10 @@ STRINGS = {
     "ev.chat_rejected": "<b>{chat}</b>: solicitud rechazada ({actor}).",
     "ev.chat_banned": "{actor} ha bloqueado <b>{chat}</b>: no podrá volver a la red.",
     "ev.chat_paused": "<b>{chat}</b>: distribución pausada.",
-    "ev.chat_paused.owner": "El socio {actor} ha pausado <b>{chat}</b> {until}.",
+    "ev.chat_paused.owner": "Tu asociado {actor} ha pausado <b>{chat}</b> {until}.",
     "ev.chat_paused.admin": "<b>{chat}</b>: distribución pausada por {actor}.",
     "ev.chat_resumed": "<b>{chat}</b>: distribución reanudada.",
-    "ev.chat_resumed.owner": "El socio {actor} ha reanudado <b>{chat}</b>.",
+    "ev.chat_resumed.owner": "Tu asociado {actor} ha reanudado <b>{chat}</b>.",
     "ev.chat_resumed.admin": "<b>{chat}</b>: distribución reanudada por {actor}.",
     "ev.chat_resumed.auto": "<b>{chat}</b>: la pausa ha terminado y vuelve a recibir mensajes.",
     "ev.chat_left": (
@@ -40,7 +40,7 @@ STRINGS = {
         "sigue existiendo, añade el bot de nuevo como administrador para recuperarlo."
     ),
     "ev.chat_removed": "<b>{chat}</b> ha salido de la red.",
-    "ev.chat_removed.owner": "El socio {actor} ha sacado <b>{chat}</b> de la red.",
+    "ev.chat_removed.owner": "Tu asociado {actor} ha sacado <b>{chat}</b> de la red.",
     "ev.chat_removed.admin": "{actor} ha quitado <b>{chat}</b> de la red y el bot ha salido de él.",
     "ev.chat_rights": (
         "<b>{chat}</b>: al bot le faltan permisos ({missing}) y no recibe mensajes. Un administrador de ese chat "

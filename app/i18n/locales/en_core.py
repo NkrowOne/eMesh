@@ -29,10 +29,10 @@ STRINGS = {
     "ev.chat_rejected": "<b>{chat}</b>: request rejected ({actor}).",
     "ev.chat_banned": "{actor} banned <b>{chat}</b>: it can't come back to the network.",
     "ev.chat_paused": "<b>{chat}</b>: distribution paused.",
-    "ev.chat_paused.owner": "The partner {actor} paused <b>{chat}</b> {until}.",
+    "ev.chat_paused.owner": "Your partner {actor} paused <b>{chat}</b> {until}.",
     "ev.chat_paused.admin": "<b>{chat}</b>: distribution paused by {actor}.",
     "ev.chat_resumed": "<b>{chat}</b>: distribution resumed.",
-    "ev.chat_resumed.owner": "The partner {actor} resumed <b>{chat}</b>.",
+    "ev.chat_resumed.owner": "Your partner {actor} resumed <b>{chat}</b>.",
     "ev.chat_resumed.admin": "<b>{chat}</b>: distribution resumed by {actor}.",
     "ev.chat_resumed.auto": "<b>{chat}</b>: the pause is over and it receives posts again.",
     "ev.chat_left": (
@@ -40,7 +40,7 @@ STRINGS = {
         "network. If it still exists, add the bot again as an administrator to bring it back."
     ),
     "ev.chat_removed": "<b>{chat}</b> left the network.",
-    "ev.chat_removed.owner": "The partner {actor} took <b>{chat}</b> out of the network.",
+    "ev.chat_removed.owner": "Your partner {actor} took <b>{chat}</b> out of the network.",
     "ev.chat_removed.admin": "{actor} removed <b>{chat}</b> from the network and the bot left it.",
     "ev.chat_rights": (
         "<b>{chat}</b>: the bot is missing rights ({missing}) and it receives no posts. An administrator of that "

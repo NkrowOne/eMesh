@@ -133,7 +133,7 @@ async def test_network_end_to_end(app: App) -> None:  # noqa: PLR0915 - one stor
         kinds = [e.kind for e in (await s.execute(select(Event).where(Event.bot_id == MAIN_BOT_ID))).scalars()]
     assert EventKind.CHAT_PAUSED in kinds
     await app.send(SUPER_ID, "/start")
-    assert "Pausados por su socio" in app.last_text(SUPER_ID)
+    assert "Pausados por su asociado" in app.last_text(SUPER_ID)
 
     # 9. Its next time: the paused channel gets nothing.
     await due_now(app, post.id)

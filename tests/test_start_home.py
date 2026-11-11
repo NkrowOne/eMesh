@@ -120,7 +120,7 @@ async def test_owner_home_of_an_empty_network(app: App) -> None:
                            "   └ Añade el bot a tus canales y grupos con ➕ <b>Añadir canal o grupo</b>.\n"
                            "📝 Mensajes activos: <b>0</b>\n   └ Crea el primero en 📝 Mensajes.\n"
                            "📅 Próximo envío: <b>—</b>")
-    for absent in ("Estado", "Pausados por su socio", "Solicitudes pendientes", "Sin permisos", "está pausada"):
+    for absent in ("Estado", "Pausados por su asociado", "Solicitudes pendientes", "Sin permisos", "está pausada"):
         assert absent not in text
     for label in (*ADMIN_BUTTONS, "Crear mi bot", "Panel"):
         assert has_button(app, SUPER_ID, label), f"{label!r} missing in {button_texts(app, SUPER_ID)}"
@@ -196,7 +196,7 @@ async def test_admin_home_summarizes_the_network(app: App) -> None:
     assert ("📣 Canales y grupos: <b>4</b> (👤 2,000)\n   └ 🏠 Propios: 2 · 🤝 Externos: 2\n"
             "📊 Estado: ✅ 2 reciben · ⏸ 1 pausado · ⚠️ 1 sin permisos · ⏳ 1 pendiente\n"
             f"📝 Mensajes activos: <b>2</b>\n📅 Próximo envío: <b>{dt(slot, 'Europe/Madrid')}</b>\n"
-            "⏸ Pausados por su socio: <b>1</b>\n⏳ Solicitudes pendientes: <b>1</b>\n⚠️ Sin permisos: <b>1</b>") in text
+            "⏸ Pausados por su asociado: <b>1</b>\n⏳ Solicitudes pendientes: <b>1</b>\n⚠️ Sin permisos: <b>1</b>") in text
     assert "Añade el bot" not in text and "Crea el primero" not in text
     assert ["⏳ Solicitudes (1)", "⏸ Pausados (1)"] in button_rows(app, SUPER_ID)
     assert callback_of(app, SUPER_ID, "Solicitudes (1)") == MenuCB(screen="requests").pack()
@@ -221,7 +221,7 @@ async def test_status_line_and_the_paused_button(app: App) -> None:
     await app.send(SUPER_ID, "/start")
     text = app.last_text(SUPER_ID)
     assert "📊 Estado: ✅ 2 reciben · ⏸ 2 pausados · ⚠️ 0 sin permisos · ⏳ 0 pendientes" in text
-    assert "⏸ Pausados por su socio: <b>1</b>" in text
+    assert "⏸ Pausados por su asociado: <b>1</b>" in text
     assert callback_of(app, SUPER_ID, "⏸ Pausados (2)") == MenuCB(screen="paused").pack()
     async with app.db() as s:
         await s.execute(update(Chat).values(admin_paused=False, owner_paused=False))

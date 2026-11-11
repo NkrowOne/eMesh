@@ -164,7 +164,7 @@ async def test_chat_detail(app: App) -> None:
     await app.press(SUPER_ID, f"m:chat:{ext}")
     text = app.last_text(SUPER_ID)
     assert "🏷 Origen: 🤝 Externo · @pepe" in text
-    assert ("📌 Estado: ⚠️ Faltan permisos: fijar mensajes · ⏸ Pausado por su socio hasta que lo reanude"
+    assert ("📌 Estado: ⚠️ Faltan permisos: fijar mensajes · ⏸ Pausado por su asociado hasta que lo reanude"
             in text)
     assert "   └ Si lo reanudas, se anula su pausa y se le avisa." in text
     assert "⏰" not in text and "🕐 Último: —" in text

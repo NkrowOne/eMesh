@@ -163,7 +163,7 @@ STRINGS = {
         "📌 Estado: {status}\n"
         "📅 Creado: {created}\n"
         "📣 Chats: <b>{chats}</b> (🏠 {own} · 🤝 {ext}) · 👤 {members}\n"
-        "⏸ Pausados por su socio: {owner_paused} · ⏳ Pendientes: {pending}\n"
+        "⏸ Pausados por su asociado: {owner_paused} · ⏳ Pendientes: {pending}\n"
         "📝 Mensajes activos: <b>{posts}</b> · 🕐 {freq}\n"
         "📤 Últimas 24 h: {runs} envíos · {sent} entregas · {failed} fallos\n"
         "🔒 Límites: {limits}"

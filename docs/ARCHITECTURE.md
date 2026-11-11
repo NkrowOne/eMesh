@@ -230,7 +230,7 @@ Admin view (admins of the network, and a super admin managing a clone):
 📝 Mensajes activos: <b>5</b>
 📅 Próximo envío: <b>07/11/2026 11:00 AM</b>        (earliest `next_send_at` of the active posts; — if none;
                                                     not shown while the network is paused)
-⏸ Pausados por su socio: <b>2</b>          (only when > 0)
+⏸ Pausados por su asociado: <b>2</b>          (only when > 0)
 ⏳ Solicitudes pendientes: <b>1</b>        (only when > 0)
 ⚠️ Sin permisos: <b>1</b>                  (only when > 0)
 ⏸ <b>La distribución está pausada.</b> No se envía nada hasta que la reanudes.   (Bot.paused)
@@ -640,7 +640,7 @@ foto; puedes cambiarla cuando quieras en @BotFather.» while a new bot can be cr
 📌 Estado: ✅ Activo
 📅 Creado: 01/11/2026
 📣 Chats: 12 (🏠 8 · 🤝 4) · 👤 45,320
-⏸ Pausados por su socio: 2 · ⏳ Pendientes: 1
+⏸ Pausados por su asociado: 2 · ⏳ Pendientes: 1
 📝 Mensajes activos: 5 · 🕐 cada 4 h        (its default schedule)
 📤 Últimas 24 h: 12 envíos · 340 entregas · 3 fallos
 🔒 Límites: 50 chats · 20 mensajes | sin límites

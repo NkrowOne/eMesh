@@ -12,7 +12,7 @@ STRINGS = {
     "home.posts": "📝 Mensajes activos: <b>{n}</b>",
     "home.posts.none": "   └ Crea el primero en 📝 Mensajes.",
     "home.next_send": "📅 Próximo envío: <b>{date}</b>",
-    "home.owner_paused": "⏸ Pausados por su socio: <b>{n}</b>",
+    "home.owner_paused": "⏸ Pausados por su asociado: <b>{n}</b>",
     "home.pending": "⏳ Solicitudes pendientes: <b>{n}</b>",
     "home.no_rights": "⚠️ Sin permisos: <b>{n}</b>",
     "home.status": "📊 Estado: {parts}",

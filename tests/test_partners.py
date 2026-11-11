@@ -128,12 +128,12 @@ async def test_partner_pauses_and_resumes(app: App, value: int, label: str, leng
     if length is None:
         assert chat.owner_paused_until is None and event.data["until"] is None
         assert "📌 Estado: ⏸ Pausado hasta que lo reanudes" in app.last_text(USER_ID)
-        alert = "El socio @pepe ha pausado <b>Cine HD</b> hasta que la reanude."
+        alert = "Tu asociado @pepe ha pausado <b>Cine HD</b> hasta que la reanude."
     else:
         assert before + length - timedelta(seconds=5) < chat.owner_paused_until < utcnow() + length
         assert event.data["until"] == chat.owner_paused_until.isoformat()
         assert f"📌 Estado: ⏸ Pausado hasta {dt(chat.owner_paused_until, TZ)}" in app.last_text(USER_ID)
-        alert = f"El socio @pepe ha pausado <b>Cine HD</b> hasta el {dt(chat.owner_paused_until, TZ)}."
+        alert = f"Tu asociado @pepe ha pausado <b>Cine HD</b> hasta el {dt(chat.owner_paused_until, TZ)}."
     assert any(alert in t for t in dms(app, SUPER_ID)), "the admins are alerted"
     assert labels(app.last_panel(USER_ID))[0] == "▶️ Reanudar"
 
@@ -147,7 +147,7 @@ async def test_partner_pauses_and_resumes(app: App, value: int, label: str, leng
     assert last_answer(app)["text"] == "▶️ Reanudado. Se ha avisado a la administración."
     [resumed] = await events_of(app, EventKind.CHAT_RESUMED)
     assert resumed.data == {"by": "owner"} and resumed.actor_id == USER_ID
-    assert any("El socio @pepe ha reanudado <b>Cine HD</b>." in t for t in dms(app, SUPER_ID))
+    assert any("Tu asociado @pepe ha reanudado <b>Cine HD</b>." in t for t in dms(app, SUPER_ID))
 
 
 async def test_partner_cant_resume_an_admin_pause(app: App) -> None:
@@ -266,7 +266,7 @@ async def test_partner_leaves_the_network(app: App, monkeypatch: pytest.MonkeyPa
     assert chat.status == ChatStatus.LEFT and chat.decided_by == USER_ID
     [event] = await events_of(app, EventKind.CHAT_REMOVED)
     assert event.data == {"by": "owner"} and event.actor_id == USER_ID
-    assert any("El socio @pepe ha sacado <b>Cine HD</b> de la red." in t for t in dms(app, SUPER_ID))
+    assert any("Tu asociado @pepe ha sacado <b>Cine HD</b> de la red." in t for t in dms(app, SUPER_ID))
     assert "🚪 Tu canal <b>Cine HD</b> ha salido de la red." in app.last_text(USER_ID)
     assert not any("se ha quitado de la red" in t for t in dms(app)), "no DM about their own decision"
     assert button(app.last_panel(USER_ID), "Mis canales")["callback_data"] == MenuCB(screen="my_chats").pack()
