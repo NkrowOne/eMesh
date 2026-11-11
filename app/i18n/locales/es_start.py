@@ -12,7 +12,7 @@ STRINGS = {
     "home.posts": "📝 Mensajes activos: <b>{n}</b>",
     "home.posts.none": "   └ Crea el primero en 📝 Mensajes.",
     "home.next_send": "📅 Próximo envío: <b>{date}</b>",
-    "home.owner_paused": "⏸ Pausados por su dueño: <b>{n}</b>",
+    "home.owner_paused": "⏸ Pausados por su asociado: <b>{n}</b>",
     "home.pending": "⏳ Solicitudes pendientes: <b>{n}</b>",
     "home.no_rights": "⚠️ Sin permisos: <b>{n}</b>",
     "home.status": "📊 Estado: {parts}",
@@ -26,7 +26,7 @@ STRINGS = {
     "home.st.pending.1": "⏳ {n} pendiente",
     "home.paused": "⏸ <b>La distribución está pausada.</b> No se envía nada hasta que la reanudes.",
     "home.btn.posts": "📝 Mensajes",
-    "home.btn.chats": "📣 Canales",
+    "home.btn.chats": "📣 Canales y grupos",
     "home.btn.groups": "🗂 Grupos de canales",
     "home.btn.freqs": "⏰ Horarios",
     "home.btn.stats": "📊 Estadísticas",
@@ -50,7 +50,7 @@ STRINGS = {
     "home.btn.create_mine": "🤖 Crear mi bot",
     "home.btn.mybots": "🤖 Mis bots ({n})",
     "home.btn.panel": "👑 Panel",
-    "home.btn.exit_ws": "🚪 Salir de @{bot}",
+    "home.btn.exit_ws": "🔙 Dejar de gestionar @{bot}",
     "home.toast.paused": "⏸ Distribución pausada: no se enviará nada hasta que la reanudes.",
     "home.toast.resumed": "▶️ Distribución reanudada.",
     "home.toast.ws_left": "🚪 Has dejado de gestionar @{bot}.",
@@ -58,7 +58,7 @@ STRINGS = {
     "home.welcome": (
         "👋 <b>¡Hola, {name}!</b> Te damos la bienvenida a <b>eMesh</b>.\n\n"
         "🕸 eMesh publica mensajes en canales y grupos de Telegram de forma automática: escribes el mensaje, eliges "
-        "cada cuánto se publica y el bot lo envía solo.\n\n"
+        "cada cuánto se publica y el bot lo envía automáticamente.\n\n"
         "🤖 <b>Para publicar en tus canales necesitas tu propio bot.</b> Créalo en un minuto con "
         "<b>🤖 Crear mi bot</b>: es tuyo, con tu nombre, tus canales y tus reglas."
     ),
@@ -219,7 +219,7 @@ STRINGS = {
     "set.notif.user": "🔔 Mis avisos: alertas {a}",
     "set.line.ext_closed": "🤝 Canales externos: ✖️ no admitidos (red privada)",
     "set.line.ext_approval": "🤝 Canales externos: ✅ admitidos (con aprobación)",
-    "set.line.ext_auto": "🤝 Canales externos: ✅ admitidos (entran solos)",
+    "set.line.ext_auto": "🤝 Canales externos: ✅ admitidos (entran automáticamente)",
     "set.support": "🛟 Soporte: {user}",
     "set.owner_only": "🔒 Los canales externos y el soporte solo los cambia el propietario.",
     "set.btn.tz": "🗺 Zona horaria",
@@ -261,7 +261,7 @@ STRINGS = {
     "set.ext.text.custom": "personalizado",
     "set.ext.hint.text": "   └ Lo ve quien abre el bot, sobre los botones para añadirlo a su canal.",
     "set.ext.groups": "🗂 Grupos abiertos: <b>{n}</b>",
-    "set.ext.hint.groups": "   └ Los canales externos entran solos en ellos y pueden salir desde su panel.",
+    "set.ext.hint.groups": "   └ Los canales externos entran automáticamente en ellos y pueden salir desde su panel.",
     "set.ext.link": "🔗 Enlace para invitar: {link}",
     "set.ext.hint.link": "   └ Compártelo con los dueños de canales: les explica cómo unirse.",
     "set.ext.pause": "⏸ Los socios pueden pausar: {v}",
@@ -309,7 +309,7 @@ STRINGS = {
         "🛟 <b>Contacto de soporte</b>\n\n"
         "✏️ Envía el @usuario de una persona o de un bot, o su enlace (<code>t.me/usuario</code>)."
     ),
-    "set.sup.invalid": "⚠️ No es un @usuario válido.",
+    "set.sup.invalid": "⚠️ @usuario no válido. Ejemplo: <code>@soporte</code>.",
     # --- Idioma ------------------------------------------------------------------------------------
     "lang.title": "🌍 <b>Idioma / Language</b>",
     "lang.body": "Elige el idioma del bot.\nChoose the bot language.",
@@ -377,7 +377,7 @@ STRINGS = {
     "tz.btn.photo_change": "🖼 Cambiar imagen",
     "tz.btn.photo_del": "🗑 Quitar imagen",
     "tz.photo.prompt": "🖼 Envía la <b>foto</b> que se verá al abrir este menú, en todos los bots.",
-    "tz.photo.invalid": "⚠️ Eso no es una foto.",
+    "tz.photo.invalid": "⚠️ Eso no es una foto. Envíala como foto, no como archivo.",
     "tz.photo.saved": "✅ Imagen guardada.",
     "tz.photo.deleted": "🗑 Imagen quitada.",
     "tz.regions": "👇 Elige tu región:",

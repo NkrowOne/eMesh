@@ -199,7 +199,7 @@ async def test_clone_page(app: App) -> None:
     assert f"👤 Dueño: @pepe (<code>{USER_ID}</code>)" in text
     assert "📌 Estado: ✅ Activo" in text
     assert "📣 Chats: <b>2</b> (🏠 1 · 🤝 1) · 👤 1,500" in text
-    assert "⏸ Pausados por su dueño: 1 · ⏳ Pendientes: 1" in text
+    assert "⏸ Pausados por su asociado: 1 · ⏳ Pendientes: 1" in text
     assert "📝 Mensajes activos: <b>2</b> · 🕐 a las 12:00" in text
     assert "📤 Últimas 24 h: 1 envíos · 7 entregas · 2 fallos" in text
     assert "🔒 Límites: sin límites (predeterminado)" in text
@@ -348,7 +348,7 @@ async def test_activity_of_a_clone(app: App) -> None:
     await app.click(SUPER_ID, "Actividad")
     text = app.last_text(SUPER_ID)
     assert f"📜 <b>Actividad de @{CLONE_USERNAME}</b>" in text
-    assert "<b>Canal 0</b> ha pausado la distribución hasta que la reanude (@pepe)." in text
+    assert "Tu asociado @pepe ha pausado <b>Canal 0</b> hasta que la reanude." in text
     assert "Canal 7" in text and "Canal 8" not in text
     await app.click(SUPER_ID, "Siguiente")
     text = app.last_text(SUPER_ID)

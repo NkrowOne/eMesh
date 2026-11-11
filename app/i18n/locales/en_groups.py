@@ -23,7 +23,7 @@ STRINGS = {
     "gr.d.closed_hint": "   └ Only admins choose its chats.",
     "gr.b.chats": "📣 Choose chats",
     "gr.b.open": "🤝 Open to external chats",
-    "gr.b.rename": "✏️ Name",
+    "gr.b.rename": "✏️ Rename",
     "gr.b.delete": "🗑 Delete",
     "gr.del.confirm": "🗑 <b>Delete the channel group {name}?</b>\nIts chats stay in the network: they are just no "
                       "longer grouped.",
@@ -59,7 +59,7 @@ STRINGS = {
     # --- ⏰ schedule editor ---
     "fq.e.default": "🕐 <b>Default schedule</b>",
     "fq.e.default_hint": "   └ Every new post starts with this schedule.",
-    "fq.e.post": "⏰ <b>Frequency</b> · 📝 {name}",
+    "fq.e.post": "⏰ <b>Schedule</b> · 📝 {name}",
     "fq.e.post_hint": "📝 At each time it goes to its whole target.",
     "fq.e.post_unused": "ℹ️ This post isn't sent on its own schedule right now: this schedule is used when "
                         "⏰ At its own times is chosen in its schedule settings.",

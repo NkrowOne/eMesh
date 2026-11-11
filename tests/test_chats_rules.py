@@ -197,9 +197,9 @@ async def test_an_admin_resumes_a_partner_pause_from_the_chat_detail(app: App) -
 
     await app.press(OWNER2_ID, f"m:chat:{chat.id}")
     text = app.last_text(OWNER2_ID)
-    assert f"📌 Estado: ⏸ Pausado por su dueño hasta {dt(until, TZ)}\n" in text
+    assert f"📌 Estado: ⏸ Pausado por su asociado hasta {dt(until, TZ)}\n" in text
     assert "   └ Si lo reanudas, se anula su pausa y se le avisa." in text
-    assert labels(app.last_panel(OWNER2_ID)) == ["🗂 Grupos de canales", "🔄 Comprobar", LIFT, "⏸ Pausar",
+    assert labels(app.last_panel(OWNER2_ID)) == ["🗂 Grupos de canales", "🔄 Comprobar permisos", LIFT, "⏸ Pausar",
                                                  "🗑 Quitar de la red", "🚫 Bloquear", "🔙 Regresar"]
     await app.click(OWNER2_ID, LIFT)
     assert app.last_text(OWNER2_ID) == ("▶️ ¿Reanudar el canal <b>Cine HD</b>?\n\nEl dueño lo ha pausado hasta "

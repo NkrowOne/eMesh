@@ -64,7 +64,7 @@ STRINGS = {
     "po.w.date": "📢 <b>Difusión puntual</b> · 4/5\n\nPulsa 🚀 <b>Ahora mismo</b> o {ask}",
     "po.w.delete": (
         "🗑 <b>¿Cuánto tiempo sigue publicado?</b> · 5/5\n"
-        "   └ Pasado ese tiempo se borra solo de los canales."
+        "   └ Pasado ese tiempo se borra automáticamente de los canales."
     ),
     "po.w.no_delete": "♾ No borrar",
     "po.help.buttons": (
@@ -135,7 +135,10 @@ STRINGS = {
     # --- detail actions ---
     "po.preview.failed": "⚠️ No se ha podido enviar la vista previa. Inténtalo de nuevo.",
     "po.busy": "⏳ Este mensaje se está enviando ahora mismo. Espera a que termine.",
-    "po.send.nobody": "⚠️ Ahora mismo ningún chat puede recibirlo. Revisa su 🎯 Destino.",
+    "po.send.nobody": (
+        "⚠️ Ningún chat de su 🎯 Destino puede recibirlo ahora (pausados, pendientes o sin permisos). Revisa su 🎯 "
+        "Destino."
+    ),
     "po.send.paused": "⏸ La distribución está pausada: no se envía nada. Reanúdala en el inicio con ▶️ Reanudar todo.",
     "po.send.confirm": (
         "🚀 <b>{name}</b>\n\nSe enviará ahora a <b>{chats}</b> (👤 {members}).\n"
@@ -258,7 +261,7 @@ STRINGS = {
     "po.oh.spoiler": "   └ Contenido multimedia borroso hasta que se pulsa.",
     "po.oh.delete_previous": "   └ Al enviarlo de nuevo a un chat, se borra la copia anterior de ese chat.",
     "po.oh.delete_after": (
-        "   └ Cada copia se borra sola pasado ese tiempo (máximo 48 h: Telegram no deja borrar mensajes más antiguos)."
+        "   └ Cada copia se borra automáticamente pasado ese tiempo (máximo 48 h: Telegram no deja borrar mensajes más antiguos)."
     ),
     "po.ad.never": "✖️ nunca",
     "po.ad.after": "a las {t} de enviarse",

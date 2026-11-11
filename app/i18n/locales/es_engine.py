@@ -29,7 +29,7 @@ STRINGS = {
     "eng.summary.skipped": "🛡 Omitidos por anti-spam: <b>{n}</b>",
     "eng.summary.reach": "👁 Alcance: <b>{n}</b>",
     "eng.summary.chats": "📣 Chats: <b>{n}</b> · 👤 {members}",
-    "eng.summary.owner_paused": "⏸ Pausados por su dueño: <b>{n}</b>",
+    "eng.summary.owner_paused": "⏸ Pausados por su asociado: <b>{n}</b>",
     "eng.summary.admin_paused": "⏸ Pausados por la administración: <b>{n}</b>",
     "eng.summary.pending": "⏳ Pendientes: <b>{n}</b>",
     "eng.summary.no_rights": "⚠️ Sin permisos: <b>{n}</b>",

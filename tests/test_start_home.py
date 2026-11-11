@@ -42,7 +42,7 @@ from tests.test_start_helpers import (
 
 ADMIN_BUTTONS = ("Añadir canal o grupo", "Mensajes", "Canales", "Grupos de canales", "Horarios", "Estadísticas",
                  "Actividad", "Pausar todo", "Ajustes", "Guía")
-NETWORK_SCREENS = {"📝 Mensajes": "posts", "📣 Canales": "chats", "🗂 Grupos de canales": "groups",
+NETWORK_SCREENS = {"📝 Mensajes": "posts", "📣 Canales y grupos": "chats", "🗂 Grupos de canales": "groups",
                    "⏰ Horarios": "freqs", "📊 Estadísticas": "stats", "📜 Actividad": "activity",
                    "⚙️ Ajustes": "settings", "📖 Guía": "guide"}
 ADD_CHAT = ("➕ <b>Añadir canal o grupo</b>\n\n"
@@ -51,7 +51,7 @@ ADD_CHAT = ("➕ <b>Añadir canal o grupo</b>\n\n"
             "3. Listo: entra en la red al momento y se te avisa por aquí.")
 WELCOME = ("👋 <b>¡Hola, Pepe!</b> Te damos la bienvenida a <b>eMesh</b>.\n\n"
            "🕸 eMesh publica mensajes en canales y grupos de Telegram de forma automática: escribes el mensaje, eliges "
-           "cada cuánto se publica y el bot lo envía solo.\n\n"
+           "cada cuánto se publica y el bot lo envía automáticamente.\n\n"
            "🤖 <b>Para publicar en tus canales necesitas tu propio bot.</b> Créalo en un minuto con "
            "<b>🤖 Crear mi bot</b>: es tuyo, con tu nombre, tus canales y tus reglas.")
 JOIN_STEPS = ("🤝 <b>Únete a la red de @{bot}</b>\n"
@@ -120,7 +120,7 @@ async def test_owner_home_of_an_empty_network(app: App) -> None:
                            "   └ Añade el bot a tus canales y grupos con ➕ <b>Añadir canal o grupo</b>.\n"
                            "📝 Mensajes activos: <b>0</b>\n   └ Crea el primero en 📝 Mensajes.\n"
                            "📅 Próximo envío: <b>—</b>")
-    for absent in ("Estado", "Pausados por su dueño", "Solicitudes pendientes", "Sin permisos", "está pausada"):
+    for absent in ("Estado", "Pausados por su asociado", "Solicitudes pendientes", "Sin permisos", "está pausada"):
         assert absent not in text
     for label in (*ADMIN_BUTTONS, "Crear mi bot", "Panel"):
         assert has_button(app, SUPER_ID, label), f"{label!r} missing in {button_texts(app, SUPER_ID)}"
@@ -133,8 +133,8 @@ async def test_owner_home_of_an_empty_network(app: App) -> None:
     assert callback_of(app, SUPER_ID, "Panel") == MenuCB(screen="panel").pack()
     assert callback_of(app, SUPER_ID, "Pausar todo") == StCB(action="pause").pack()
     assert button_rows(app, SUPER_ID) == [
-        ["➕ Añadir canal o grupo"], ["📝 Mensajes", "📣 Canales"], ["🗂 Grupos de canales", "⏰ Horarios"],
-        ["📊 Estadísticas", "📜 Actividad"], ["⏸ Pausar todo"], ["⚙️ Ajustes", "📖 Guía"], ["🤖 Crear mi bot"],
+        ["➕ Añadir canal o grupo"], ["📝 Mensajes", "⏰ Horarios"], ["📣 Canales y grupos", "🗂 Grupos de canales"],
+        ["📊 Estadísticas", "📜 Actividad"], ["⚙️ Ajustes", "📖 Guía"], ["⏸ Pausar todo"], ["🤖 Crear mi bot"],
         ["👑 Panel"],
     ]
     assert button_of(app, SUPER_ID, "Añadir canal o grupo")["style"] == "success"
@@ -196,7 +196,7 @@ async def test_admin_home_summarizes_the_network(app: App) -> None:
     assert ("📣 Canales y grupos: <b>4</b> (👤 2,000)\n   └ 🏠 Propios: 2 · 🤝 Externos: 2\n"
             "📊 Estado: ✅ 2 reciben · ⏸ 1 pausado · ⚠️ 1 sin permisos · ⏳ 1 pendiente\n"
             f"📝 Mensajes activos: <b>2</b>\n📅 Próximo envío: <b>{dt(slot, 'Europe/Madrid')}</b>\n"
-            "⏸ Pausados por su dueño: <b>1</b>\n⏳ Solicitudes pendientes: <b>1</b>\n⚠️ Sin permisos: <b>1</b>") in text
+            "⏸ Pausados por su asociado: <b>1</b>\n⏳ Solicitudes pendientes: <b>1</b>\n⚠️ Sin permisos: <b>1</b>") in text
     assert "Añade el bot" not in text and "Crea el primero" not in text
     assert ["⏳ Solicitudes (1)", "⏸ Pausados (1)"] in button_rows(app, SUPER_ID)
     assert callback_of(app, SUPER_ID, "Solicitudes (1)") == MenuCB(screen="requests").pack()
@@ -221,7 +221,7 @@ async def test_status_line_and_the_paused_button(app: App) -> None:
     await app.send(SUPER_ID, "/start")
     text = app.last_text(SUPER_ID)
     assert "📊 Estado: ✅ 2 reciben · ⏸ 2 pausados · ⚠️ 0 sin permisos · ⏳ 0 pendientes" in text
-    assert "⏸ Pausados por su dueño: <b>1</b>" in text
+    assert "⏸ Pausados por su asociado: <b>1</b>" in text
     assert callback_of(app, SUPER_ID, "⏸ Pausados (2)") == MenuCB(screen="paused").pack()
     async with app.db() as s:
         await s.execute(update(Chat).values(admin_paused=False, owner_paused=False))
@@ -281,7 +281,7 @@ async def test_home_shows_the_next_send_of_the_posts(app: App) -> None:
 async def test_home_buttons_open_the_screens_of_other_modules(app: App, stub_screens: list) -> None:  # noqa: F811
     await add_chat_row(app, status=ChatStatus.PENDING)
     await add_chat_row(app, origin=ChatOrigin.EXTERNAL, owner_paused=True)
-    expected = {"Mensajes": "posts", "📣 Canales": "chats", "Grupos de canales": "groups", "Horarios": "freqs",
+    expected = {"Mensajes": "posts", "📣 Canales y grupos": "chats", "Grupos de canales": "groups", "Horarios": "freqs",
                 "Solicitudes": "requests", "Pausados (": "paused", "Crear mi bot": "clone", "Panel": "panel"}
     for label, name in expected.items():
         await app.send(SUPER_ID, "/start")
@@ -493,11 +493,11 @@ async def test_hub_home(app: App, monkeypatch: pytest.MonkeyPatch, stub_screens:
     await app.send(SUPER_ID, "/start")
     text = app.last_text(SUPER_ID)
     assert text.startswith("🕸 <b>eMesh · Tu propia red de distribución</b>") and "Crear mi bot" in text
-    assert button_rows(app, SUPER_ID) == [["✨ Crear mi bot"], ["📖 Guía", "⚙️ Ajustes"], ["👑 Panel"]]
+    assert button_rows(app, SUPER_ID) == [["✨ Crear mi bot"], ["⚙️ Ajustes", "📖 Guía"], ["👑 Panel"]]
     assert button_of(app, SUPER_ID, "Crear mi bot")["style"] == "success"
     assert callback_of(app, SUPER_ID, "Crear mi bot") == MenuCB(screen="clone").pack()
     await app.send(OWNER2_ID, "/start")
-    assert button_rows(app, OWNER2_ID) == [["✨ Crear mi bot"], ["🤖 Mis bots (1)"], ["📖 Guía", "⚙️ Ajustes"]]
+    assert button_rows(app, OWNER2_ID) == [["✨ Crear mi bot"], ["🤖 Mis bots (1)"], ["⚙️ Ajustes", "📖 Guía"]]
     # Network screens and deep links open the home instead.
     await app.send(USER_ID, "/start join")
     await app.press(USER_ID, MenuCB(screen="stats").pack())
@@ -517,20 +517,20 @@ async def test_workspace_home_and_exit(app: App) -> None:
     assert text.startswith(f"🛠 Gestionando <b>@{CLONE_USERNAME}</b>\n\n🕸 <b>Tu red de distribución</b>")
     assert "📣 Canales y grupos: <b>1</b> (👤 777)" in text  # the clone's network
     assert not has_button(app, SUPER_ID, "Crear mi bot") and has_button(app, SUPER_ID, "Panel")
-    exit_button = button_of(app, SUPER_ID, "Salir de")
-    assert exit_button["text"] == f"🚪 Salir de @{CLONE_USERNAME}" and exit_button["style"] == "danger"
-    assert button_rows(app, SUPER_ID)[-1] == [f"🚪 Salir de @{CLONE_USERNAME}"]
+    exit_button = button_of(app, SUPER_ID, "Dejar de gestionar")
+    assert exit_button["text"] == f"🔙 Dejar de gestionar @{CLONE_USERNAME}" and "style" not in exit_button
+    assert button_rows(app, SUPER_ID)[-1] == [f"🔙 Dejar de gestionar @{CLONE_USERNAME}"]
     await app.click(SUPER_ID, "Añadir canal o grupo")  # the clone's bot is the one added
     assert app.last_text(SUPER_ID) == f"🛠 Gestionando <b>@{CLONE_USERNAME}</b>\n\n{ADD_CHAT}"
     assert url_of(app, SUPER_ID, "Añadir canal") == add_to_channel_url(CLONE_USERNAME)
     assert url_of(app, SUPER_ID, "Añadir grupo") == add_to_group_url(CLONE_USERNAME)
     await app.click(SUPER_ID, "Regresar")
-    await app.click(SUPER_ID, "Salir de")
+    await app.click(SUPER_ID, "Dejar de gestionar")
     assert (await get_bu(app, SUPER_ID)).ws_bot_id is None
     assert last_answer(app)["text"] == f"🚪 Has dejado de gestionar @{CLONE_USERNAME}."
     text = app.last_text(SUPER_ID)
     assert text.startswith("🕸 <b>Tu red de distribución</b>") and "Gestionando" not in text
-    assert "📣 Canales y grupos: <b>0</b>" in text and not has_button(app, SUPER_ID, "Salir de")
+    assert "📣 Canales y grupos: <b>0</b>" in text and not has_button(app, SUPER_ID, "Dejar de gestionar")
     await app.click(SUPER_ID, "Añadir canal o grupo")
     assert url_of(app, SUPER_ID, "Añadir canal") == add_to_channel_url(MAIN_BOT_USERNAME)
     await app.send(SUPER_ID, "/start")
@@ -545,7 +545,7 @@ async def test_workspace_in_hub_mode(app: App, monkeypatch: pytest.MonkeyPatch) 
     assert "Gestionando" in app.last_text(SUPER_ID) and "Tu red de distribución" in app.last_text(SUPER_ID)
     await app.click(SUPER_ID, "Pausar todo")
     assert (await get_bot(app, CLONE_ID)).paused
-    await app.click(SUPER_ID, "Salir de")
+    await app.click(SUPER_ID, "Dejar de gestionar")
     assert app.last_text(SUPER_ID).startswith("🕸 <b>eMesh · Tu propia red de distribución</b>")
 
 

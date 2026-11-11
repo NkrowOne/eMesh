@@ -40,7 +40,7 @@ MADRID = ZoneInfo("Europe/Madrid")
 BUTTONS = ("Web - https://example.com 🟢\n"
            "Canal - @micanal && Grupo - t.me/migrupo 🔴\n"
            "Código - copiar: PROMO10 🔵")
-STEP_5 = "🗑 <b>¿Cuánto tiempo sigue publicado?</b> · 5/5\n   └ Pasado ese tiempo se borra solo de los canales."
+STEP_5 = "🗑 <b>¿Cuánto tiempo sigue publicado?</b> · 5/5\n   └ Pasado ese tiempo se borra automáticamente de los canales."
 MODE_BUTTONS = ["⏰ A sus horas", "📢 Difusión puntual", "✋ Solo cuando lo envíe yo"]
 
 

@@ -9,10 +9,14 @@ STRINGS = {
     "rights.can_invite_users": "invitar usuarios",
     "rights.can_manage_topics": "gestionar temas",
     # --- chat state (services/chatstate.py): messages to the owner of an external chat ---
-    "cs.left": "🚪 El bot ya no está en tu {kind} <b>{chat}</b>, así que ha dejado de recibir los mensajes de la red. "
-               "Para volver, añade el bot de nuevo.",
-    "cs.rights": "⚠️ Al bot le faltan permisos en tu {kind} <b>{chat}</b>: {missing}. No recibirá mensajes hasta "
-                 "que se los concedas.",
+    "cs.left": (
+        "🚪 El bot ya no está en tu {kind} <b>{chat}</b> (expulsado o {kind} eliminado). Ya no recibe mensajes de "
+        "la red. Para volver, añade el bot como admin."
+    ),
+    "cs.rights": (
+        "⚠️ Al bot le faltan permisos en tu {kind} <b>{chat}</b>: {missing}. No recibe mensajes hasta que se los "
+        "des (Administradores › el bot)."
+    ),
     "cs.rights_ok": "✅ Tu {kind} <b>{chat}</b> vuelve a tener los permisos y recibe los mensajes de la red.",
     # --- activity / alerts (services/events.py) ---
     "ev.someone": "alguien",
@@ -23,19 +27,25 @@ STRINGS = {
     "ev.chat_joined": "<b>{chat}</b> se ha unido a la red ({actor}).",
     "ev.chat_joined.admin": "<b>{chat}</b> se ha unido a la red (aceptado por {actor}).",
     "ev.chat_rejected": "<b>{chat}</b>: solicitud rechazada ({actor}).",
-    "ev.chat_banned": "<b>{chat}</b> se ha bloqueado: no podrá volver a la red ({actor}).",
+    "ev.chat_banned": "{actor} ha bloqueado <b>{chat}</b>: no podrá volver a la red.",
     "ev.chat_paused": "<b>{chat}</b>: distribución pausada.",
-    "ev.chat_paused.owner": "<b>{chat}</b> ha pausado la distribución {until} ({actor}).",
+    "ev.chat_paused.owner": "Tu asociado {actor} ha pausado <b>{chat}</b> {until}.",
     "ev.chat_paused.admin": "<b>{chat}</b>: distribución pausada por {actor}.",
     "ev.chat_resumed": "<b>{chat}</b>: distribución reanudada.",
-    "ev.chat_resumed.owner": "<b>{chat}</b> ha reanudado la distribución ({actor}).",
+    "ev.chat_resumed.owner": "Tu asociado {actor} ha reanudado <b>{chat}</b>.",
     "ev.chat_resumed.admin": "<b>{chat}</b>: distribución reanudada por {actor}.",
     "ev.chat_resumed.auto": "<b>{chat}</b>: la pausa ha terminado y vuelve a recibir mensajes.",
-    "ev.chat_left": "El bot ya no está en <b>{chat}</b> (lo han quitado o ya no existe). Ha salido de la red.",
+    "ev.chat_left": (
+        "El bot ya no está en <b>{chat}</b> (expulsado o chat eliminado). Fuera de la red. Para recuperarlo, "
+        "añade el bot como admin."
+    ),
     "ev.chat_removed": "<b>{chat}</b> ha salido de la red.",
-    "ev.chat_removed.owner": "<b>{chat}</b> ha salido de la red ({actor}).",
-    "ev.chat_removed.admin": "<b>{chat}</b> se ha quitado de la red ({actor}).",
-    "ev.chat_rights": "<b>{chat}</b>: faltan permisos ({missing}). No recibe mensajes hasta que se concedan.",
+    "ev.chat_removed.owner": "Tu asociado {actor} ha retirado <b>{chat}</b> de la red.",
+    "ev.chat_removed.admin": "{actor} ha retirado <b>{chat}</b> de la red. El bot ha salido del chat.",
+    "ev.chat_rights": (
+        "<b>{chat}</b>: faltan permisos ({missing}). No recibe mensajes hasta que un admin del chat se los dé al "
+        "bot."
+    ),
     "ev.chat_rights_ok": "<b>{chat}</b> vuelve a tener los permisos y recibe mensajes.",
     "ev.bot_paused": "Distribución de toda la red pausada ({actor}).",
     "ev.bot_resumed": "Distribución de toda la red reanudada ({actor}).",

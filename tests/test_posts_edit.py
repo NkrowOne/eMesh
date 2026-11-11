@@ -291,7 +291,7 @@ async def test_options_of_a_post(app: App, engine: SimpleNamespace) -> None:
     text = await open_screen_of(app, "post_opts", pid)
     assert "⚙️ <b>Opciones</b> · Promo Cine" in text
     assert "📌 Fijar: ✖️\n   └ Se fija en el chat sin avisar a los miembros." in text
-    assert "🗑 Borrado automático: ✖️ nunca\n   └ Cada copia se borra sola" in text
+    assert "🗑 Borrado automático: ✖️ nunca\n   └ Cada copia se borra automáticamente" in text
     assert button_texts(app) == ["✖️ Fijar", "✖️ Sin sonido", "✖️ Proteger contenido", "✖️ Vista previa de enlaces",
                                  "✅ Borrar su envío anterior", "✅ Nunca", "⚪ 1 h", "⚪ 3 h", "⚪ 6 h", "⚪ 12 h",
                                  "⚪ 1 día", "⚪ 2 días", "✏️ Otro", "🔙 Regresar"]

@@ -230,17 +230,17 @@ Admin view (admins of the network, and a super admin managing a clone):
 📝 Mensajes activos: <b>5</b>
 📅 Próximo envío: <b>07/11/2026 11:00 AM</b>        (earliest `next_send_at` of the active posts; — if none;
                                                     not shown while the network is paused)
-⏸ Pausados por su dueño: <b>2</b>          (only when > 0)
+⏸ Pausados por su asociado: <b>2</b>          (only when > 0)
 ⏳ Solicitudes pendientes: <b>1</b>        (only when > 0)
 ⚠️ Sin permisos: <b>1</b>                  (only when > 0)
 ⏸ <b>La distribución está pausada.</b> No se envía nada hasta que la reanudes.   (Bot.paused)
 ```
 Buttons: first `[➕ Añadir canal o grupo]` (success, when the network's bot has a username; screen `add_chat`), then
-`[📝 Mensajes][📣 Canales]`, `[🗂 Grupos de canales][⏰ Horarios]`, `[📊 Estadísticas][📜 Actividad]`,
-`[⏳ Solicitudes (N)]` / `[⏸ Pausados (N)]` (only when > 0, screens `requests` / `paused`), `[⏸ Pausar todo]` /
-`[▶️ Reanudar todo]` (success) (`StCB` toggles `Bot.paused`, `events.emit(BOT_PAUSED/BOT_RESUMED)`),
-`[⚙️ Ajustes][📖 Guía]`, main bot: `[🤖 Crear mi bot]` (screen `clone`) and `[🤖 Mis bots (N)]` (`mybots`, when
-N > 0), super admin in a main bot: `[👑 Panel]`, and while managing a clone: `[🚪 Salir de @clone]` (danger;
+`[📝 Mensajes][⏰ Horarios]`, `[📣 Canales y grupos][🗂 Grupos de canales]`, `[⏳ Solicitudes (N)]` /
+`[⏸ Pausados (N)]` (screens `requests` / `paused`), `[📊 Estadísticas][📜 Actividad]`, `[⚙️ Ajustes][📖 Guía]`,
+`[⏸ Pausar todo]` / `[▶️ Reanudar todo]` (success; last, away from ⏸ Pausados) (`StCB` toggles `Bot.paused`,
+`events.emit(BOT_PAUSED/BOT_RESUMED)`), main bot: `[🤖 Crear mi bot]` (screen `clone`) and `[🤖 Mis bots (N)]` (`mybots`, when
+N > 0), super admin in a main bot: `[👑 Panel]`, and while managing a clone: `[🔙 Dejar de gestionar @clone]` (
 clears `bu.ws_bot_id`, back to the main bot's home).
 `add_chat` («➕ Añadir canal o grupo», admins, hidden in the hub): three short steps (pulsa, deja los permisos que se
 proponen, entra al momento y se te avisa) + `[➕ Añadir canal ↗][➕ Añadir grupo ↗]` (urls for `ctx.ws_rec.username`:
@@ -392,7 +392,7 @@ first, done last. Buttons: one per post (`#1 Promo Cine`, 2 per row), `[➕ Nuev
    todo su destino a cada hora de su horario (empieza con el horario por defecto: …).»), `[📢 Difusión puntual]`
    (still step 4: `[🚀 Ahora mismo]` — created with `send_at` = now, the scheduler sends it once at once — or a
    typed date: `freq.parse_datetime`), `[✋ Solo cuando lo envíe yo]`.
-5. «🗑 <b>¿Cuánto tiempo sigue publicado?</b> · 5/5» (└ «Pasado ese tiempo se borra solo de los canales.»):
+5. «🗑 <b>¿Cuánto tiempo sigue publicado?</b> · 5/5» (└ «Pasado ese tiempo se borra automáticamente de los canales.»):
    `[1 h][3 h][6 h][12 h][1 día][2 días]`, `[♾ No borrar]`, the default of the network pre-selected
    (`Bot.post_defaults["delete_after"]`, else `DEFAULT_DELETE_AFTER`: no borrar).
 Then: create the `Post` (`apply` content with `ctx.bot_id`, `name = default_name`, `ws.post_defaults`, `targets`,
@@ -553,7 +553,7 @@ Partners (`partners.py`):
 📣 Chats: <b>5</b> (👤 23,000)
 📝 Mensajes que lo usan: 3
 🤝 Abierto a externos: ✅
-   └ Los canales externos pueden unirse o salir desde su panel, y los nuevos entran solos.
+   └ Los canales externos pueden unirse o salir desde su panel, y los nuevos entran automáticamente.
 ```
 A group of chats is only a **target** of posts: it has no schedule of its own.
 `[📣 Elegir chats]` (`group_chats`), `[🤝 Abierto a externos]` (toggle), `[✏️ Nombre]`, `[🗑 Eliminar]` (confirm: the
@@ -574,7 +574,7 @@ Cada mensaje se envía a sus propias horas (📝 Mensajes › ⏰ Programación)
 or 📢 once mode. `[🕐 Horario por defecto: cada 4 h]` (`freq_edit` 0), `[🛡 Anti-spam]`, `[🔙]` → home.
 `freq_edit` (arg 0 = the default schedule / -post = that post's own schedule):
 ```
-🕐 <b>Horario por defecto</b> | ⏰ <b>Frecuencia</b> · 📝 Promo Cine
+🕐 <b>Horario por defecto</b> | ⏰ <b>Horario</b> · 📝 Promo Cine
    └ Cada mensaje nuevo empieza con este horario. | 📝 A cada hora de su horario se envía a todo su destino.
 🔁 Cada: <b>3 h</b> | 🕐 A las: <b>10:00, 14:00 y 22:00</b>
 🕐 Horario: 08:00-23:00 | todo el día                (interval mode)
@@ -640,7 +640,7 @@ foto; puedes cambiarla cuando quieras en @BotFather.» while a new bot can be cr
 📌 Estado: ✅ Activo
 📅 Creado: 01/11/2026
 📣 Chats: 12 (🏠 8 · 🤝 4) · 👤 45,320
-⏸ Pausados por su dueño: 2 · ⏳ Pendientes: 1
+⏸ Pausados por su asociado: 2 · ⏳ Pendientes: 1
 📝 Mensajes activos: 5 · 🕐 cada 4 h        (its default schedule)
 📤 Últimas 24 h: 12 envíos · 340 entregas · 3 fallos
 🔒 Límites: 50 chats · 20 mensajes | sin límites
@@ -778,7 +778,7 @@ Modules written by other agents are stubs in your worktree: monkeypatch them in 
   screen in `screens.HUB_HIDDEN`, the bot leaves chats it is added to, the scheduler skips it.
 * **🛠 Gestionar** (workspace): a super admin in a main bot sets `bot_users.ws_bot_id` (panel) to a clone's id.
   From then on `ctx.ws_rec` is that clone in every update of that main bot, every panel shows the banner
-  «🛠 Gestionando @clone», and the home has `[🚪 Salir de @clone]`. Everything works as in the clone itself:
+  «🛠 Gestionando @clone», and the home has `[🔙 Dejar de gestionar @clone]`. Everything works as in the clone itself:
   data of `ctx.ws_id`, chat calls through `ctx.ws_bot()`, add-to-channel links of the clone. Media sent to the main
   bot is stored with the main bot's file id (`content.apply(post, c, ctx.bot_id)`); the engine passes it to the
   clone automatically (`content.media_for`). Alerts (`events.emit`) go through `ctx.ws_bot()`, so they reach the

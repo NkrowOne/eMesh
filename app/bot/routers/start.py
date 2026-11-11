@@ -173,22 +173,23 @@ async def _admin_home(ctx: Ctx, session: AsyncSession) -> tuple[str, InlineKeybo
     rows: list[list[InlineKeyboardButton | None]] = [
         # ➕ first: a network starts by adding the bot to channels and groups (both links are in its submenu).
         [btn(ctx.t("home.btn.add_chat"), MenuCB(screen="add_chat"), style="success")] if ws.username else None,
-        [btn(ctx.t("home.btn.posts"), MenuCB(screen="posts")), btn(ctx.t("home.btn.chats"), MenuCB(screen="chats"))],
-        [btn(ctx.t("home.btn.groups"), MenuCB(screen="groups")),
-         btn(ctx.t("home.btn.freqs"), MenuCB(screen="freqs"))],
-        [btn(ctx.t("home.btn.stats"), MenuCB(screen="stats")),
-         btn(ctx.t("home.btn.activity"), MenuCB(screen="activity"))],
+        [btn(ctx.t("home.btn.posts"), MenuCB(screen="posts")), btn(ctx.t("home.btn.freqs"), MenuCB(screen="freqs"))],
+        [btn(ctx.t("home.btn.chats"), MenuCB(screen="chats")),
+         btn(ctx.t("home.btn.groups"), MenuCB(screen="groups"))],
         [btn(ctx.t("home.btn.requests", n=s.pending), MenuCB(screen="requests")) if s.pending else None,
          # ⏸ Pausados even with 0 when partners can join: the admins always see every pause.
          btn(ctx.t("home.btn.paused", n=paused), MenuCB(screen="paused"))
          if ws.join_open or s.external or paused else None],
+        [btn(ctx.t("home.btn.stats"), MenuCB(screen="stats")),
+         btn(ctx.t("home.btn.activity"), MenuCB(screen="activity"))],
+        [btn(ctx.t("home.btn.settings"), MenuCB(screen="settings")),
+         btn(ctx.t("home.btn.guide"), MenuCB(screen="guide"))],
     ]
+    # Last of the network's own rows, away from ⏸ Pausados: it stops everything.
     if ws.paused:
         rows.append([btn(ctx.t("home.btn.resume_all"), StCB(action="resume"), style="success")])
     else:
         rows.append([btn(ctx.t("home.btn.pause_all"), StCB(action="pause"))])
-    rows.append([btn(ctx.t("home.btn.settings"), MenuCB(screen="settings")),
-                 btn(ctx.t("home.btn.guide"), MenuCB(screen="guide"))])
     if ctx.is_main and not ctx.in_ws:
         mine = await clones.count_user_bots(session, ctx.user_id)
         rows.append([btn(ctx.t("home.btn.create_mine"), MenuCB(screen="clone")),
@@ -196,8 +197,7 @@ async def _admin_home(ctx: Ctx, session: AsyncSession) -> tuple[str, InlineKeybo
     if ctx.is_super and ctx.is_main:
         rows.append([btn(ctx.t("home.btn.panel"), MenuCB(screen="panel"))])
     if ctx.in_ws:
-        rows.append([btn(ctx.t("home.btn.exit_ws", bot=ws.username or ws.id), StCB(action="exit"),
-                         style="danger")])
+        rows.append([btn(ctx.t("home.btn.exit_ws", bot=ws.username or ws.id), StCB(action="exit"))])
     return "\n".join(lines), kb(*rows)
 
 
@@ -301,8 +301,8 @@ async def _hub_home(ctx: Ctx, session: AsyncSession) -> tuple[str, InlineKeyboar
     rows: list[list[InlineKeyboardButton | None]] = [
         [btn(ctx.t("home.btn.create_hub"), MenuCB(screen="clone"), style="success")],
         [btn(ctx.t("home.btn.mybots", n=mine), MenuCB(screen="mybots")) if mine else None],
-        [btn(ctx.t("home.btn.guide"), MenuCB(screen="guide")),
-         btn(ctx.t("home.btn.settings"), MenuCB(screen="settings"))],
+        [btn(ctx.t("home.btn.settings"), MenuCB(screen="settings")),
+         btn(ctx.t("home.btn.guide"), MenuCB(screen="guide"))],
         [btn(ctx.t("home.btn.panel"), MenuCB(screen="panel")) if ctx.is_super else None],
     ]
     return ctx.t("home.hub"), kb(*rows)

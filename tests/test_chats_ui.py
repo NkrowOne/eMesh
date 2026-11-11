@@ -55,7 +55,7 @@ async def test_list_totals_rows_and_buttons(app: App) -> None:
 
     await app.press(SUPER_ID, "m:chats:0")
     text = app.last_text(SUPER_ID)
-    assert text.startswith("📣 <b>Canales y grupos</b> 👥\n📣 Canales: 2 · 👥 Grupos: 1 · 👤 12,810\n"
+    assert text.startswith("📣 <b>Canales y grupos</b>\n📣 Canales: 2 · 👥 Grupos: 1 · 👤 12,810\n"
                            "🏠 Propios: 2 · 🤝 Externos: 1")
     assert '📣 <a href="https://t.me/cinehd">Cine HD</a> ✅\n   └👤 12,000 · 🏠 · 🗂 Cine' in text
     from app.ui.fmt import dt
@@ -155,7 +155,7 @@ async def test_chat_detail(app: App) -> None:
         f"🕐 Último: {dt(last, 'Europe/Madrid')}",
     ])
     panel = app.last_panel(SUPER_ID)
-    assert labels(panel) == ["🗂 Grupos de canales", "🔄 Comprobar", "⏸ Pausar", "🗑 Quitar de la red", "🚫 Bloquear",
+    assert labels(panel) == ["🗂 Grupos de canales", "🔄 Comprobar permisos", "⏸ Pausar", "🗑 Quitar de la red", "🚫 Bloquear",
                              "↗️ Abrir", "🔙 Regresar"]
     assert button(panel, "Abrir")["url"] == "https://t.me/cinehd"
 
@@ -164,7 +164,7 @@ async def test_chat_detail(app: App) -> None:
     await app.press(SUPER_ID, f"m:chat:{ext}")
     text = app.last_text(SUPER_ID)
     assert "🏷 Origen: 🤝 Externo · @pepe" in text
-    assert ("📌 Estado: ⚠️ Faltan permisos: fijar mensajes · ⏸ Pausado por su dueño hasta que lo reanude"
+    assert ("📌 Estado: ⚠️ Faltan permisos: fijar mensajes · ⏸ Pausado por su asociado hasta que lo reanude"
             in text)
     assert "   └ Si lo reanudas, se anula su pausa y se le avisa." in text
     assert "⏰" not in text and "🕐 Último: —" in text
@@ -317,7 +317,7 @@ async def test_remove_from_the_network(app: App, monkeypatch: pytest.MonkeyPatch
     assert chat.status == ChatStatus.LEFT and chat.decided_by == SUPER_ID and chat.approved_at is None
     [event] = await events_of(app, EventKind.CHAT_REMOVED)
     assert event.data == {"by": "admin"} and event.actor_id == SUPER_ID
-    assert "🗑 Tu canal <b>Cine HD</b> se ha quitado de la red y el bot ha salido de él." in dms(app)
+    assert "🗑 La administración ha retirado tu canal <b>Cine HD</b> de la red. El bot ha salido." in dms(app)
     assert last_answer(app)["text"] == "🗑 Cine HD se ha quitado de la red"
     assert "Canales y grupos" in app.last_text(SUPER_ID)
 
@@ -480,7 +480,7 @@ async def test_super_admin_manages_the_chats_of_a_clone(app: App, monkeypatch: p
     assert (await get_chat(app, CHANNEL, CLONE_ID)).status == ChatStatus.LEFT
     assert (await get_chat(app, GROUP)).status == ChatStatus.APPROVED
     # The removal alert reaches the clone's owner through the clone.
-    assert any("se ha quitado de la red" in t for t in dms(app, OWNER2_ID, clone_token))
+    assert any("de la red. El bot ha salido" in t for t in dms(app, OWNER2_ID, clone_token))
 
 
 async def test_message_to_the_partners_of_a_managed_clone(app: App) -> None:

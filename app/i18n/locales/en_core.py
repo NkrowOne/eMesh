@@ -9,10 +9,14 @@ STRINGS = {
     "rights.can_invite_users": "invite users",
     "rights.can_manage_topics": "manage topics",
     # --- chat state (services/chatstate.py): messages to the owner of an external chat ---
-    "cs.left": "🚪 The bot is no longer in your {kind} <b>{chat}</b>, so it stopped receiving the network's posts. "
-               "To come back, add the bot again.",
-    "cs.rights": "⚠️ The bot is missing rights in your {kind} <b>{chat}</b>: {missing}. It won't receive posts "
-                 "until you grant them.",
+    "cs.left": (
+        "🚪 The bot is no longer in your {kind} <b>{chat}</b> (kicked or {kind} deleted). It no longer receives "
+        "the network's posts. To come back, add the bot as an admin."
+    ),
+    "cs.rights": (
+        "⚠️ The bot is missing rights in your {kind} <b>{chat}</b>: {missing}. It receives no posts until you "
+        "grant them (Administrators › the bot)."
+    ),
     "cs.rights_ok": "✅ Your {kind} <b>{chat}</b> has its rights back and receives the network's posts.",
     # --- activity / alerts (services/events.py) ---
     "ev.someone": "someone",
@@ -23,19 +27,25 @@ STRINGS = {
     "ev.chat_joined": "<b>{chat}</b> joined the network ({actor}).",
     "ev.chat_joined.admin": "<b>{chat}</b> joined the network (accepted by {actor}).",
     "ev.chat_rejected": "<b>{chat}</b>: request rejected ({actor}).",
-    "ev.chat_banned": "<b>{chat}</b> was banned: it can't come back to the network ({actor}).",
+    "ev.chat_banned": "{actor} banned <b>{chat}</b>: it can't come back to the network.",
     "ev.chat_paused": "<b>{chat}</b>: distribution paused.",
-    "ev.chat_paused.owner": "<b>{chat}</b> paused the distribution {until} ({actor}).",
+    "ev.chat_paused.owner": "Your partner {actor} paused <b>{chat}</b> {until}.",
     "ev.chat_paused.admin": "<b>{chat}</b>: distribution paused by {actor}.",
     "ev.chat_resumed": "<b>{chat}</b>: distribution resumed.",
-    "ev.chat_resumed.owner": "<b>{chat}</b> resumed the distribution ({actor}).",
+    "ev.chat_resumed.owner": "Your partner {actor} resumed <b>{chat}</b>.",
     "ev.chat_resumed.admin": "<b>{chat}</b>: distribution resumed by {actor}.",
     "ev.chat_resumed.auto": "<b>{chat}</b>: the pause is over and it receives posts again.",
-    "ev.chat_left": "The bot is no longer in <b>{chat}</b> (it was removed or no longer exists). It left the network.",
+    "ev.chat_left": (
+        "The bot is no longer in <b>{chat}</b> (kicked or chat deleted). Out of the network. To bring it back, "
+        "add the bot as an admin."
+    ),
     "ev.chat_removed": "<b>{chat}</b> left the network.",
-    "ev.chat_removed.owner": "<b>{chat}</b> left the network ({actor}).",
-    "ev.chat_removed.admin": "<b>{chat}</b> was removed from the network ({actor}).",
-    "ev.chat_rights": "<b>{chat}</b>: missing rights ({missing}). It receives no posts until they are granted.",
+    "ev.chat_removed.owner": "Your partner {actor} removed <b>{chat}</b> from the network.",
+    "ev.chat_removed.admin": "{actor} removed <b>{chat}</b> from the network. The bot left the chat.",
+    "ev.chat_rights": (
+        "<b>{chat}</b>: missing rights ({missing}). It receives no posts until an admin of the chat grants them "
+        "to the bot."
+    ),
     "ev.chat_rights_ok": "<b>{chat}</b> has its rights back and receives posts.",
     "ev.bot_paused": "Distribution of the whole network paused ({actor}).",
     "ev.bot_resumed": "Distribution of the whole network resumed ({actor}).",

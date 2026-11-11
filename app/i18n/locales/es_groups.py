@@ -19,11 +19,11 @@ STRINGS = {
     "gr.d.chats": "📣 Chats: <b>{n}</b> (👤 {members})",
     "gr.d.posts": "📝 Mensajes que lo usan: <b>{n}</b>",
     "gr.d.open": "🤝 Abierto a externos: {value}",
-    "gr.d.open_hint": "   └ Los canales externos pueden unirse o salir desde su panel, y los nuevos entran solos.",
+    "gr.d.open_hint": "   └ Los canales externos pueden unirse o salir desde su panel, y los nuevos entran automáticamente.",
     "gr.d.closed_hint": "   └ Solo los admins eligen sus chats.",
     "gr.b.chats": "📣 Elegir chats",
     "gr.b.open": "🤝 Abierto a externos",
-    "gr.b.rename": "✏️ Nombre",
+    "gr.b.rename": "✏️ Cambiar nombre",
     "gr.b.delete": "🗑 Eliminar",
     "gr.del.confirm": "🗑 <b>¿Eliminar el grupo de canales {name}?</b>\nSus chats siguen en la red: solo dejan de "
                       "estar agrupados.",
@@ -58,7 +58,7 @@ STRINGS = {
     # --- ⏰ schedule editor ---
     "fq.e.default": "🕐 <b>Horario por defecto</b>",
     "fq.e.default_hint": "   └ Cada mensaje nuevo empieza con este horario.",
-    "fq.e.post": "⏰ <b>Frecuencia</b> · 📝 {name}",
+    "fq.e.post": "⏰ <b>Horario</b> · 📝 {name}",
     "fq.e.post_hint": "📝 A cada hora de su horario se envía a todo su destino.",
     "fq.e.post_unused": "ℹ️ Ahora este mensaje no se envía con su propio horario: este horario se usará cuando se "
                         "elija ⏰ A sus horas en su programación.",

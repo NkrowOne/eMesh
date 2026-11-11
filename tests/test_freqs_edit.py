@@ -240,7 +240,7 @@ async def test_post_schedule_starts_from_a_copy_of_the_default_one(app: App, wak
     await started(app, SUPER_ID)
     await open_menu(app, SUPER_ID, "freq_edit", -p)
     text = app.last_text(SUPER_ID)
-    assert text.startswith("⏰ <b>Frecuencia</b> · 📝 Promo &lt;Cine&gt;\n"
+    assert text.startswith("⏰ <b>Horario</b> · 📝 Promo &lt;Cine&gt;\n"
                            "📝 A cada hora de su horario se envía a todo su destino.\n🔁 Cada: <b>3 h</b>\n🕐 Horario: 08:00-23:00")
     assert "Horario por defecto" not in text and "no se envía con su propio horario" not in text
     assert button_data(app, "Regresar") == MenuCB(screen="post_sched", arg=p).pack()

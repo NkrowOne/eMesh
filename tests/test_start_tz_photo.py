@@ -65,7 +65,7 @@ async def test_a_super_admin_sets_changes_and_removes_the_photo(app: App) -> Non
     assert await fsm_state(app, SUPER_ID) == "StartTimezoneFSM:photo"
     assert app.last_text(SUPER_ID) == PROMPT and app.last_panel(SUPER_ID).method == "sendMessage"
     await app.send(SUPER_ID, "no es una foto")
-    assert app.last_text(SUPER_ID) == f"⚠️ Eso no es una foto.\n\n{PROMPT}"
+    assert app.last_text(SUPER_ID) == f"⚠️ Eso no es una foto. Envíala como foto, no como archivo.\n\n{PROMPT}"
     await app.send(SUPER_ID, None, photo="TZPHOTO")
     assert await stored(app) == {str(MAIN_BOT_ID): "TZPHOTO"}  # with the file id of the bot that received it
     assert await fsm_state(app, SUPER_ID) is None

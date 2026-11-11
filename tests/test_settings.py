@@ -70,7 +70,7 @@ async def test_owner_settings(app: App) -> None:
     await make_admin(app, USER_ID)
     await open_settings(app, SUPER_ID)
     text = app.last_text(SUPER_ID)
-    assert "🤝 Canales externos: ✅ admitidos (entran solos)" in text and "🛟 Soporte: @ayuda_bot" in text
+    assert "🤝 Canales externos: ✅ admitidos (entran automáticamente)" in text and "🛟 Soporte: @ayuda_bot" in text
     assert "👮 Admins: 2" in text
 
 
@@ -175,7 +175,7 @@ async def test_external_chats_toggles(app: App) -> None:
             "   └ Los canales con menos miembros no pueden unirse (0 = sin mínimo).\n"
             "💬 Texto de bienvenida: el predeterminado\n") in text
     assert ("🗂 Grupos abiertos: <b>0</b>\n"
-            "   └ Los canales externos entran solos en ellos y pueden salir desde su panel.\n"
+            "   └ Los canales externos entran automáticamente en ellos y pueden salir desde su panel.\n"
             "⏸ Los socios pueden pausar: ✅\n⏸ Pausa máxima: <b>Sin límite</b>\n"
             "   └ Tú siempre puedes reanudar una pausa.\n\n"
             "🔗 Enlace para invitar: https://t.me/emesh_test_bot?start=join\n"
@@ -341,7 +341,7 @@ async def test_support_contact(app: App) -> None:
     assert await fsm_state(app, SUPER_ID) == "SettingsFSM:support"
     for bad in ("not valid!", "@ab", "https://example.com/x", "t.me/+AbCdEf123456"):
         await app.send(SUPER_ID, bad)
-        assert app.last_text(SUPER_ID).startswith("⚠️ No es un @usuario válido."), bad
+        assert app.last_text(SUPER_ID).startswith("⚠️ @usuario no válido."), bad
     await app.send(SUPER_ID, "https://t.me/ayuda_bot")
     assert (await get_bot(app)).support_username == "ayuda_bot"
     assert app.last_text(SUPER_ID).startswith("✅ Guardado\n\n🛟 <b>Soporte</b>")
