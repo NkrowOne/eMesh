@@ -108,7 +108,7 @@ async def test_antispam_choices_and_custom_values(app: App) -> None:
     assert "🧹 Uno a la vez: ✖️\n   └ Antes de enviar uno nuevo, se borra el anterior" in text
     assert button_texts(app) == [
         "✅ Sin límite", "⚪ 2 al día", "⚪ 4 al día", "⚪ 6 al día", "⚪ 8 al día", "⚪ 12 al día", "✏️ Otro máximo",
-        "✅ Sin separación", "⚪ 15 min", "⚪ 30 min", "⚪ 1 h", "⚪ 2 h", "✏️ Otra separación", "✖️ Uno a la vez",
+        "✅ Ninguna", "⚪ 15 min", "⚪ 30 min", "⚪ 1 h", "⚪ 2 h", "✏️ Otra", "✖️ Uno a la vez",
         "🔙 Regresar",
     ]
     assert button_data(app, "Regresar") == MenuCB(screen="freqs").pack()
@@ -133,7 +133,7 @@ async def test_antispam_choices_and_custom_values(app: App) -> None:
 
     await app.click(SUPER_ID, "30 min")
     assert (await load(app, BotRecord, MAIN_BOT_ID)).min_gap == 30
-    await app.click(SUPER_ID, "Otra separación")
+    await app.click(SUPER_ID, "✏️ Otra")
     await app.send(SUPER_ID, "5 min")
     assert "⚠️ Elige entre 10 minutos y 24 horas." in app.last_text(SUPER_ID)
     await app.send(SUPER_ID, "a ratos")

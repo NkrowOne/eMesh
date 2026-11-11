@@ -162,7 +162,7 @@ async def test_the_whole_wizard(app: App) -> None:
         f"🗺 Zona horaria: Europe/Madrid ({utc_offset_label('Europe/Madrid')})\n\n"
         "👇 Ahora añade el bot a tus canales y grupos y crea un mensaje.\n"
         "   └ Todo se puede cambiar en ⚙️ Ajustes, ⏰ Horarios y 📝 Mensajes.")
-    assert button_rows(app, OWNER2_ID) == [["➕ Añadir canal ↗", "➕ Añadir grupo ↗"], ["📝 Crear el primer mensaje"],
+    assert button_rows(app, OWNER2_ID) == [["➕ Añadir canal", "➕ Añadir grupo"], ["📝 Crear el primer mensaje"],
                                            ["🏠 Ir al inicio"], ["🔙 Regresar"]]
     assert url_of(app, OWNER2_ID, "Añadir canal") == add_to_channel_url(CLONE_USERNAME)
     assert url_of(app, OWNER2_ID, "Añadir grupo") == add_to_group_url(CLONE_USERNAME)
@@ -555,9 +555,9 @@ async def test_the_wizard_in_english(app: App) -> None:
     assert text.startswith("⏰ <b>At what times are your posts published?</b>\nEach post goes to its whole target")
     assert text.endswith("🕐 <b>1 a day</b>: 12:00\n📅 Days: every day\n"
                          "   └ Europe/Madrid time.")
-    assert button_rows(app, OWNER2_ID)[:2] == [["✅ 1 a day", "⚪ 2 a day", "⚪ 3 a day"],
-                                               ["⚪ 4 a day", "⚪ Every 2 h", "⚪ Every hour"]]
-    assert button_rows(app, OWNER2_ID)[6:] == [["✅ All", "⚪ Mo-Fr", "⚪ Sa-Su"], ["✏️ Type other times (9:30…)"],
+    assert button_rows(app, OWNER2_ID)[:3] == [["✅ 1 a day", "⚪ 2 a day"], ["⚪ 3 a day", "⚪ 4 a day"],
+                                               ["⚪ Every 2 h", "⚪ Every hour"]]
+    assert button_rows(app, OWNER2_ID)[-4:] == [["✅ All", "⚪ Mo-Fr", "⚪ Sa-Su"], ["✏️ Type other times (9:30…)"],
                                                ["Continue ➡️"], ["🔙 Back"]]
     await click(app, "Every 2 h")
     assert "🕐 <b>8 a day</b>: 08:00, 10:00, 12:00, 14:00, 16:00, 18:00, 20:00 and 22:00\n" in app.last_text(OWNER2_ID)

@@ -135,7 +135,7 @@ async def test_requests_screen_and_decisions_from_the_list(app: App) -> None:
     text = app.last_text(SUPER_ID)
     assert "⏳ <b>Solicitudes pendientes</b> (2)" in text
     assert '1. 📣 <a href="https://t.me/cinehd">Cine HD</a>\n   └👤 1,200 · 🤝 @pepe' in text
-    assert "2. 👥 Tertulias ⚠️\n   └👤 1,200 · 🤝 @pepe" in text
+    assert '2. 👥 <a href="https://t.me/+1001000000002x1">Tertulias</a> ⚠️\n   └👤 1,200 · 🤝 @pepe' in text
     panel = app.last_panel(SUPER_ID)
     assert labels(panel)[:3] == ["#1 📣 Cine HD", "✅", "❌"]
     assert button(panel, "✅")["style"] == "success"

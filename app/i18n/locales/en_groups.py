@@ -112,7 +112,7 @@ STRINGS = {
     "fq.as.b.max_other": "✏️ Other maximum",
     "fq.as.b.max_custom": "✏️ Other: {n} a day",
     "fq.as.b.no_gap": "No gap",
-    "fq.as.b.gap_other": "✏️ Other gap",
+    "fq.as.b.gap_other": "✏️ Other",
     "fq.as.b.gap_custom": "✏️ Other: {gap}",
     "fq.as.b.one": "🧹 One at a time",
     "fq.as.p.max": "📊 <b>Maximum a day per chat</b>\n\nType how many posts each chat can get a day at most (1 to "

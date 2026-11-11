@@ -101,8 +101,8 @@ STRINGS = {
     "ch.filter.ext": "🤝",
     "ch.filter.paused": "⏸",
     "ch.filter.rights": "⚠️",
-    "ch.btn.add_channel": "➕ Añadir canal ↗",
-    "ch.btn.add_group": "➕ Añadir grupo ↗",
+    "ch.btn.add_channel": "➕ Añadir canal",
+    "ch.btn.add_group": "➕ Añadir grupo",
     "ch.btn.partners_msg": "📢 Avisar a los dueños",
     "ch.btn.requests": "⏳ Solicitudes ({n})",
     # --- detail of a chat ---
@@ -211,8 +211,8 @@ STRINGS = {
     "pa.join.min": "👤 Mínimo: <b>{n}</b> miembros.",
     "pa.join.pause": "⏸ Puedes pausar la distribución cuando quieras desde <b>📣 Mis canales</b>.",
     "pa.join.closed": "🔒 Esta red es privada.",
-    "pa.btn.add_channel": "➕ Añadir a mi canal ↗",
-    "pa.btn.add_group": "➕ Añadir a mi grupo ↗",
+    "pa.btn.add_channel": "➕ Añadir canal",
+    "pa.btn.add_group": "➕ Añadir grupo",
     "pa.btn.my_chats": "📣 Mis canales ({n})",
     "pa.btn.join": "🤝 Cómo unirse",
     # --- 📣 Mis canales ---

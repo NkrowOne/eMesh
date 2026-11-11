@@ -246,6 +246,8 @@ class Chat(Base):
     type: Mapped[str] = mapped_column(String(16), default=ChatType.CHANNEL)
     title: Mapped[str] = mapped_column(String(256), default="")
     username: Mapped[str | None] = mapped_column(String(64), nullable=True)
+    # A private chat's invite link, created by the bot when it may invite (an optional right): how the admins enter.
+    invite_link: Mapped[str | None] = mapped_column(String(128), nullable=True)
     members: Mapped[int] = mapped_column(Integer, default=0)
     members_at: Mapped[datetime | None] = mapped_column(UTCDateTime, nullable=True)
 
@@ -297,6 +299,11 @@ class Chat(Base):
     @property
     def public_link(self) -> str | None:
         return f"https://t.me/{self.username}" if self.username else None
+
+    @property
+    def join_link(self) -> str | None:
+        """How to open the chat: its public link, or the bot's invite link of a private one."""
+        return self.public_link or self.invite_link
 
     def owner_pause_active(self, now: datetime | None = None) -> bool:
         """Paused by its owner right now (a pause whose end already passed doesn't count)."""

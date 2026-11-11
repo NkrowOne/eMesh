@@ -174,8 +174,9 @@ async def _admin_home(ctx: Ctx, session: AsyncSession) -> tuple[str, InlineKeybo
         # ➕ first: a network starts by adding the bot to channels and groups (both links are in its submenu).
         [btn(ctx.t("home.btn.add_chat"), MenuCB(screen="add_chat"), style="success")] if ws.username else None,
         [btn(ctx.t("home.btn.posts"), MenuCB(screen="posts")), btn(ctx.t("home.btn.freqs"), MenuCB(screen="freqs"))],
-        [btn(ctx.t("home.btn.chats"), MenuCB(screen="chats")),
-         btn(ctx.t("home.btn.groups"), MenuCB(screen="groups"))],
+        # A row each: two long names side by side are cut on a phone.
+        [btn(ctx.t("home.btn.chats"), MenuCB(screen="chats"))],
+        [btn(ctx.t("home.btn.groups"), MenuCB(screen="groups"))],
         [btn(ctx.t("home.btn.requests", n=s.pending), MenuCB(screen="requests")) if s.pending else None,
          # ⏸ Pausados even with 0 when partners can join: the admins always see every pause.
          btn(ctx.t("home.btn.paused", n=paused), MenuCB(screen="paused"))

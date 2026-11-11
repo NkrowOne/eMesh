@@ -88,13 +88,39 @@ def btn(
     return InlineKeyboardButton(**kwargs)  # type: ignore[arg-type]
 
 
+# What fits in a button on a phone before Telegram cuts it with «…», by buttons in the row (the narrowest case: under
+# a photo). In width units: an emoji counts 2, any other character 1.
+ROW_WIDTHS = {2: 16, 3: 12, 4: 9}
+
+
+def label_width(text: str) -> int:
+    return sum(0 if ch in "\ufe0f\u200d" else 2 if ord(ch) > 0x2000 else 1 for ch in text)
+
+
+def _fits(row: Sequence[InlineKeyboardButton], cols: int) -> bool:
+    limit = ROW_WIDTHS.get(cols)
+    return limit is None or all(label_width(b.text) <= limit for b in row)
+
+
+def fit_row(row: list[InlineKeyboardButton]) -> list[list[InlineKeyboardButton]]:
+    """A row whose labels would be cut is split: in pairs when they fit side by side, else one button per row. Rows
+    of a list (``#1 name``, cut on purpose) and rows of 5 or more small buttons (pages, digits) are left as they are."""
+    if len(row) < 2 or _fits(row, len(row)) or any(b.text.startswith("#") for b in row):
+        return [row]
+    if len(row) > 2 and _fits(row, 2):
+        return [row[i : i + 2] for i in range(0, len(row), 2)]
+    return [[b] for b in row]
+
+
 def kb(*rows: Sequence[InlineKeyboardButton | None] | None) -> InlineKeyboardMarkup:
     clean = [[b for b in row if b is not None] for row in rows if row]
-    return InlineKeyboardMarkup(inline_keyboard=[r for r in clean if r])
+    return InlineKeyboardMarkup(inline_keyboard=[part for r in clean if r for part in fit_row(r)])
 
 
 def grid(buttons: Sequence[InlineKeyboardButton], cols: int) -> list[list[InlineKeyboardButton]]:
     cols = max(1, cols)
+    while cols > 2 and not _fits(buttons, cols):  # fewer columns rather than labels cut (the grid stays even)
+        cols -= 1
     return [list(buttons[i : i + cols]) for i in range(0, len(buttons), cols)]
 
 

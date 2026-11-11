@@ -56,7 +56,7 @@ WELCOME = ("👋 <b>¡Hola, Pepe!</b> Te damos la bienvenida a <b>eMesh</b>.\n\n
            "<b>🤖 Crear mi bot</b>: es tuyo, con tu nombre, tus canales y tus reglas.")
 JOIN_STEPS = ("🤝 <b>Únete a la red de @{bot}</b>\n"
               "Tu canal o grupo recibirá sus publicaciones de forma automática. Unirse lleva un minuto:\n\n"
-              "1. Pulsa ➕ <b>Añadir a mi canal</b> (o <b>a mi grupo</b>) y elige cuál.\n"
+              "1. Pulsa ➕ <b>Añadir canal</b> (o ➕ <b>Añadir grupo</b>) y elige cuál.\n"
               "2. Conserva los permisos que se proponen: sirven para publicar los mensajes y borrarlos.\n"
               "3. Listo: se te avisará por aquí cuando ya esté dentro.")
 JOIN_PAUSE = "⏸ Puedes pausar las publicaciones cuando quieras desde 📣 Mis canales."
@@ -133,7 +133,7 @@ async def test_owner_home_of_an_empty_network(app: App) -> None:
     assert callback_of(app, SUPER_ID, "Panel") == MenuCB(screen="panel").pack()
     assert callback_of(app, SUPER_ID, "Pausar todo") == StCB(action="pause").pack()
     assert button_rows(app, SUPER_ID) == [
-        ["➕ Añadir canal o grupo"], ["📝 Mensajes", "⏰ Horarios"], ["📣 Canales y grupos", "🗂 Grupos de canales"],
+        ["➕ Añadir canal o grupo"], ["📝 Mensajes", "⏰ Horarios"], ["📣 Canales y grupos"], ["🗂 Grupos de canales"],
         ["📊 Estadísticas", "📜 Actividad"], ["⚙️ Ajustes", "📖 Guía"], ["⏸ Pausar todo"], ["🤖 Crear mi bot"],
         ["👑 Panel"],
     ]
@@ -144,7 +144,7 @@ async def test_add_a_channel_or_group_from_its_submenu(app: App, stub_screens: l
     await app.send(SUPER_ID, "/start")
     await app.click(SUPER_ID, "Añadir canal o grupo")
     assert app.last_text(SUPER_ID) == ADD_CHAT
-    assert button_rows(app, SUPER_ID) == [["➕ Añadir canal ↗", "➕ Añadir grupo ↗"], ["📣 Ver canales y grupos"],
+    assert button_rows(app, SUPER_ID) == [["➕ Añadir canal", "➕ Añadir grupo"], ["📣 Ver canales y grupos"],
                                           ["🔙 Regresar"]]
     assert url_of(app, SUPER_ID, "Añadir canal") == add_to_channel_url(MAIN_BOT_USERNAME)
     assert url_of(app, SUPER_ID, "Añadir grupo") == add_to_group_url(MAIN_BOT_USERNAME)
@@ -159,21 +159,21 @@ async def test_add_a_channel_or_group_from_its_submenu(app: App, stub_screens: l
     await make_admin(app, 778)
     await app.press(778, MenuCB(screen="add_chat").pack())
     assert app.last_text(778).startswith("➕ <b>Add a channel or group</b>\n\n1. Tap ➕ <b>Add channel</b>")
-    assert button_rows(app, 778) == [["➕ Add channel ↗", "➕ Add group ↗"], ["📣 See channels and groups"], ["🔙 Back"]]
+    assert button_rows(app, 778) == [["➕ Add channel", "➕ Add group"], ["📣 See channels and groups"], ["🔙 Back"]]
 
 
 async def test_only_admins_add_channels_from_the_home(app: App, monkeypatch: pytest.MonkeyPatch) -> None:
     await app.send(USER_ID, "/start")
     assert not has_button(app, USER_ID, "Añadir canal o grupo")
     await app.press(USER_ID, MenuCB(screen="add_chat").pack())  # a forged button
-    assert denied(app) and not has_button(app, USER_ID, "Añadir canal ↗")
+    assert denied(app) and not has_button(app, USER_ID, "Añadir canal")
     await make_admin(app, OWNER2_ID)
     await app.press(OWNER2_ID, MenuCB(screen="add_chat").pack())
     assert app.last_text(OWNER2_ID) == ADD_CHAT
     monkeypatch.setattr(app.settings, "MAIN_BOT_MODE", "hub")  # the hub runs no network: nothing to add
     await app.send(SUPER_ID, "/start")
     await app.press(SUPER_ID, MenuCB(screen="add_chat").pack())
-    assert not has_button(app, SUPER_ID, "Añadir canal ↗")
+    assert not has_button(app, SUPER_ID, "Añadir canal")
 
 
 async def test_admin_home_summarizes_the_network(app: App) -> None:
@@ -198,7 +198,7 @@ async def test_admin_home_summarizes_the_network(app: App) -> None:
             f"📝 Mensajes activos: <b>2</b>\n📅 Próximo envío: <b>{dt(slot, 'Europe/Madrid')}</b>\n"
             "⏸ Pausados por su asociado: <b>1</b>\n⏳ Solicitudes pendientes: <b>1</b>\n⚠️ Sin permisos: <b>1</b>") in text
     assert "Añade el bot" not in text and "Crea el primero" not in text
-    assert ["⏳ Solicitudes (1)", "⏸ Pausados (1)"] in button_rows(app, SUPER_ID)
+    assert [["⏳ Solicitudes (1)"], ["⏸ Pausados (1)"]] == button_rows(app, SUPER_ID)[4:6]
     assert callback_of(app, SUPER_ID, "Solicitudes (1)") == MenuCB(screen="requests").pack()
     assert callback_of(app, SUPER_ID, "Pausados (1)") == MenuCB(screen="paused").pack()
 
@@ -336,7 +336,7 @@ async def test_visitors_of_the_main_bot_are_welcomed_to_emesh(app: App) -> None:
     await app.send(SUPER_ID, "/start")
     await app.send(USER_ID, "/start")
     assert url_of(app, USER_ID, "Soporte") == "https://t.me/superadmin"
-    assert ["📖 Guía", "🛟 Soporte ↗"] in button_rows(app, USER_ID)
+    assert ["📖 Guía", "🛟 Soporte"] in button_rows(app, USER_ID)
     async with edit_bot(app) as rec:
         rec.support_username = "ayuda_bot"
     await app.send(USER_ID, "/start")
@@ -351,9 +351,9 @@ async def test_the_main_bot_also_explains_how_to_join_its_network_when_it_is_ope
     assert app.last_text(USER_ID) == (
         f"{WELCOME}\n\n{JOIN_STEPS.format(bot=MAIN_BOT_USERNAME)}\n\n{JOIN_PAUSE}\n\n"
         "👤 Mínimo para unirse: <b>500</b> miembros.\n\n⏳ La administración revisa cada canal antes de aceptarlo.")
-    assert button_rows(app, USER_ID)[:2] == [["🤖 Crear mi bot"], ["➕ Añadir a mi canal ↗", "➕ Añadir a mi grupo ↗"]]
-    assert url_of(app, USER_ID, "Añadir a mi canal") == add_to_channel_url(MAIN_BOT_USERNAME)
-    assert url_of(app, USER_ID, "Añadir a mi grupo") == add_to_group_url(MAIN_BOT_USERNAME)
+    assert button_rows(app, USER_ID)[:2] == [["🤖 Crear mi bot"], ["➕ Añadir canal", "➕ Añadir grupo"]]
+    assert url_of(app, USER_ID, "Añadir canal") == add_to_channel_url(MAIN_BOT_USERNAME)
+    assert url_of(app, USER_ID, "Añadir grupo") == add_to_group_url(MAIN_BOT_USERNAME)
     async with edit_bot(app) as rec:
         rec.join_approval = False
         rec.min_members = 0
@@ -369,13 +369,13 @@ async def test_visitors_of_a_clone_get_the_steps_to_join(app: App) -> None:
     assert app.last_text(USER_ID) == (f"{JOIN_STEPS.format(bot=CLONE_USERNAME)}\n\n{JOIN_PAUSE}\n\n"
                                       "⏳ La administración revisa cada canal antes de aceptarlo.")
     rows = button_rows(app, USER_ID)
-    assert rows[0] == ["➕ Añadir a mi canal ↗", "➕ Añadir a mi grupo ↗"] and rows[-1] == ["🤖 Crea tu propio bot"]
-    assert url_of(app, USER_ID, "Añadir a mi canal") == add_to_channel_url(CLONE_USERNAME)
+    assert rows[0] == ["➕ Añadir canal", "➕ Añadir grupo"] and rows[-1] == ["🤖 Crea tu propio bot"]
+    assert url_of(app, USER_ID, "Añadir canal") == add_to_channel_url(CLONE_USERNAME)
     app.fake.add_user(779, "Eng", "eng", lang="en")
     await app.send(779, "/start", bot_id=CLONE_ID)
     assert app.last_text(779).startswith(f"🤝 <b>Join the network of @{CLONE_USERNAME}</b>\nYour channel or group "
                                          "will get its posts automatically. Joining takes a minute:\n\n1. Tap ➕ <b>Add "
-                                         "to my channel</b> (or <b>to my group</b>) and pick which one.\n")
+                                         "channel</b> (or ➕ <b>Add group</b>) and pick which one.\n")
 
 
 async def test_the_default_welcome_promises_pauses_only_when_partners_can_pause(app: App) -> None:
@@ -688,7 +688,7 @@ async def test_guide_describes_the_real_features(app: App) -> None:
     assert "según las reglas de la red" in pauses and "por defecto, hasta que lo reanude" in pauses
     assert "Los admins pueden reanudar cualquier pausa" in pauses and "Solo su dueño puede reanudarlo" not in pauses
     partner = " ".join(t(f"guide.partner.{i}", "es") for i in range(1, 3))
-    for feature in ("Añadir a mi canal", "pendiente", "dentro de las reglas de la red",
+    for feature in ("Añadir canal", "pendiente", "dentro de las reglas de la red",
                     "la administración también puede reanudarlo", "Categorías", "Salir"):
         assert feature in partner, feature
     assert "3 días, 7 días" not in partner  # not every network allows them

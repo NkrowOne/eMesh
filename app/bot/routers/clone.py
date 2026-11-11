@@ -10,7 +10,7 @@ from aiogram.exceptions import TelegramAPIError
 from aiogram.filters.callback_data import CallbackData
 from aiogram.fsm.context import FSMContext
 from aiogram.fsm.state import State, StatesGroup
-from aiogram.types import CallbackQuery, InlineKeyboardMarkup, ManagedBotUpdated, Message
+from aiogram.types import CallbackQuery, InlineKeyboardButton, InlineKeyboardMarkup, ManagedBotUpdated, Message
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.bot.context import Ctx
@@ -155,7 +155,8 @@ async def mybots_screen(event: Message | CallbackQuery, ctx: Ctx, session: Async
         key = clones.status_key(rec)
         keys.add(key)
         lines.append(ctx.t("cl.mybots.row", i=i, username=esc(rec.username), status=ctx.t(f"cl.status.{key}")))
-        row = [btn(f"#{i} @{truncate(rec.username, 18)}", url=f"https://t.me/{rec.username}")]
+        rows.append([btn(f"#{i} @{truncate(rec.username, 32)}", url=f"https://t.me/{rec.username}")])
+        row: list[InlineKeyboardButton] = []  # its actions under it: three buttons in a row would be cut
         if key == "active":
             row.append(btn(ctx.t("cl.btn.pause"), CloneCB(action="pause", id=rec.id, page=page)))
         elif key == "paused":

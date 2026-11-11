@@ -120,7 +120,7 @@ async def test_group_detail(app: App) -> None:
         "📝 Mensajes que lo usan: <b>2</b>\n"
         "🤝 Abierto a externos: ✅\n"
         "   └ Los canales externos pueden unirse o salir desde su panel, y los nuevos entran automáticamente.")
-    assert button_texts(app) == ["📣 Elegir chats", "✅ Abierto a externos", "✏️ Cambiar nombre", "🗑 Eliminar", "🔙 Regresar"]
+    assert button_texts(app) == ["📣 Elegir chats", "✅ Abierto a externos", "✏️ Renombrar", "🗑 Eliminar", "🔙 Regresar"]
     assert button_data(app, "Elegir chats") == MenuCB(screen="group_chats", arg=g).pack()
 
 
@@ -128,7 +128,7 @@ async def test_rename_group(app: App) -> None:
     g = await add_group(app, "Cine")
     await started(app, SUPER_ID)
     await open_menu(app, SUPER_ID, "group", g)
-    await app.click(SUPER_ID, "✏️ Cambiar nombre")
+    await app.click(SUPER_ID, "✏️ Renombrar")
     assert "🗂 Ahora: <b>Cine</b>" in app.last_text(SUPER_ID)
     await app.send(SUPER_ID, "   ")
     assert "⚠️ Escribe el nombre como texto." in app.last_text(SUPER_ID)
@@ -137,7 +137,7 @@ async def test_rename_group(app: App) -> None:
     assert text.startswith("✅ Guardado") and "🗂 <b>Películas &amp; Series</b>" in text
     assert (await load(app, ChatGroup, g)).name == "Películas & Series"
 
-    await app.click(SUPER_ID, "✏️ Cambiar nombre")
+    await app.click(SUPER_ID, "✏️ Renombrar")
     await app.click(SUPER_ID, "Cancelar")
     assert "🗂 <b>Películas &amp; Series</b>" in app.last_text(SUPER_ID)  # back in the detail
 

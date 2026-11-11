@@ -23,7 +23,7 @@ STRINGS = {
     "gr.d.closed_hint": "   └ Solo los admins eligen sus chats.",
     "gr.b.chats": "📣 Elegir chats",
     "gr.b.open": "🤝 Abierto a externos",
-    "gr.b.rename": "✏️ Cambiar nombre",
+    "gr.b.rename": "✏️ Renombrar",
     "gr.b.delete": "🗑 Eliminar",
     "gr.del.confirm": "🗑 <b>¿Eliminar el grupo de canales {name}?</b>\nSus chats siguen en la red: solo dejan de "
                       "estar agrupados.",
@@ -110,8 +110,8 @@ STRINGS = {
     "fq.as.b.per_day": "{n} al día",
     "fq.as.b.max_other": "✏️ Otro máximo",
     "fq.as.b.max_custom": "✏️ Otro: {n} al día",
-    "fq.as.b.no_gap": "Sin separación",
-    "fq.as.b.gap_other": "✏️ Otra separación",
+    "fq.as.b.no_gap": "Ninguna",
+    "fq.as.b.gap_other": "✏️ Otra",
     "fq.as.b.gap_custom": "✏️ Otra: {gap}",
     "fq.as.b.one": "🧹 Uno a la vez",
     "fq.as.p.max": "📊 <b>Máximo al día por chat</b>\n\nEscribe cuántos mensajes puede recibir cada chat al día como "

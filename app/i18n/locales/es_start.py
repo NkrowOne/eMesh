@@ -33,8 +33,8 @@ STRINGS = {
     "home.btn.activity": "📜 Actividad",
     "home.btn.requests": "⏳ Solicitudes ({n})",
     "home.btn.paused": "⏸ Pausados ({n})",
-    "home.btn.add_channel": "➕ Añadir canal ↗",
-    "home.btn.add_group": "➕ Añadir grupo ↗",
+    "home.btn.add_channel": "➕ Añadir canal",
+    "home.btn.add_group": "➕ Añadir grupo",
     "home.btn.add_chat": "➕ Añadir canal o grupo",
     "home.add.text": (
         "➕ <b>Añadir canal o grupo</b>\n\n"
@@ -65,7 +65,7 @@ STRINGS = {
     "home.join.default": (
         "🤝 <b>Únete a la red de @{bot}</b>\n"
         "Tu canal o grupo recibirá sus publicaciones de forma automática. Unirse lleva un minuto:\n\n"
-        "1. Pulsa ➕ <b>Añadir a mi canal</b> (o <b>a mi grupo</b>) y elige cuál.\n"
+        "1. Pulsa ➕ <b>Añadir canal</b> (o ➕ <b>Añadir grupo</b>) y elige cuál.\n"
         "2. Conserva los permisos que se proponen: sirven para publicar los mensajes y borrarlos.\n"
         "3. Listo: se te avisará por aquí cuando ya esté dentro.\n\n"
         "⏸ Puedes pausar las publicaciones cuando quieras desde 📣 Mis canales."
@@ -73,17 +73,17 @@ STRINGS = {
     "home.join.default_no_pause": (
         "🤝 <b>Únete a la red de @{bot}</b>\n"
         "Tu canal o grupo recibirá sus publicaciones de forma automática. Unirse lleva un minuto:\n\n"
-        "1. Pulsa ➕ <b>Añadir a mi canal</b> (o <b>a mi grupo</b>) y elige cuál.\n"
+        "1. Pulsa ➕ <b>Añadir canal</b> (o ➕ <b>Añadir grupo</b>) y elige cuál.\n"
         "2. Conserva los permisos que se proponen: sirven para publicar los mensajes y borrarlos.\n"
         "3. Listo: se te avisará por aquí cuando ya esté dentro."
     ),
     "home.join.min": "👤 Mínimo para unirse: <b>{n}</b> miembros.",
     "home.join.approval": "⏳ La administración revisa cada canal antes de aceptarlo.",
     "home.private": "🔒 <b>Esta red es privada.</b>\nSolo la administración puede añadir canales y grupos.",
-    "home.btn.join_channel": "➕ Añadir a mi canal ↗",
-    "home.btn.join_group": "➕ Añadir a mi grupo ↗",
+    "home.btn.join_channel": "➕ Añadir canal",
+    "home.btn.join_group": "➕ Añadir grupo",
     "home.btn.my_chats": "📣 Mis canales ({n})",
-    "home.btn.support": "🛟 Soporte ↗",
+    "home.btn.support": "🛟 Soporte",
     "home.btn.create_own": "🤖 Crea tu propio bot",
     # --- Inicio: bot principal en modo hub ---------------------------------------------------------
     "home.hub": (
@@ -172,7 +172,7 @@ STRINGS = {
     # --- Guía: socios ------------------------------------------------------------------------------
     "guide.partner.1": (
         "🤝 <b>Cómo unirse a la red</b>\n\n"
-        "1. Pulsa ➕ <b>Añadir a mi canal</b> o ➕ <b>Añadir a mi grupo</b> en el inicio.\n"
+        "1. Pulsa ➕ <b>Añadir canal</b> o ➕ <b>Añadir grupo</b> en el inicio.\n"
         "2. Elige tu canal o grupo y conserva los permisos que se proponen.\n"
         "3. Si la red revisa las solicitudes, tu canal queda ⏳ pendiente hasta que se acepte. Se te avisa por "
         "aquí.\n\n"

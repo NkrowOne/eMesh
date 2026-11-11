@@ -53,7 +53,7 @@ async def test_owner_settings(app: App) -> None:
         r"🔔 Mis avisos: alertas ✅ · resumen diario ✅ · informe de cada envío ✖️\n"
         r"🤝 Canales externos: ✖️ no admitidos \(red privada\)\n🛟 Soporte: @superadmin", text), text
     assert button_rows(app, SUPER_ID) == [["🗺 Zona horaria", "🌍 Idioma"], ["🔔 Mis avisos", "👮 Admins"],
-                                          ["🤝 Canales externos", "🛟 Soporte"], ["🧭 Asistente de configuración"],
+                                          ["🤝 Canales externos"], ["🛟 Soporte"], ["🧭 Asistente de configuración"],
                                           ["🔙 Regresar"]]
     for label, name in {"Zona horaria": "timezone", "Idioma": "lang", "Mis avisos": "notifications",
                         "Admins": "admins", "Canales externos": "externals", "Soporte": "support",
