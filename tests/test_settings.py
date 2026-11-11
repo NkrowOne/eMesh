@@ -341,7 +341,7 @@ async def test_support_contact(app: App) -> None:
     assert await fsm_state(app, SUPER_ID) == "SettingsFSM:support"
     for bad in ("not valid!", "@ab", "https://example.com/x", "t.me/+AbCdEf123456"):
         await app.send(SUPER_ID, bad)
-        assert app.last_text(SUPER_ID).startswith("⚠️ No es un @usuario válido."), bad
+        assert app.last_text(SUPER_ID).startswith("⚠️ @usuario no válido."), bad
     await app.send(SUPER_ID, "https://t.me/ayuda_bot")
     assert (await get_bot(app)).support_username == "ayuda_bot"
     assert app.last_text(SUPER_ID).startswith("✅ Guardado\n\n🛟 <b>Soporte</b>")

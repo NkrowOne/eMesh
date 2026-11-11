@@ -10,12 +10,12 @@ STRINGS = {
     "rights.can_manage_topics": "gestionar temas",
     # --- chat state (services/chatstate.py): messages to the owner of an external chat ---
     "cs.left": (
-        "🚪 El bot ya no está en tu {kind} <b>{chat}</b> (lo han sacado o el {kind} ya no existe), así que ha "
-        "dejado de recibir los mensajes de la red. Para volver, añade el bot de nuevo como administrador."
+        "🚪 El bot ya no está en tu {kind} <b>{chat}</b> (expulsado o {kind} eliminado). Ya no recibe mensajes de "
+        "la red. Para volver, añade el bot como admin."
     ),
     "cs.rights": (
-        "⚠️ Al bot le faltan permisos en tu {kind} <b>{chat}</b>: {missing}. Dáselos en los ajustes del {kind} › "
-        "Administradores › el bot. En cuanto lo hagas, volverá a recibir los mensajes."
+        "⚠️ Al bot le faltan permisos en tu {kind} <b>{chat}</b>: {missing}. No recibe mensajes hasta que se los "
+        "des (Administradores › el bot)."
     ),
     "cs.rights_ok": "✅ Tu {kind} <b>{chat}</b> vuelve a tener los permisos y recibe los mensajes de la red.",
     # --- activity / alerts (services/events.py) ---
@@ -36,15 +36,15 @@ STRINGS = {
     "ev.chat_resumed.admin": "<b>{chat}</b>: distribución reanudada por {actor}.",
     "ev.chat_resumed.auto": "<b>{chat}</b>: la pausa ha terminado y vuelve a recibir mensajes.",
     "ev.chat_left": (
-        "El bot ya no está en <b>{chat}</b> (lo han sacado o el chat ya no existe): ha salido de la red. Si "
-        "sigue existiendo, añade el bot de nuevo como administrador para recuperarlo."
+        "El bot ya no está en <b>{chat}</b> (expulsado o chat eliminado). Fuera de la red. Para recuperarlo, "
+        "añade el bot como admin."
     ),
     "ev.chat_removed": "<b>{chat}</b> ha salido de la red.",
-    "ev.chat_removed.owner": "Tu asociado {actor} ha sacado <b>{chat}</b> de la red.",
-    "ev.chat_removed.admin": "{actor} ha quitado <b>{chat}</b> de la red y el bot ha salido de él.",
+    "ev.chat_removed.owner": "Tu asociado {actor} ha retirado <b>{chat}</b> de la red.",
+    "ev.chat_removed.admin": "{actor} ha retirado <b>{chat}</b> de la red. El bot ha salido del chat.",
     "ev.chat_rights": (
-        "<b>{chat}</b>: al bot le faltan permisos ({missing}) y no recibe mensajes. Un administrador de ese chat "
-        "debe dárselos; en cuanto lo haga, vuelve a recibir solo."
+        "<b>{chat}</b>: faltan permisos ({missing}). No recibe mensajes hasta que un admin del chat se los dé al "
+        "bot."
     ),
     "ev.chat_rights_ok": "<b>{chat}</b> vuelve a tener los permisos y recibe mensajes.",
     "ev.bot_paused": "Distribución de toda la red pausada ({actor}).",

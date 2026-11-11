@@ -61,8 +61,8 @@ STRINGS = {
     "rq.check.ok_pending": "✅ Permisos correctos en el {kind} <b>{chat}</b>. La solicitud está pendiente de "
                            "aprobación.",
     "rq.check.gone": (
-        "🚪 El bot ya no está en el {kind} <b>{chat}</b> (lo han sacado o ya no existe). Para volver a la red, "
-        "añádelo de nuevo como administrador."
+        "🚪 El bot ya no está en el {kind} <b>{chat}</b> (expulsado o {kind} eliminado). Para volver a la red, "
+        "añádelo como admin."
     ),
     "rq.check.inactive": "ℹ️ El {kind} <b>{chat}</b> ya no está en la red ({status}). Para volver, añade el bot de "
                          "nuevo.",
@@ -143,11 +143,8 @@ STRINGS = {
     "ch.check.members_same": "👤 Miembros: <b>{n}</b> (sin cambios)",
     "ch.check.rights_ok": "🛡 Permisos: ✅",
     "ch.check.rights_missing": "🛡 Faltan permisos: {rights}",
-    "ch.check.gone": (
-        "🚪 El bot ya no está en el chat (lo han sacado o el chat ya no existe): ha salido de la red. Si sigue "
-        "existiendo, añade el bot de nuevo como administrador."
-    ),
-    "ch.check.error": "⚠️ Telegram no ha dejado comprobarlo todo ahora mismo. Prueba de nuevo en unos minutos.",
+    "ch.check.gone": "🚪 El bot ya no está en el chat (expulsado o chat eliminado). Fuera de la red.",
+    "ch.check.error": "⚠️ No se ha podido comprobar todo. Inténtalo en unos minutos.",
     "ch.toast.checked": "🔄 Comprobado",
     # --- pause, remove, ban ---
     "ch.toast.paused": "⏸ Pausado",
@@ -167,7 +164,7 @@ STRINGS = {
     "ch.toast.removed": "🗑 {chat} se ha quitado de la red",
     "ch.toast.banned": "🚫 {chat} se ha bloqueado",
     "ch.toast.unbanned": "♻️ Desbloqueado: puede volver a la red",
-    "ch.dm.removed": "🗑 La administración ha quitado tu {kind} <b>{chat}</b> de la red y el bot ha salido de él.",
+    "ch.dm.removed": "🗑 La administración ha retirado tu {kind} <b>{chat}</b> de la red. El bot ha salido.",
     "ch.dm.banned": "🚫 Tu {kind} <b>{chat}</b> se ha bloqueado en esta red: el bot ha salido y no podrá volver.",
     "ch.dm.paused": "⏸ La administración ha pausado la distribución en tu {kind} <b>{chat}</b>.",
     "ch.dm.resumed": "▶️ La administración ha reanudado la distribución en tu {kind} <b>{chat}</b>.",

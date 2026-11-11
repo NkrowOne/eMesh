@@ -10,12 +10,12 @@ STRINGS = {
     "rights.can_manage_topics": "manage topics",
     # --- chat state (services/chatstate.py): messages to the owner of an external chat ---
     "cs.left": (
-        "🚪 The bot is no longer in your {kind} <b>{chat}</b> (it was taken out or the {kind} no longer exists), "
-        "so it stopped receiving the network's posts. To come back, add the bot again as an administrator."
+        "🚪 The bot is no longer in your {kind} <b>{chat}</b> (kicked or {kind} deleted). It no longer receives "
+        "the network's posts. To come back, add the bot as an admin."
     ),
     "cs.rights": (
-        "⚠️ The bot is missing rights in your {kind} <b>{chat}</b>: {missing}. Grant them in the {kind}'s "
-        "settings › Administrators › the bot. It will receive posts again as soon as you do."
+        "⚠️ The bot is missing rights in your {kind} <b>{chat}</b>: {missing}. It receives no posts until you "
+        "grant them (Administrators › the bot)."
     ),
     "cs.rights_ok": "✅ Your {kind} <b>{chat}</b> has its rights back and receives the network's posts.",
     # --- activity / alerts (services/events.py) ---
@@ -36,15 +36,15 @@ STRINGS = {
     "ev.chat_resumed.admin": "<b>{chat}</b>: distribution resumed by {actor}.",
     "ev.chat_resumed.auto": "<b>{chat}</b>: the pause is over and it receives posts again.",
     "ev.chat_left": (
-        "The bot is no longer in <b>{chat}</b> (it was taken out or the chat no longer exists): it left the "
-        "network. If it still exists, add the bot again as an administrator to bring it back."
+        "The bot is no longer in <b>{chat}</b> (kicked or chat deleted). Out of the network. To bring it back, "
+        "add the bot as an admin."
     ),
     "ev.chat_removed": "<b>{chat}</b> left the network.",
-    "ev.chat_removed.owner": "Your partner {actor} took <b>{chat}</b> out of the network.",
-    "ev.chat_removed.admin": "{actor} removed <b>{chat}</b> from the network and the bot left it.",
+    "ev.chat_removed.owner": "Your partner {actor} removed <b>{chat}</b> from the network.",
+    "ev.chat_removed.admin": "{actor} removed <b>{chat}</b> from the network. The bot left the chat.",
     "ev.chat_rights": (
-        "<b>{chat}</b>: the bot is missing rights ({missing}) and it receives no posts. An administrator of that "
-        "chat must grant them; it then receives posts again by itself."
+        "<b>{chat}</b>: missing rights ({missing}). It receives no posts until an admin of the chat grants them "
+        "to the bot."
     ),
     "ev.chat_rights_ok": "<b>{chat}</b> has its rights back and receives posts.",
     "ev.bot_paused": "Distribution of the whole network paused ({actor}).",

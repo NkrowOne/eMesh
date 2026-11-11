@@ -59,8 +59,8 @@ STRINGS = {
     "rq.check.ok": "✅ All good: the bot has the rights it needs in the {kind} <b>{chat}</b>.",
     "rq.check.ok_pending": "✅ Rights are fine in the {kind} <b>{chat}</b>. The request is waiting for approval.",
     "rq.check.gone": (
-        "🚪 The bot is no longer in the {kind} <b>{chat}</b> (it was taken out or it no longer exists). To come "
-        "back to the network, add it again as an administrator."
+        "🚪 The bot is no longer in the {kind} <b>{chat}</b> (kicked or {kind} deleted). To come back to the "
+        "network, add it as an admin."
     ),
     "rq.check.inactive": "ℹ️ The {kind} <b>{chat}</b> is no longer in the network ({status}). To come back, add the "
                          "bot again.",
@@ -142,11 +142,8 @@ STRINGS = {
     "ch.check.members_same": "👤 Members: <b>{n}</b> (no change)",
     "ch.check.rights_ok": "🛡 Rights: ✅",
     "ch.check.rights_missing": "🛡 Missing rights: {rights}",
-    "ch.check.gone": (
-        "🚪 The bot is no longer in the chat (it was taken out or the chat no longer exists): it left the "
-        "network. If it still exists, add the bot again as an administrator."
-    ),
-    "ch.check.error": "⚠️ Telegram didn't let everything be checked right now. Try again in a few minutes.",
+    "ch.check.gone": "🚪 The bot is no longer in the chat (kicked or chat deleted). Out of the network.",
+    "ch.check.error": "⚠️ Not everything could be checked. Try again in a few minutes.",
     "ch.toast.checked": "🔄 Checked",
     # --- pause, remove, ban ---
     "ch.toast.paused": "⏸ Paused",
@@ -166,7 +163,7 @@ STRINGS = {
     "ch.toast.removed": "🗑 {chat} was removed from the network",
     "ch.toast.banned": "🚫 {chat} was banned",
     "ch.toast.unbanned": "♻️ Unbanned: it can come back to the network",
-    "ch.dm.removed": "🗑 The administration removed your {kind} <b>{chat}</b> from the network and the bot left it.",
+    "ch.dm.removed": "🗑 The administration removed your {kind} <b>{chat}</b> from the network. The bot left.",
     "ch.dm.banned": "🚫 Your {kind} <b>{chat}</b> was banned from this network: the bot left and can't come back.",
     "ch.dm.paused": "⏸ The administration paused the distribution in your {kind} <b>{chat}</b>.",
     "ch.dm.resumed": "▶️ The administration resumed the distribution in your {kind} <b>{chat}</b>.",

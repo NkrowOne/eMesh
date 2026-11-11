@@ -206,13 +206,13 @@ async def test_send_now(app: App, engine: SimpleNamespace) -> None:
 
     engine.run_id = None  # the engine found nobody when the run started
     await app.press(SUPER_ID, PoCB(a="send_ok", id=pid).pack())
-    assert answers(app)[-1] == ("⚠️ Ahora mismo ningún chat de su 🎯 Destino puede recibirlo: no hay ninguno o están pausados, "
-                                "pendientes o sin permisos. Revisa su 🎯 Destino o 📣 Canales y grupos.")
+    assert answers(app)[-1] == ("⚠️ Ningún chat de su 🎯 Destino puede recibirlo ahora (pausados, pendientes o sin permisos). "
+                                "Revisa su 🎯 Destino.")
 
     await open_post(app, nobody)  # targets only a paused external chat
     await app.click(SUPER_ID, "Enviar ahora")
-    assert answers(app)[-1] == ("⚠️ Ahora mismo ningún chat de su 🎯 Destino puede recibirlo: no hay ninguno o están pausados, "
-                                "pendientes o sin permisos. Revisa su 🎯 Destino o 📣 Canales y grupos.")
+    assert answers(app)[-1] == ("⚠️ Ningún chat de su 🎯 Destino puede recibirlo ahora (pausados, pendientes o sin permisos). "
+                                "Revisa su 🎯 Destino.")
     assert len(engine.sent) == 2
 
 

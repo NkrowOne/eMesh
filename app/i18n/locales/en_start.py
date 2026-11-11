@@ -308,7 +308,7 @@ STRINGS = {
         "🛟 <b>Support contact</b>\n\n"
         "✏️ Send the @username of a person or a bot, or their link (<code>t.me/username</code>)."
     ),
-    "set.sup.invalid": "⚠️ That is not a valid @username. Send something like <code>@support</code>.",
+    "set.sup.invalid": "⚠️ Invalid @username. Example: <code>@support</code>.",
     # --- Language ----------------------------------------------------------------------------------
     "lang.title": "🌍 <b>Idioma / Language</b>",
     "lang.body": "Elige el idioma del bot.\nChoose the bot language.",

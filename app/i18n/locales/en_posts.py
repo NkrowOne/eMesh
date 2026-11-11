@@ -139,8 +139,7 @@ STRINGS = {
     "po.preview.failed": "⚠️ The preview couldn't be sent. Try again.",
     "po.busy": "⏳ This post is being sent right now. Wait until it finishes.",
     "po.send.nobody": (
-        "⚠️ No chat of its 🎯 Target can receive it right now: there are none, or they are paused, pending or "
-        "missing rights. Check its 🎯 Target or 📣 Channels and groups."
+        "⚠️ No chat of its 🎯 Target can receive it now (paused, pending or missing rights). Check its 🎯 Target."
     ),
     "po.send.paused": "⏸ The distribution is paused: nothing is sent. Resume it on the home screen with ▶️ Resume all.",
     "po.send.confirm": (

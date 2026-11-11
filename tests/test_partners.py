@@ -266,7 +266,7 @@ async def test_partner_leaves_the_network(app: App, monkeypatch: pytest.MonkeyPa
     assert chat.status == ChatStatus.LEFT and chat.decided_by == USER_ID
     [event] = await events_of(app, EventKind.CHAT_REMOVED)
     assert event.data == {"by": "owner"} and event.actor_id == USER_ID
-    assert any("Tu asociado @pepe ha sacado <b>Cine HD</b> de la red." in t for t in dms(app, SUPER_ID))
+    assert any("Tu asociado @pepe ha retirado <b>Cine HD</b> de la red." in t for t in dms(app, SUPER_ID))
     assert "🚪 Tu canal <b>Cine HD</b> ha salido de la red." in app.last_text(USER_ID)
     assert not any("se ha quitado de la red" in t for t in dms(app)), "no DM about their own decision"
     assert button(app.last_panel(USER_ID), "Mis canales")["callback_data"] == MenuCB(screen="my_chats").pack()

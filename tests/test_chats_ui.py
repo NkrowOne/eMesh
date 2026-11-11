@@ -317,7 +317,7 @@ async def test_remove_from_the_network(app: App, monkeypatch: pytest.MonkeyPatch
     assert chat.status == ChatStatus.LEFT and chat.decided_by == SUPER_ID and chat.approved_at is None
     [event] = await events_of(app, EventKind.CHAT_REMOVED)
     assert event.data == {"by": "admin"} and event.actor_id == SUPER_ID
-    assert "🗑 La administración ha quitado tu canal <b>Cine HD</b> de la red y el bot ha salido de él." in dms(app)
+    assert "🗑 La administración ha retirado tu canal <b>Cine HD</b> de la red. El bot ha salido." in dms(app)
     assert last_answer(app)["text"] == "🗑 Cine HD se ha quitado de la red"
     assert "Canales y grupos" in app.last_text(SUPER_ID)
 
@@ -480,7 +480,7 @@ async def test_super_admin_manages_the_chats_of_a_clone(app: App, monkeypatch: p
     assert (await get_chat(app, CHANNEL, CLONE_ID)).status == ChatStatus.LEFT
     assert (await get_chat(app, GROUP)).status == ChatStatus.APPROVED
     # The removal alert reaches the clone's owner through the clone.
-    assert any("de la red y el bot ha salido de él" in t for t in dms(app, OWNER2_ID, clone_token))
+    assert any("de la red. El bot ha salido." in t for t in dms(app, OWNER2_ID, clone_token))
 
 
 async def test_message_to_the_partners_of_a_managed_clone(app: App) -> None:
