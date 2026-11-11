@@ -67,7 +67,7 @@ async def test_far_future_campaign_end_keeps_the_post_screens_working(app: App) 
     await open_menu(app, SUPER_ID, "post_sched", pid)
     assert "hasta el 31/12/9999" in app.last_text(SUPER_ID)
     await open_menu(app, SUPER_ID, "freq_edit", -pid)  # freqs.upcoming: ends_on + 1 day
-    assert "⏰ <b>Frecuencia</b>" in app.last_text(SUPER_ID), app.last_text(SUPER_ID)[:200]
+    assert "⏰ <b>Horario</b>" in app.last_text(SUPER_ID), app.last_text(SUPER_ID)[:200]
 
 
 # --- LOW: the group buttons of the target picker count chats that left the network ------------------------------

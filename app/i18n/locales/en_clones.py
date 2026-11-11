@@ -96,8 +96,8 @@ STRINGS = {
     "cl.status.invalid": "❌ Invalid token",
     "cl.btn.pause": "⏸ Pause",
     "cl.btn.resume": "▶️ Activate",
-    "cl.btn.remove": "🗑 Disconnect",
-    "cl.btn.remove_yes": "🗑 Yes, disconnect",
+    "cl.btn.remove": "🔌 Disconnect",
+    "cl.btn.remove_yes": "🔌 Yes, disconnect",
     "cl.paused": "⏸ Bot paused",
     "cl.resumed": "▶️ Bot activated",
     "cl.resume_failed": (
@@ -144,7 +144,7 @@ STRINGS = {
     "sa.bots.empty": "📭 There are no bots here.",
     "sa.filter.all": "🌐 All",
     "sa.filter.active": "✅ Active",
-    "sa.filter.paused": "⏸ Stopped",
+    "sa.filter.paused": "⏸ Paused",
     "sa.filter.pending": "⏳ Pending",
     "sa.filter.invalid": "❌ Invalid token",
     "sa.btn.find": "🔎 Search",
@@ -160,7 +160,7 @@ STRINGS = {
         "📌 Status: {status}\n"
         "📅 Created: {created}\n"
         "📣 Chats: <b>{chats}</b> (🏠 {own} · 🤝 {ext}) · 👤 {members}\n"
-        "⏸ Paused by their owner: {owner_paused} · ⏳ Pending: {pending}\n"
+        "⏸ Paused by their partner: {owner_paused} · ⏳ Pending: {pending}\n"
         "📝 Active posts: <b>{posts}</b> · 🕐 {freq}\n"
         "📤 Last 24 h: {runs} sends · {sent} deliveries · {failed} failed\n"
         "🔒 Limits: {limits}"

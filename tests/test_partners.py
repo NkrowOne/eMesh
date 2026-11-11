@@ -128,12 +128,12 @@ async def test_partner_pauses_and_resumes(app: App, value: int, label: str, leng
     if length is None:
         assert chat.owner_paused_until is None and event.data["until"] is None
         assert "📌 Estado: ⏸ Pausado hasta que lo reanudes" in app.last_text(USER_ID)
-        alert = "<b>Cine HD</b> ha pausado la distribución hasta que la reanude (@pepe)."
+        alert = "El socio @pepe ha pausado <b>Cine HD</b> hasta que la reanude."
     else:
         assert before + length - timedelta(seconds=5) < chat.owner_paused_until < utcnow() + length
         assert event.data["until"] == chat.owner_paused_until.isoformat()
         assert f"📌 Estado: ⏸ Pausado hasta {dt(chat.owner_paused_until, TZ)}" in app.last_text(USER_ID)
-        alert = f"<b>Cine HD</b> ha pausado la distribución hasta el {dt(chat.owner_paused_until, TZ)} (@pepe)."
+        alert = f"El socio @pepe ha pausado <b>Cine HD</b> hasta el {dt(chat.owner_paused_until, TZ)}."
     assert any(alert in t for t in dms(app, SUPER_ID)), "the admins are alerted"
     assert labels(app.last_panel(USER_ID))[0] == "▶️ Reanudar"
 
@@ -147,7 +147,7 @@ async def test_partner_pauses_and_resumes(app: App, value: int, label: str, leng
     assert last_answer(app)["text"] == "▶️ Reanudado. Se ha avisado a la administración."
     [resumed] = await events_of(app, EventKind.CHAT_RESUMED)
     assert resumed.data == {"by": "owner"} and resumed.actor_id == USER_ID
-    assert any("<b>Cine HD</b> ha reanudado la distribución (@pepe)." in t for t in dms(app, SUPER_ID))
+    assert any("El socio @pepe ha reanudado <b>Cine HD</b>." in t for t in dms(app, SUPER_ID))
 
 
 async def test_partner_cant_resume_an_admin_pause(app: App) -> None:
@@ -156,7 +156,7 @@ async def test_partner_cant_resume_an_admin_pause(app: App) -> None:
     await app.press(SUPER_ID, ChCB(a="pz", id=chat.id).pack())
     await pa(app, USER_ID, "op", chat.id)
     text = app.last_text(USER_ID)
-    assert "📌 Estado: ⏸ Pausado por la administración" in text and "Solo la administración puede reanudarla" in text
+    assert "📌 Estado: ⏸ Pausado por la administración" in text and "Solo la administración puede reanudarlo" in text
     assert "▶️ Reanudar" not in labels(app.last_panel(USER_ID))
     await pa(app, USER_ID, "rs", chat.id)  # forged
     assert is_alert(app, "Lo ha pausado la administración")
@@ -266,7 +266,7 @@ async def test_partner_leaves_the_network(app: App, monkeypatch: pytest.MonkeyPa
     assert chat.status == ChatStatus.LEFT and chat.decided_by == USER_ID
     [event] = await events_of(app, EventKind.CHAT_REMOVED)
     assert event.data == {"by": "owner"} and event.actor_id == USER_ID
-    assert any("<b>Cine HD</b> ha salido de la red (@pepe)." in t for t in dms(app, SUPER_ID))
+    assert any("El socio @pepe ha sacado <b>Cine HD</b> de la red." in t for t in dms(app, SUPER_ID))
     assert "🚪 Tu canal <b>Cine HD</b> ha salido de la red." in app.last_text(USER_ID)
     assert not any("se ha quitado de la red" in t for t in dms(app)), "no DM about their own decision"
     assert button(app.last_panel(USER_ID), "Mis canales")["callback_data"] == MenuCB(screen="my_chats").pack()

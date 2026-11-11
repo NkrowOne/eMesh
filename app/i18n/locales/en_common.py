@@ -26,7 +26,10 @@ STRINGS = {
     "common.invalid_number": "⚠️ Send a valid number.",
     "common.too_long": "⚠️ It is too long (maximum {max} characters).",
     "common.slow_down": "⏳ You are going too fast, wait a moment.",
-    "common.not_running": "⚠️ The bot of this network isn't running right now.",
+    "common.not_running": (
+        "⚠️ The bot of this network isn't running right now. Turn it on in 🤖 My bots or try again in a few "
+        "minutes."
+    ),
     "common.infinite": "∞",
     "common.members_short": "{n} members",
     "common.channel": "Channel",

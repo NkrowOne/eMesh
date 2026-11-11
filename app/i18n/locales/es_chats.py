@@ -48,18 +48,22 @@ STRINGS = {
     "rq.toast.already": "ℹ️ Esta solicitud ya está resuelta: {status}",
     "rq.toast.missing": "⚠️ Aún faltan permisos",
     "rq.toast.rights_ok": "✅ Permisos correctos",
-    "rq.btn.no_reason": "Sin motivo",
+    "rq.btn.no_reason": "❌ Rechazar sin motivo",
     "rq.btn.requests": "⏳ Solicitudes",
     "rq.btn.chat": "📣 Ver chat",
-    "rq.reason.prompt": "❌ <b>Rechazar solicitud</b> · {chat}\n\n✏️ Escribe el motivo (se enviará a su dueño) o pulsa "
-                        "<b>Sin motivo</b>.",
+    "rq.reason.prompt": (
+        "❌ <b>Rechazar solicitud</b> · {chat}\n\n✏️ Escribe el motivo (se enviará a su dueño) o pulsa <b>❌ "
+        "Rechazar sin motivo</b>."
+    ),
     "rq.reason.invalid": "⚠️ Envía el motivo como texto (máximo {max} caracteres).",
     "rq.reason.done": "❌ Se ha rechazado la solicitud del {kind} <b>{chat}</b>.",
     "rq.check.ok": "✅ Todo correcto: el bot tiene los permisos que necesita en el {kind} <b>{chat}</b>.",
     "rq.check.ok_pending": "✅ Permisos correctos en el {kind} <b>{chat}</b>. La solicitud está pendiente de "
                            "aprobación.",
-    "rq.check.gone": "🚪 El bot ya no está en el {kind} <b>{chat}</b>. Para volver a la red, añádelo de nuevo como "
-                     "administrador.",
+    "rq.check.gone": (
+        "🚪 El bot ya no está en el {kind} <b>{chat}</b> (lo han sacado o ya no existe). Para volver a la red, "
+        "añádelo de nuevo como administrador."
+    ),
     "rq.check.inactive": "ℹ️ El {kind} <b>{chat}</b> ya no está en la red ({status}). Para volver, añade el bot de "
                          "nuevo.",
     "rq.list.title": "⏳ <b>Solicitudes pendientes</b> ({n})",
@@ -73,14 +77,14 @@ STRINGS = {
     "ch.st.pending": "⏳ Pendiente de aprobación",
     "ch.st.pending_rights": "⏳ Pendiente: faltan permisos ({rights})",
     "ch.st.rights": "⚠️ Faltan permisos: {rights}",
-    "ch.st.owner_paused": "⏸ Pausado por su dueño hasta {date}",
-    "ch.st.owner_paused_open": "⏸ Pausado por su dueño hasta que lo reanude",
+    "ch.st.owner_paused": "⏸ Pausado por su socio hasta {date}",
+    "ch.st.owner_paused_open": "⏸ Pausado por su socio hasta que lo reanude",
     "ch.st.admin_paused": "⏸ Pausado por un admin",
     "ch.st.rejected": "❌ Rechazado",
     "ch.st.banned": "🚫 Bloqueado",
     "ch.st.left": "🚪 Fuera de la red",
     # --- 📣 list (routers/chats.py) ---
-    "ch.list.title": "📣 <b>Canales y grupos</b> 👥",
+    "ch.list.title": "📣 <b>Canales y grupos</b>",
     "ch.list.totals": "📣 Canales: {channels} · 👥 Grupos: {groups} · 👤 {members}",
     "ch.list.origins": "🏠 Propios: {own} · 🤝 Externos: {ext}",
     "ch.list.row": "{n}. {icon} {chat} {status}\n   └{details}",
@@ -114,7 +118,7 @@ STRINGS = {
     "ch.d.received": "📨 Recibidos: {total} · últimos 7 días: {week}",
     "ch.d.last": "🕐 Último: {date}",
     "ch.btn.groups": "🗂 Grupos de canales",
-    "ch.btn.check": "🔄 Comprobar",
+    "ch.btn.check": "🔄 Comprobar permisos",
     "ch.btn.pause": "⏸ Pausar",
     "ch.btn.resume": "▶️ Reanudar",
     "ch.btn.resume_owner": "▶️ Reanudar (anula la pausa del socio)",
@@ -139,8 +143,11 @@ STRINGS = {
     "ch.check.members_same": "👤 Miembros: <b>{n}</b> (sin cambios)",
     "ch.check.rights_ok": "🛡 Permisos: ✅",
     "ch.check.rights_missing": "🛡 Faltan permisos: {rights}",
-    "ch.check.gone": "🚪 El bot ya no está en el chat: ha salido de la red.",
-    "ch.check.error": "⚠️ Telegram no ha dejado comprobarlo todo ahora mismo.",
+    "ch.check.gone": (
+        "🚪 El bot ya no está en el chat (lo han sacado o el chat ya no existe): ha salido de la red. Si sigue "
+        "existiendo, añade el bot de nuevo como administrador."
+    ),
+    "ch.check.error": "⚠️ Telegram no ha dejado comprobarlo todo ahora mismo. Prueba de nuevo en unos minutos.",
     "ch.toast.checked": "🔄 Comprobado",
     # --- pause, remove, ban ---
     "ch.toast.paused": "⏸ Pausado",
@@ -160,7 +167,7 @@ STRINGS = {
     "ch.toast.removed": "🗑 {chat} se ha quitado de la red",
     "ch.toast.banned": "🚫 {chat} se ha bloqueado",
     "ch.toast.unbanned": "♻️ Desbloqueado: puede volver a la red",
-    "ch.dm.removed": "🗑 Tu {kind} <b>{chat}</b> se ha quitado de la red y el bot ha salido de él.",
+    "ch.dm.removed": "🗑 La administración ha quitado tu {kind} <b>{chat}</b> de la red y el bot ha salido de él.",
     "ch.dm.banned": "🚫 Tu {kind} <b>{chat}</b> se ha bloqueado en esta red: el bot ha salido y no podrá volver.",
     "ch.dm.paused": "⏸ La administración ha pausado la distribución en tu {kind} <b>{chat}</b>.",
     "ch.dm.resumed": "▶️ La administración ha reanudado la distribución en tu {kind} <b>{chat}</b>.",
@@ -219,7 +226,7 @@ STRINGS = {
     "pa.list.empty": "ℹ️ Aún no tienes canales ni grupos en esta red.",
     # --- panel of a chat ---
     "pa.d.status": "📌 Estado: {status}",
-    "pa.d.admin_hint": "   └ Solo la administración puede reanudarla.",
+    "pa.d.admin_hint": "   └ Solo la administración puede reanudarlo.",
     "pa.d.received": "📨 Recibidos: {total} · últimos 7 días: {week}",
     "pa.d.last": "🕐 Último: {date}",
     "pa.d.categories": "🗂 Categorías: {names}",

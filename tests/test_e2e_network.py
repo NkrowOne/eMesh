@@ -128,12 +128,12 @@ async def test_network_end_to_end(app: App) -> None:  # noqa: PLR0915 - one stor
     await app.click(USER_ID, "24 h")
     partner = await chat_row(app, PARTNER_CHANNEL)
     assert partner.owner_pause_active() and partner.owner_paused_until is not None
-    assert any("ha pausado la distribución" in t for t in dm_texts(app, SUPER_ID))
+    assert any("ha pausado <b>" in t for t in dm_texts(app, SUPER_ID))
     async with app.db() as s:
         kinds = [e.kind for e in (await s.execute(select(Event).where(Event.bot_id == MAIN_BOT_ID))).scalars()]
     assert EventKind.CHAT_PAUSED in kinds
     await app.send(SUPER_ID, "/start")
-    assert "Pausados por su dueño" in app.last_text(SUPER_ID)
+    assert "Pausados por su socio" in app.last_text(SUPER_ID)
 
     # 9. Its next time: the paused channel gets nothing.
     await due_now(app, post.id)
@@ -184,7 +184,7 @@ async def test_network_end_to_end(app: App) -> None:  # noqa: PLR0915 - one stor
 
     # 12. Leaving the clone's network goes back to the main bot's own one.
     await app.send(SUPER_ID, "/start")
-    await app.click(SUPER_ID, "Salir de @clon_series_bot")
+    await app.click(SUPER_ID, "Dejar de gestionar @clon_series_bot")
     async with app.db() as s:
         bu = await s.get(BotUser, (MAIN_BOT_ID, SUPER_ID))
         assert bu is not None and bu.ws_bot_id is None

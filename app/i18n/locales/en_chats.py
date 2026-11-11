@@ -47,17 +47,21 @@ STRINGS = {
     "rq.toast.already": "ℹ️ This request is already settled: {status}",
     "rq.toast.missing": "⚠️ Rights are still missing",
     "rq.toast.rights_ok": "✅ Rights are fine",
-    "rq.btn.no_reason": "No reason",
+    "rq.btn.no_reason": "❌ Reject without a reason",
     "rq.btn.requests": "⏳ Requests",
     "rq.btn.chat": "📣 See chat",
-    "rq.reason.prompt": "❌ <b>Reject request</b> · {chat}\n\n✏️ Write the reason (it is sent to its owner) or press "
-                        "<b>No reason</b>.",
+    "rq.reason.prompt": (
+        "❌ <b>Reject request</b> · {chat}\n\n✏️ Write the reason (it is sent to its owner) or press <b>❌ Reject "
+        "without a reason</b>."
+    ),
     "rq.reason.invalid": "⚠️ Send the reason as text (at most {max} characters).",
     "rq.reason.done": "❌ The request of the {kind} <b>{chat}</b> was rejected.",
     "rq.check.ok": "✅ All good: the bot has the rights it needs in the {kind} <b>{chat}</b>.",
     "rq.check.ok_pending": "✅ Rights are fine in the {kind} <b>{chat}</b>. The request is waiting for approval.",
-    "rq.check.gone": "🚪 The bot is no longer in the {kind} <b>{chat}</b>. To come back to the network, add it again "
-                     "as an administrator.",
+    "rq.check.gone": (
+        "🚪 The bot is no longer in the {kind} <b>{chat}</b> (it was taken out or it no longer exists). To come "
+        "back to the network, add it again as an administrator."
+    ),
     "rq.check.inactive": "ℹ️ The {kind} <b>{chat}</b> is no longer in the network ({status}). To come back, add the "
                          "bot again.",
     "rq.list.title": "⏳ <b>Pending requests</b> ({n})",
@@ -72,14 +76,14 @@ STRINGS = {
     "ch.st.pending": "⏳ Waiting for approval",
     "ch.st.pending_rights": "⏳ Waiting: missing rights ({rights})",
     "ch.st.rights": "⚠️ Missing rights: {rights}",
-    "ch.st.owner_paused": "⏸ Paused by its owner until {date}",
-    "ch.st.owner_paused_open": "⏸ Paused by its owner until they resume it",
+    "ch.st.owner_paused": "⏸ Paused by its partner until {date}",
+    "ch.st.owner_paused_open": "⏸ Paused by its partner until they resume it",
     "ch.st.admin_paused": "⏸ Paused by an admin",
     "ch.st.rejected": "❌ Rejected",
     "ch.st.banned": "🚫 Banned",
     "ch.st.left": "🚪 Out of the network",
     # --- 📣 list (routers/chats.py) ---
-    "ch.list.title": "📣 <b>Channels and groups</b> 👥",
+    "ch.list.title": "📣 <b>Channels and groups</b>",
     "ch.list.totals": "📣 Channels: {channels} · 👥 Groups: {groups} · 👤 {members}",
     "ch.list.origins": "🏠 Own: {own} · 🤝 External: {ext}",
     "ch.list.row": "{n}. {icon} {chat} {status}\n   └{details}",
@@ -113,7 +117,7 @@ STRINGS = {
     "ch.d.received": "📨 Received: {total} · last 7 days: {week}",
     "ch.d.last": "🕐 Last: {date}",
     "ch.btn.groups": "🗂 Groups of channels",
-    "ch.btn.check": "🔄 Check",
+    "ch.btn.check": "🔄 Check rights",
     "ch.btn.pause": "⏸ Pause",
     "ch.btn.resume": "▶️ Resume",
     "ch.btn.resume_owner": "▶️ Resume (lifts the partner's pause)",
@@ -138,8 +142,11 @@ STRINGS = {
     "ch.check.members_same": "👤 Members: <b>{n}</b> (no change)",
     "ch.check.rights_ok": "🛡 Rights: ✅",
     "ch.check.rights_missing": "🛡 Missing rights: {rights}",
-    "ch.check.gone": "🚪 The bot is no longer in the chat: it left the network.",
-    "ch.check.error": "⚠️ Telegram didn't let everything be checked right now.",
+    "ch.check.gone": (
+        "🚪 The bot is no longer in the chat (it was taken out or the chat no longer exists): it left the "
+        "network. If it still exists, add the bot again as an administrator."
+    ),
+    "ch.check.error": "⚠️ Telegram didn't let everything be checked right now. Try again in a few minutes.",
     "ch.toast.checked": "🔄 Checked",
     # --- pause, remove, ban ---
     "ch.toast.paused": "⏸ Paused",
@@ -159,7 +166,7 @@ STRINGS = {
     "ch.toast.removed": "🗑 {chat} was removed from the network",
     "ch.toast.banned": "🚫 {chat} was banned",
     "ch.toast.unbanned": "♻️ Unbanned: it can come back to the network",
-    "ch.dm.removed": "🗑 Your {kind} <b>{chat}</b> was removed from the network and the bot left it.",
+    "ch.dm.removed": "🗑 The administration removed your {kind} <b>{chat}</b> from the network and the bot left it.",
     "ch.dm.banned": "🚫 Your {kind} <b>{chat}</b> was banned from this network: the bot left and can't come back.",
     "ch.dm.paused": "⏸ The administration paused the distribution in your {kind} <b>{chat}</b>.",
     "ch.dm.resumed": "▶️ The administration resumed the distribution in your {kind} <b>{chat}</b>.",

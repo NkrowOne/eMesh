@@ -76,7 +76,7 @@ async def test_reject_with_a_reason(app: App) -> None:
     await press_notice(app, "Rechazar")
     prompt = app.fake.calls_of("sendMessage", chat_id=SUPER_ID)[-1]
     assert "❌ <b>Rechazar solicitud</b> · Cine HD" in prompt.params["text"]
-    assert button(prompt, "Sin motivo") and button(prompt, "Cancelar")
+    assert button(prompt, "Rechazar sin motivo") and button(prompt, "Cancelar")
     assert (await get_chat(app)).status == ChatStatus.PENDING
 
     await app.send(SUPER_ID, "x" * 501)  # too long: asked again
@@ -105,7 +105,7 @@ async def test_reject_with_a_reason(app: App) -> None:
 async def test_reject_without_a_reason(app: App) -> None:
     await _request(app)
     await press_notice(app, "Rechazar")
-    await app.click(SUPER_ID, "Sin motivo")
+    await app.click(SUPER_ID, "Rechazar sin motivo")
     chat = await get_chat(app)
     assert chat.status == ChatStatus.REJECTED and chat.reject_reason is None
     rejected = [t for t in dms(app) if "no se ha aceptado" in t]
