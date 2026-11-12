@@ -33,8 +33,8 @@ STRINGS = {
     "home.btn.activity": "📜 Activity",
     "home.btn.requests": "⏳ Requests ({n})",
     "home.btn.paused": "⏸ Paused ({n})",
-    "home.btn.add_channel": "➕ Add channel ↗",
-    "home.btn.add_group": "➕ Add group ↗",
+    "home.btn.add_channel": "➕ Add channel",
+    "home.btn.add_group": "➕ Add group",
     "home.btn.add_chat": "➕ Add channel or group",
     "home.add.text": (
         "➕ <b>Add a channel or group</b>\n\n"
@@ -65,7 +65,7 @@ STRINGS = {
     "home.join.default": (
         "🤝 <b>Join the network of @{bot}</b>\n"
         "Your channel or group will get its posts automatically. Joining takes a minute:\n\n"
-        "1. Tap ➕ <b>Add to my channel</b> (or <b>to my group</b>) and pick which one.\n"
+        "1. Tap ➕ <b>Add channel</b> (or ➕ <b>Add group</b>) and pick which one.\n"
         "2. Keep the suggested rights: they are used to post the messages and delete them.\n"
         "3. Done: you'll be told here as soon as it's in.\n\n"
         "⏸ You can pause the posts whenever you want from 📣 My channels."
@@ -73,17 +73,17 @@ STRINGS = {
     "home.join.default_no_pause": (
         "🤝 <b>Join the network of @{bot}</b>\n"
         "Your channel or group will get its posts automatically. Joining takes a minute:\n\n"
-        "1. Tap ➕ <b>Add to my channel</b> (or <b>to my group</b>) and pick which one.\n"
+        "1. Tap ➕ <b>Add channel</b> (or ➕ <b>Add group</b>) and pick which one.\n"
         "2. Keep the suggested rights: they are used to post the messages and delete them.\n"
         "3. Done: you'll be told here as soon as it's in."
     ),
     "home.join.min": "👤 Minimum to join: <b>{n}</b> members.",
     "home.join.approval": "⏳ Every channel is reviewed by the team before it is accepted.",
     "home.private": "🔒 <b>This network is private.</b>\nOnly its team can add channels and groups.",
-    "home.btn.join_channel": "➕ Add to my channel ↗",
-    "home.btn.join_group": "➕ Add to my group ↗",
+    "home.btn.join_channel": "➕ Add channel",
+    "home.btn.join_group": "➕ Add group",
     "home.btn.my_chats": "📣 My channels ({n})",
-    "home.btn.support": "🛟 Support ↗",
+    "home.btn.support": "🛟 Support",
     "home.btn.create_own": "🤖 Create your own bot",
     # --- Home: main bot in hub mode ----------------------------------------------------------------
     "home.hub": (
@@ -173,7 +173,7 @@ STRINGS = {
     # --- Guide: partners ---------------------------------------------------------------------------
     "guide.partner.1": (
         "🤝 <b>How to join the network</b>\n\n"
-        "1. Tap ➕ <b>Add to my channel</b> or ➕ <b>Add to my group</b> on the home screen.\n"
+        "1. Tap ➕ <b>Add channel</b> or ➕ <b>Add group</b> on the home screen.\n"
         "2. Pick your channel or group and keep the suggested rights.\n"
         "3. If the network reviews requests, your channel stays ⏳ pending until it is accepted. You are notified "
         "here.\n\n"

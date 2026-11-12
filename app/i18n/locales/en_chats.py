@@ -100,8 +100,8 @@ STRINGS = {
     "ch.filter.ext": "🤝",
     "ch.filter.paused": "⏸",
     "ch.filter.rights": "⚠️",
-    "ch.btn.add_channel": "➕ Add channel ↗",
-    "ch.btn.add_group": "➕ Add group ↗",
+    "ch.btn.add_channel": "➕ Add channel",
+    "ch.btn.add_group": "➕ Add group",
     "ch.btn.partners_msg": "📢 Message the owners",
     "ch.btn.requests": "⏳ Requests ({n})",
     # --- detail of a chat ---
@@ -210,8 +210,8 @@ STRINGS = {
     "pa.join.min": "👤 Minimum: <b>{n}</b> members.",
     "pa.join.pause": "⏸ You can pause the distribution whenever you want from <b>📣 My channels</b>.",
     "pa.join.closed": "🔒 This network is private.",
-    "pa.btn.add_channel": "➕ Add to my channel ↗",
-    "pa.btn.add_group": "➕ Add to my group ↗",
+    "pa.btn.add_channel": "➕ Add channel",
+    "pa.btn.add_group": "➕ Add group",
     "pa.btn.my_chats": "📣 My channels ({n})",
     "pa.btn.join": "🤝 How to join",
     # --- 📣 My channels ---

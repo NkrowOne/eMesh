@@ -86,8 +86,8 @@ async def test_keyboard_is_drawn_with_the_real_colors(app: App, engine: SimpleNa
     assert [[x["text"] for x in row] for row in rows[:2]] == [["Alfa", "Beta"], ["Gamma"]]
     assert "style" not in rows[0][0] and rows[0][1]["style"] == "success" and rows[1][0]["style"] == "danger"
     assert rows[0][1]["callback_data"] == PbCB(a="b", id=pid, r=0, c=1).pack()
-    assert [[x["text"] for x in row] for row in rows[2:]] == [["➕ Añadir botón"], ["✍️ Escribirlos todos",
-                                                              "🗑 Quitar todos"], ["👁 Vista previa"], ["🔙 Regresar"]]
+    assert [[x["text"] for x in row] for row in rows[2:]] == [["➕ Añadir botón"], ["✍️ Escribirlos todos"],
+                                                              ["🗑 Quitar todos"], ["👁 Vista previa"], ["🔙 Regresar"]]
     engine.live = 4
     await open_menu(app, SUPER_ID, "post_buttons", pid)
     assert "🔄 Actualizar publicados" in app.last_text(SUPER_ID)

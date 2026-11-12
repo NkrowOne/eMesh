@@ -54,8 +54,8 @@ async def test_join_screen(app: App) -> None:
     assert "La administración revisará la solicitud" in text and "👤 Mínimo: <b>500</b> miembros." in text
     assert "⏸ Puedes pausar la distribución cuando quieras" in text
     panel = app.last_panel(USER_ID)
-    assert "startchannel" in button(panel, "Añadir a mi canal")["url"]
-    assert "startgroup" in button(panel, "Añadir a mi grupo")["url"]
+    assert "startchannel" in button(panel, "Añadir canal")["url"]
+    assert "startgroup" in button(panel, "Añadir grupo")["url"]
 
     await set_bot(app, join_approval=False)
     await app.press(USER_ID, "m:join:0")
@@ -139,7 +139,7 @@ async def test_partner_pauses_and_resumes(app: App, value: int, label: str, leng
 
     # The admins see it in the list and in its detail.
     await app.press(SUPER_ID, "m:chats:0")
-    assert "Cine HD ⏸" in app.last_text(SUPER_ID)
+    assert "Cine HD</a> ⏸" in app.last_text(SUPER_ID)
 
     await app.click(USER_ID, "Reanudar")
     chat = await get_chat(app)

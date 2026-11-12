@@ -22,8 +22,10 @@ REQUIRED_CHANNEL = ("can_post_messages", "can_edit_messages", "can_delete_messag
 REQUIRED_GROUP = ("can_delete_messages", "can_pin_messages")
 
 # Deep links that open Telegram's "add bot as admin" dialog with these rights pre-selected.
-CHANNEL_RIGHTS_PARAM = "post_messages+edit_messages+delete_messages"
-GROUP_RIGHTS_PARAM = "delete_messages+pin_messages"
+# ``invite_users`` is proposed but not required: with it the bot makes the link the admins use to enter a private chat.
+CHANNEL_RIGHTS_PARAM = "post_messages+edit_messages+delete_messages+invite_users"
+GROUP_RIGHTS_PARAM = "delete_messages+pin_messages+invite_users"
+INVITE_LINK_NAME = "eMesh"
 
 
 def add_to_channel_url(bot_username: str) -> str:
@@ -53,6 +55,19 @@ def apply_rights(chat: Chat, member: ChatMember | None) -> list[str]:
     chat.rights_ok = not missing
     chat.missing_rights = ",".join(missing)
     return missing
+
+
+async def ensure_invite_link(bot: Bot, chat: Chat, member: ChatMember | None) -> None:
+    """A private chat gets an invite link of the bot's own (never a revoked or replaced one) when the bot may
+    invite. Public chats use their @username. Never raises."""
+    if chat.username or chat.invite_link or not getattr(member, "can_invite_users", False):
+        return
+    try:
+        created = await bot.create_chat_invite_link(chat.chat_id, name=INVITE_LINK_NAME)
+    except Exception as exc:  # noqa: BLE001 - the link is a convenience: the chat works without it
+        log.info("Can't create an invite link in %s: %s", chat.chat_id, short(exc))
+        return
+    chat.invite_link = created.invite_link[:128]
 
 
 @dataclass
@@ -137,6 +152,8 @@ async def inspect_chat(bot: Bot, chat: Chat, *, with_rights: bool = True) -> Ins
                 res.gone = True  # the chat answers (it may be public) but the bot isn't in it
             res.missing = apply_rights(chat, member)
             res.rights_read = True
+            if not res.gone:
+                await ensure_invite_link(bot, chat, member)
         except TelegramAPIError as exc:
             if is_chat_gone(exc) and (_surely_gone(exc) or await _confirm_gone(bot, chat, by_member=False)):
                 res.gone = True

@@ -105,7 +105,7 @@ never confused with a Telegram group (👥).
 | `app/i18n` | `t(key, lang, **kw)`, `LANG_NAMES`, `LANG_FLAGS`, `SUPPORTED_LANGS` (es, en), `normalize_lang`. Core keys: `common.*`, `weekday.*`, `color.*`, `rights.*`, `ws.banner`, `ev.*`, `cs.*`, `freq.*`, `content.*`. |
 | `app/services/users.py` | `admin_ids(session, bot_rec)` (owner first), `admins`, `find_bot_user(session, bot_id, "@user"/id)`, `get_lang`. |
 | `app/services/notify.py` | `send_dm(bot, session, user_id, text, markup)` (never raises, marks blocked), `notify_admins(bot, session, bot_rec, render(lang)->(text, markup))`. |
-| `app/services/chatinfo.py` | `add_to_channel_url(username)`, `add_to_group_url(username)` (rights pre-selected: channels post+edit+delete, groups delete+pin), `inspect_chat(bot, chat)`, `check_access(bot, chat)`, `missing_rights`, `apply_rights(chat, member)`, `chat_type_of`, `REQUIRED_CHANNEL/GROUP`. |
+| `app/services/chatinfo.py` | `add_to_channel_url(username)`, `add_to_group_url(username)` (rights pre-selected: channels post+edit+delete, groups delete+pin, both plus the optional invite_users for the invite link), `inspect_chat(bot, chat)`, `check_access(bot, chat)`, `missing_rights`, `apply_rights(chat, member)`, `chat_type_of`, `REQUIRED_CHANNEL/GROUP`. |
 | `app/services/chatstate.py` | `mark_left(bot, session, ws_rec, chat)` (a conditional update: only an approved or pending chat becomes left, never a banned one; it closes its request notices), `mark_rights(bot, session, ws_rec, chat, missing)`, `rights_restored(...)`, `refresh(bot, session, ws_rec, chat) -> RefreshResult` (title, members, rights; gone → left), `rights_text(missing, lang)`, `kind_word(chat, lang)`. They log events, alert admins and DM partners. |
 | `app/services/events.py` | `emit(bot, session, ws_rec, kind, chat=, actor_id=, data=, notify=, skip_user=, markup=)` stores an `Event` and alerts the owner + admins with 🔔 alerts on (defaults per kind: `ALERT_KINDS`); `describe(session, ev, lang, tz)` one entry for 📜 Actividad; `recent(session, bot_id, limit=, offset=, chat_pk=, kinds=)`. Data conventions: pause `{"by": "owner"|"admin", "until": iso|None}`, resume `{"by": "owner"|"admin"|"auto"}`, removed `{"by": "owner"|"admin"}`. |
 | `app/services/freq.py` | Schedules ("frequencies", dict in JSON: `Post.freq`; `Bot.freq` is the default one new posts copy): `normalize`, `next_slot(freq, tz, after)`, `upcoming(freq, tz, after, n)`, `per_day`, `refresh_post(post, tz, now)`, `in_dates(post, tz, now)`, `ended`, parsers `parse_every` / `parse_times` / `parse_window` / `parse_date` / `parse_datetime` (ValueError with an i18n key), `describe(freq, lang)`, `every_text`, `days_text`, `times_text`, `join_list`, `day_times(freq)` (the (h, m) of a
@@ -139,7 +139,12 @@ visitors). Times: schedules and dates are in the workspace timezone (`ctx.bot_tz
   **Explain what isn't obvious in the menu text itself**, in one short line.
 * Pagination: `⬅️ Anterior` / `Siguiente ➡️` and `📄 Página 1 de 6` (`common.page`).
 * Lists of chats: `1. 📣 <a href="link">Name</a> ✅` + new line `   └👤 1,234 · …` (📣 channel, 👥 group; link =
-  `chat.public_link` when it has one).
+  `chat.public_link` when it has one). Only in the admins' 📣 Canales y grupos list the name of a private chat is a link
+  too (`chat.join_link`): an invite link the bot creates when it has the optional right to invite
+  (`chatinfo.ensure_invite_link`, column `em_chats.invite_link`), so an admin can look at it. No button, no other use.
+* **Nothing is cut on a phone**: `kb()` splits a row whose labels don't fit side by side (`ROW_WIDTHS`: 16 width units
+  for 2 buttons, 12 for 3, 9 for 4; an emoji counts 2) in pairs or one per row, and `grid()` uses fewer columns. Rows
+  of a list (`#1 name`) are left as they are. Url buttons carry no `↗` in their text: Telegram draws it.
 * Button colors (Bot API 9.4 `style`): `primary` 🔵, `success` 🟢, `danger` 🔴. Use `success` for create/confirm
   buttons and `danger` for delete/reject/remove.
 * Disabled buttons (Bot API 10.3, `btn(..., disabled=True)`) for "done" states (a decided request).
@@ -236,14 +241,14 @@ Admin view (admins of the network, and a super admin managing a clone):
 ⏸ <b>La distribución está pausada.</b> No se envía nada hasta que la reanudes.   (Bot.paused)
 ```
 Buttons: first `[➕ Añadir canal o grupo]` (success, when the network's bot has a username; screen `add_chat`), then
-`[📝 Mensajes][⏰ Horarios]`, `[📣 Canales y grupos][🗂 Grupos de canales]`, `[⏳ Solicitudes (N)]` /
+`[📝 Mensajes][⏰ Horarios]`, `[📣 Canales y grupos]`, `[🗂 Grupos de canales]` (a row each: side by side they are cut), `[⏳ Solicitudes (N)]` /
 `[⏸ Pausados (N)]` (screens `requests` / `paused`), `[📊 Estadísticas][📜 Actividad]`, `[⚙️ Ajustes][📖 Guía]`,
 `[⏸ Pausar todo]` / `[▶️ Reanudar todo]` (success; last, away from ⏸ Pausados) (`StCB` toggles `Bot.paused`,
 `events.emit(BOT_PAUSED/BOT_RESUMED)`), main bot: `[🤖 Crear mi bot]` (screen `clone`) and `[🤖 Mis bots (N)]` (`mybots`, when
 N > 0), super admin in a main bot: `[👑 Panel]`, and while managing a clone: `[🔙 Dejar de gestionar @clone]` (
 clears `bu.ws_bot_id`, back to the main bot's home).
 `add_chat` («➕ Añadir canal o grupo», admins, hidden in the hub): three short steps (pulsa, deja los permisos que se
-proponen, entra al momento y se te avisa) + `[➕ Añadir canal ↗][➕ Añadir grupo ↗]` (urls for `ctx.ws_rec.username`:
+proponen, entra al momento y se te avisa) + `[➕ Añadir canal][➕ Añadir grupo]` (urls for `ctx.ws_rec.username`:
 the clone's while managing one), `[📣 Ver canales y grupos]` (`chats`), `[🔙]` → home.
 Partner / visitor view (role user):
 * in the main bot (while clones can be created): first a welcome «👋 <b>¡Hola, {name}!</b> Te damos la bienvenida a
@@ -251,12 +256,12 @@ Partner / visitor view (role user):
   necesitas tu propio bot…»), then `[🤖 Crear mi bot]` (success, screen `clone`) first and `[🤖 Mis bots (N)]`; the
   main bot's visitors never see «🔒 Esta red es privada» (they come to create their bot);
 * the bot accepts external chats (`join_open`): `Bot.join_text` (premium-free custom HTML, may be None) or the
-  default «🤝 <b>Únete a la red de @bot</b>» with three numbered steps (pulsa ➕ Añadir a mi canal, conserva los
+  default «🤝 <b>Únete a la red de @bot</b>» with three numbered steps (pulsa ➕ Añadir canal, conserva los
   permisos, se te avisa cuando esté dentro) and «⏸ Puedes pausar las publicaciones cuando quieras desde 📣 Mis
-  canales.» (when partners can pause) + `[➕ Añadir a mi canal ↗][➕ Añadir a mi grupo ↗]`;
+  canales.» (when partners can pause) + `[➕ Añadir canal][➕ Añadir grupo]`;
 * it doesn't (clones): «🔒 Esta red es privada.»;
 * `[📣 Mis canales (N)]` (screen `my_chats`) when the user has external chats in this bot (any status but left);
-* `[📖 Guía][🛟 Soporte ↗]` (support url: `https://t.me/<Bot.support_username>` or the owner's @username, hidden
+* `[📖 Guía][🛟 Soporte]` (support url: `https://t.me/<Bot.support_username>` or the owner's @username, hidden
   when unknown), `[⚙️ Ajustes]`, and in a clone `[🤖 Crea tu propio bot]` → url
   `https://t.me/<main username>?start=clone` (hidden when the clone policy is `closed`).
 Hub mode (`ctx.is_hub`): informational text (what eMesh is, you own your bot) + `[✨ Crear mi bot]` (`clone`),
@@ -305,7 +310,7 @@ Step by step, one question per screen, the current value pre-selected (✅), `[�
 4. «🗑 <b>¿Cuánto tiempo siguen publicados los mensajes?</b>» `[1 h][6 h][12 h][1 día][2 días]`,
    `[♾ No se borran]` → `Bot.post_defaults["delete_after"]` (a new dict).
 5. «✅ <b>Todo listo</b>» + a summary of the answers (external chats, partners' pauses, «🕐 Horario por defecto: …»,
-   auto delete, timezone) + `[➕ Añadir canal ↗][➕ Añadir grupo ↗]`,
+   auto delete, timezone) + `[➕ Añadir canal][➕ Añadir grupo]`,
    `[📝 Crear el primer mensaje]` (`post_new`), `[🏠 Ir al inicio]`. `setup_done` becomes True.
 It can be run again from ⚙️ Ajustes › `[🧭 Asistente de configuración]` (owner).
 
@@ -459,7 +464,7 @@ choice `[Nunca][1 h][3 h][6 h][12 h][1 día][2 días]` + `[✏️ Otro]` (input,
 2. 👥 Grupo Series ⏸
    └👤 800 · 🤝 @pepe · hasta 08/11/2026 10:00 AM
 ```
-10 per page, one button per chat (`#1 📣 Cine HD`, 2 per row), filter row, `[➕ Añadir canal ↗][➕ Añadir grupo ↗]`,
+10 per page, one button per chat (`#1 📣 Cine HD`, 2 per row), filter row, `[➕ Añadir canal][➕ Añadir grupo]`,
 `[📢 Avisar a los dueños]` (when there are partners), `[⏳ Solicitudes (N)]` (when > 0), nav,
 `[🔙]` → home. Left, rejected and banned chats are not listed (pending ones are, with ⏳).
 `chat` (arg pk):
