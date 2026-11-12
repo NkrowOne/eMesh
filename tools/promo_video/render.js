@@ -20,8 +20,8 @@ const MAX_SECONDS = 300;
 
 async function render(browser, lang) {
   const data = JSON.parse(fs.readFileSync(path.join(HERE, `guion_${lang}.json`), "utf8"));
-  const banner = path.join(HERE, "banner.jpg");
-  if (fs.existsSync(banner)) data.banner = "data:image/jpeg;base64," + fs.readFileSync(banner).toString("base64");
+  data.banner = "assets/logo_banner.jpg";  // the logo: the corner, the covers and the bot's home image
+  data.avatar = "assets/avatar.jpg";       // the bot's avatar in Telegram
   const page = await browser.newPage({ viewport: { width: SIZE, height: SIZE }, deviceScaleFactor: SCALE });
   await page.goto("file://" + path.join(HERE, "player.html"));
   await page.evaluate(() => document.fonts.ready);

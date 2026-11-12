@@ -1,9 +1,11 @@
-"""Records the guion of the eMesh promo video: real bot screens (texts, rich panels, buttons, edits) plus the
-scenes and captions of the story.
+"""Records what the eMesh promo videos show: real bot screens (texts, rich panels, buttons, edits).
 
-Runs the whole bot against the fake Telegram of the tests and writes ``tools/promo_video/guion_<lang>.json``. The
-player (player.html) turns it into a 1:1 video: an iPhone with Telegram next to the headline of each scene. Run
-through ``tools/promo_video/make.sh`` (or see the README there).
+Runs the whole bot against the fake Telegram of the tests and writes, in ``tools/promo_video/``:
+
+* ``guion_<lang>.json``: the step-by-step guion (scenes, captions, taps) of the walkthrough video (player.html);
+* ``spot_<lang>.json``: the named screens of the spot cut to the music (spot.html).
+
+Run through ``tools/promo_video/make.sh`` (or see the README there).
 """
 from __future__ import annotations
 
@@ -31,12 +33,15 @@ HERE = Path(__file__).parent
 OUT = Path(os.environ.get("PROMO_VIDEO_OUT", HERE))
 LANGS = ("es",)
 BANNER_ID = "AgADpromoBanner"
+# The images the bot sends, by file id: the videos show the files of assets/ (real photos in the posts).
+ASSETS = {BANNER_ID: "assets/logo_banner.jpg", "AgADpostEstreno": "assets/post_estreno.jpg",
+          "AgADpostSorteo": "assets/post_sorteo.jpg", "AgADpostNoche": "assets/post_noche.jpg"}
 NEW_CHANNEL = -1001987650001
 PARTNER_CHANNEL = -1001987650002
 
 TEXT: dict[str, dict[str, Any]] = {
     "es": {
-        "bot": "Red de Cine", "username": "RedDeCineBot", "viewer": "tu_usuario",
+        "bot": "eMesh", "username": "eMeshBot", "viewer": "tu_usuario",
         "brand.tagline": "Tu red de distribución en Telegram",
         "intro.title": "Publica en todos tus canales a la vez",
         "intro.sub": "Escribes el mensaje una vez. eMesh lo lleva a toda tu red, a su hora.",
@@ -59,12 +64,15 @@ TEXT: dict[str, dict[str, Any]] = {
         "new.channel": "Estrenos de Cine", "partner.channel": "Series en Casa", "partner.name": "Laura",
         "channels": ["Cine Clásico", "Documentales HD", "Cortos de Autor", "Cine en Familia", "Terror Nocturno"],
         "post.name": "Estreno de la semana",
-        "post.text": ("🎬 <b>Estreno de la semana</b>\n\nYa disponible en nuestra red: tráiler, ficha y dónde verla.\n\n"
-                      "🍿 No te la pierdas."),
+        "post.text": ("🎬 <b>Estreno de la semana</b>\n\nLa película de la que todos hablan llega este viernes. "
+                      "Tráiler, horarios y entradas con <b>-20 %</b> solo hoy.\n\n🍿 ¿Te la vas a perder?"),
         "post.buttons": [[{"text": "▶️ Ver tráiler", "url": "https://example.com/trailer", "style": "primary"}],
-                         [{"text": "🎟 Entradas", "url": "https://example.com/entradas", "style": "success"},
+                         [{"text": "🎟 Entradas -20 %", "url": "https://example.com/entradas", "style": "success"},
                           {"text": "⭐ Opiniones", "url": "https://example.com/opiniones"}]],
-        "post2.name": "Agenda del fin de semana", "post3.name": "Sorteo de entradas",
+        "post2.name": "Sorteo: 2 entradas dobles",
+        "post2.text": "🍿 <b>Sorteo: 2 entradas dobles</b>\n\nParticipa con un toque. El ganador sale el domingo.",
+        "post3.name": "Noche de cine",
+        "post3.text": "🌃 <b>Noche de cine</b>\n\nSesión doble este sábado. Aforo limitado: reserva tu butaca.",
         "picker.title": "Elegir un canal", "picker.cancel": "Cancelar", "picker.search": "Buscar",
         "picker.subs": "{n} suscriptores",
         "rights.title": "Permisos de administrador", "rights.header": "¿Qué puede hacer este administrador?",
@@ -109,6 +117,9 @@ class Recorder:
         return value.format(**kw) if kw and isinstance(value, str) else value
 
     def _photo(self, file_id: Any) -> str | None:
+        """Where the player finds an image the bot sent: its file in assets/, else the image itself."""
+        if str(file_id) in ASSETS:
+            return ASSETS[str(file_id)]
         data = self.app.fake.files.get(str(file_id))
         return "data:image/jpeg;base64," + base64.b64encode(data).decode() if data else None
 
@@ -201,6 +212,14 @@ class Recorder:
         (OUT / f"guion_{self.lang}.json").write_text(json.dumps(data, ensure_ascii=False, indent=1), encoding="utf-8")
 
 
+def channel_post(rec: Recorder, chat_id: int) -> dict[str, Any]:
+    """The post as it was published in a channel: its photo, its text and its buttons."""
+    sent = rec.app.fake.calls_of("sendPhoto", chat_id=chat_id) or rec.app.fake.calls_of("sendMessage", chat_id=chat_id)
+    p = sent[-1].params
+    return {"text": realistic(p.get("caption") or p.get("text") or ""), "kb": keyboard(p),
+            "photo": rec._photo(p.get("photo"))}  # noqa: SLF001
+
+
 async def prepare(app: App, lang: str) -> None:
     """A believable network: its name, its image, a few channels (own and of partners), messages and a day of runs."""
     words = TEXT[lang]
@@ -208,7 +227,8 @@ async def prepare(app: App, lang: str) -> None:
     app.fake.users[SUPER_ID].update(username=words["viewer"], first_name="Admin", language_code=lang)
     app.fake.users[USER_ID].update(username="laura_cine", first_name=words["partner.name"], language_code=lang)
     app.fake.users[OWNER2_ID].update(username="marcos_tv", first_name="Marcos", language_code=lang)
-    app.fake.files[BANNER_ID] = (HERE / "banner.jpg").read_bytes()
+    for file_id, path in ASSETS.items():
+        app.fake.files[file_id] = (HERE / path).read_bytes()
     await start(app, SUPER_ID, USER_ID, OWNER2_ID)
     async with app.db() as s:
         rec = await s.get(BotRecord, MAIN_BOT_ID)
@@ -225,9 +245,11 @@ async def prepare(app: App, lang: str) -> None:
                       origin=ChatOrigin.EXTERNAL if partner else ChatOrigin.OWN,
                       owner=OWNER2_ID if partner else SUPER_ID,
                       **({"owner_paused": True, "owner_paused_until": utcnow() + timedelta(hours=6)} if i == 4 else {}))
-    await add_post(app, name=words["post.name"], text=words["post.text"], buttons=words["post.buttons"])
-    await add_post(app, name=words["post2.name"], text="📅 <b>Agenda</b>")
-    await add_post(app, name=words["post3.name"], text="🎁 <b>Sorteo</b>")
+    for name, text, file_id, buttons in (
+            (words["post.name"], words["post.text"], "AgADpostEstreno", words["post.buttons"]),
+            (words["post2.name"], words["post2.text"], "AgADpostSorteo", []),
+            (words["post3.name"], words["post3.text"], "AgADpostNoche", [])):
+        await add_post(app, name=name, kind="photo", text=text, media={str(MAIN_BOT_ID): file_id}, buttons=buttons)
     async with app.db() as s:
         now = utcnow()
         for hours, sent, failed, reach in ((3, 5, 0, 51300), (9, 4, 1, 44760), (20, 5, 0, 51300)):
@@ -280,12 +302,10 @@ async def test_guion(app: App, lang: str) -> None:
     rec.wait(0.8)
     await rec.tap("✅")
     await app.publisher.wait_idle(15)
-    sent = app.fake.calls_of("sendMessage", chat_id=-1001987651000)
     rec.collect(toasts=True)
     rec.caption("c.channel")
     rec.events.append({"t": "channel", "title": words["channels"][0], "subs": words["channel.subs"].format(n="18.450"),
-                       "old": words["channel.old"],
-                       "post": {"text": realistic(sent[-1].params.get("text") or ""), "kb": keyboard(sent[-1].params)}})
+                       "old": words["channel.old"], "post": channel_post(rec, -1001987651000)})
     rec.wait(3.0)
     rec.events.append({"t": "back"})
 
@@ -326,3 +346,61 @@ async def test_guion(app: App, lang: str) -> None:
 
     rec.events.append({"t": "outro", "title": words["outro.title"], "sub": words["outro.sub"], "cta": words["outro.cta"]})
     rec.save()
+
+
+@pytest.mark.parametrize("lang", LANGS)
+async def test_spot(app: App, lang: str) -> None:
+    """The screens of the spot, by name: the spot's timeline (spot.html) decides when each one is on the phone."""
+    await prepare(app, lang)
+    words = TEXT[lang]
+    rec = Recorder(app, SUPER_ID, lang)
+    states: dict[str, Any] = {}
+
+    def snap(name: str) -> None:
+        """The panel the viewer has on screen now."""
+        panel = next(e for e in reversed(rec.events) if e["t"] in ("msg", "edit") and ("rich" in e or "text" in e))
+        states[name] = {k: panel[k] for k in ("rich", "text", "photo", "kb") if panel.get(k) is not None}
+
+    await rec.say("/start")
+    snap("home")
+    await rec.tap("➕")
+    snap("add")
+    app.fake.add_chat(NEW_CHANNEL, words["new.channel"], members=7815, creator=SUPER_ID)
+    await app.feed(app.my_chat_member_update(NEW_CHANNEL, SUPER_ID), MAIN_BOT_ID)
+    rec.collect()
+    snap("added")
+    await rec.home()
+    await rec.tap("📝")
+    snap("posts")
+    await rec.tap(words["post.name"][:12])
+    snap("post")
+    await rec.tap("🚀")
+    snap("confirm")
+    await rec.tap("✅")
+    await app.publisher.wait_idle(15)
+    rec.collect(toasts=True)
+    states["channel"] = channel_post(rec, -1001987651000)
+    await rec.home()
+    await rec.tap("⏰")
+    snap("schedule")
+    app.fake.add_chat(PARTNER_CHANNEL, words["partner.channel"], members=3460, creator=USER_ID)
+    await app.feed(app.my_chat_member_update(PARTNER_CHANNEL, USER_ID), MAIN_BOT_ID)
+    rec.collect()
+    snap("request")
+    await rec.tap("✅")
+    states["accepted"] = {**states["request"], "kb": next(e for e in reversed(rec.events) if e["t"] == "edit")["kb"]}
+    await rec.home()
+    await rec.tap("📣")
+    snap("chats")
+    await rec.home()
+    await rec.tap("📊")
+    snap("stats")
+    channels = [{"name": n, "members": m} for n, m in zip(words["channels"], (18450, 9320, 4210, 12780, 6540))]
+    channels.insert(1, {"name": words["new.channel"], "members": 7815})
+    data = {"lang": lang, "bot": words["bot"], "states": states, "channels": channels,
+            "partner": {"name": words["partner.name"], "channel": words["partner.channel"]},
+            "ui": {k: words[k] for k in ("chats", "message", "menu", "today", "edited", "chat.bot", "channel.mute",
+                                         "channel.subs", "views", "picker.title", "picker.cancel", "picker.search",
+                                         "picker.subs", "rights.title", "rights.header", "rights.list",
+                                         "rights.button", "rights.alert", "rights.ok", "cancel", "back")}}
+    (OUT / f"spot_{lang}.json").write_text(json.dumps(data, ensure_ascii=False, indent=1), encoding="utf-8")
