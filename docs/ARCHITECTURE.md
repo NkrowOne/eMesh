@@ -142,6 +142,20 @@ visitors). Times: schedules and dates are in the workspace timezone (`ctx.bot_tz
   `chat.public_link` when it has one). Only in the admins' 📣 Canales y grupos list the name of a private chat is a link
   too (`chat.join_link`): an invite link the bot creates when it has the optional right to invite
   (`chatinfo.ensure_invite_link`, column `em_chats.invite_link`), so an admin can look at it. No button, no other use.
+* Screens that every admin opens count in the database and read one page: the home (`stats.summary`, one aggregate
+  query) and 📣 Canales y grupos (`chats.list_totals` + `chats.list_page`). Never load every chat of a network to count.
+* **Rich panels** (Bot API 10.1 `sendRichMessage`, `app/ui/rich.py`): every panel without media goes out as a rich
+  message. The screens keep writing their plain text with the conventions above and `rich.to_rich(text)` turns it into
+  rich HTML when `show()` sends it: the title line and the lines under it are a card (a bordered one-column `<table>`
+  with the title in `<th>`), `1. …` lists are `<ol>`, `• …` lists `<ul>`, a block in italics is the `<footer>`, an
+  example keeps its `<pre>`, anything else is a `<p>`. A notice before the title stays above the card. A text that
+  can't be cut safely (a tag open across blocks, an unknown tag) stays plain. `show()` shows the plain `text` when
+  Telegram refuses the rich one, so no screen depends on it; `show(..., rich=html)` gives a hand-made layout (the
+  visitors' welcome, `home.join.rich`) and `rich=False` keeps a panel plain. The homes with the bot image send it
+  inside the rich message (`show_photo_rich`: `<img src="tg://photo?id=panel"/>` + the card) and fall back to the
+  photo with its caption. `RICH_PANELS=false` turns it all off. Rich HTML is not Telegram HTML: line breaks are
+  `<br>` or a new block, never `\n`. The tests read the plain panels (`rich_mode = explicit` in `conftest.py`);
+  `tests/test_ui_rich.py` covers the converter and the rich mode.
 * **Nothing is cut on a phone**: `kb()` splits a row whose labels don't fit side by side (`ROW_WIDTHS`: 16 width units
   for 2 buttons, 12 for 3, 9 for 4; an emoji counts 2) in pairs or one per row, and `grid()` uses fewer columns. Rows
   of a list (`#1 name`) are left as they are. Url buttons carry no `↗` in their text: Telegram draws it.

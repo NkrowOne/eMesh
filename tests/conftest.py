@@ -26,6 +26,7 @@ from app.services import clones  # noqa: E402
 from app.services.publisher import Publisher  # noqa: E402
 from app.services.scheduler import Scheduler  # noqa: E402
 from app.telegram.manager import BotManager  # noqa: E402
+from app.ui import common as ui_common  # noqa: E402
 from tests.fake_tg import ADMIN_RIGHTS_FULL, Call, FakeTelegram  # noqa: E402
 
 MAIN_BOT_ID = 5_000_000_001
@@ -36,6 +37,12 @@ USER_ID = 333  # a regular channel owner
 
 _msg_ids = itertools.count(10_000)
 _cb_ids = itertools.count(1)
+
+
+def pytest_xdist_auto_num_workers(config: pytest.Config) -> int | None:
+    """``-n auto``: one worker with PostgreSQL (every test drops and creates the tables of the same database), one per
+    CPU with SQLite (a file per test)."""
+    return 1 if os.environ.get("TEST_DATABASE_URL") else None
 
 
 @pytest.fixture(autouse=True)
@@ -259,7 +266,7 @@ class App:
 
     def panels(self, chat_id: int, token: str | None = None) -> list[Call]:
         """Messages sent or edited in a private chat, oldest first."""
-        methods = {"sendMessage", "sendPhoto", "sendVideo", "sendAnimation", "editMessageText",
+        methods = {"sendMessage", "sendRichMessage", "sendPhoto", "sendVideo", "sendAnimation", "editMessageText",
                    "editMessageCaption", "editMessageReplyMarkup"}
         return [c for c in self.fake.calls
                 if c.method in methods and str(c.params.get("chat_id")) == str(chat_id)
@@ -272,7 +279,8 @@ class App:
 
     def last_text(self, chat_id: int) -> str:
         p = self.last_panel(chat_id).params
-        return str(p.get("text") or p.get("caption") or "")
+        rich = p.get("rich_message")  # a rich panel: its HTML
+        return str(p.get("text") or p.get("caption") or (rich.get("html") if isinstance(rich, dict) else rich) or "")
 
     @staticmethod
     def buttons(call: Call) -> list[dict[str, Any]]:
@@ -329,6 +337,8 @@ async def app(settings: Settings, fake: FakeTelegram) -> AsyncIterator[App]:
             await conn.run_sync(Base.metadata.drop_all)
         await conn.run_sync(Base.metadata.create_all)
     dp, storage = build_dispatcher(settings, sm)
+    # The tests read the plain panels (what a screen writes); the rich ones are checked in tests/test_ui_rich.py.
+    ui_common.rich_mode = ui_common.RICH_EXPLICIT
     manager = BotManager(dp, settings, sm)
     publisher = Publisher(manager, sm, settings)
     scheduler = Scheduler(manager, sm, settings, publisher)

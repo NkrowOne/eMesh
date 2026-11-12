@@ -107,13 +107,13 @@ async def home_screen(
 
 
 async def _show_home(event: Message | CallbackQuery, ctx: Ctx, session: AsyncSession, text: str,
-                     markup: InlineKeyboardMarkup) -> None:
+                     markup: InlineKeyboardMarkup, rich: str | None = None) -> None:
     """The home, with the 🖼 bot image on top (👑 › 🖼 Imagen del bot): in a main bot for everyone, in a clone for its
-    admins."""
+    admins. ``rich`` is the same text as a rich message, for the homes without image."""
     if ctx.is_main or ctx.is_admin:
         await show_with_photo(event, ctx, session, brand.BOT, text, markup)
     else:
-        await show(event, text, markup)
+        await show(event, text, markup, rich=rich)
 
 
 def _known_zone_notice(ctx: Ctx, zone: str) -> str:
@@ -245,6 +245,24 @@ def _first_name(ctx: Ctx) -> str:
     return esc(user.first_name or user.full_name) if user is not None else ""
 
 
+def _partner_rich(ctx: Ctx, notice: str | None) -> str | None:
+    """The default welcome of an open network as a rich message: a card, the steps as a list and the conditions in a
+    footer. None when there is nothing to join (the plain text says why)."""
+    ws = ctx.ws_rec
+    if not ws.join_open:
+        return None
+    parts = [f"<p>{notice.replace(chr(10), '<br>')}</p>"] if notice else []
+    parts.append(ctx.t("home.join.rich", bot=esc(ws.username)))
+    if ws.partners_can_pause:
+        parts.append(f"<p>{ctx.t('home.join.rich.pause')}</p>")
+    notes = [ctx.t("home.join.min", n=num(ws.min_members))] if ws.min_members else []
+    if ws.join_approval:
+        notes.append(ctx.t("home.join.approval"))
+    if notes:
+        parts.append(f"<footer>{'<br>'.join(notes)}</footer>")
+    return "".join(parts)
+
+
 def _partner_text(ctx: Ctx, *, platform: bool, custom: str | None) -> str:
     ws = ctx.ws_rec
     parts = [ctx.t("home.welcome", name=_first_name(ctx))] if platform else []
@@ -294,7 +312,7 @@ async def _partner_home(event: Message | CallbackQuery, ctx: Ctx, session: Async
         except TelegramBadRequest as exc:
             log.warning("The welcome text of bot %s was refused by Telegram: %s", ws.id, exc)
     await _show_home(event, ctx, session, with_notice(_partner_text(ctx, platform=platform, custom=None), notice),
-                     markup)
+                     markup, rich=None if platform else _partner_rich(ctx, notice))
 
 
 async def _hub_home(ctx: Ctx, session: AsyncSession) -> tuple[str, InlineKeyboardMarkup]:

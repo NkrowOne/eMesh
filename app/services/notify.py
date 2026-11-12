@@ -63,17 +63,16 @@ async def notify_admins(
     session: AsyncSession,
     bot_rec: BotRecord,
     render: Callable[[str], tuple[str, InlineKeyboardMarkup | None]],
-    *,
-    only_with_notifications: bool = True,
 ) -> list[tuple[int, int]]:
-    """Sends ``render(lang)`` to the owner and every admin. Returns ``[(user_id, message_id)]``."""
+    """Sends ``render(lang)`` to the owner and every admin. Returns ``[(user_id, message_id)]``.
+
+    Always: a request waits for their decision, so 🔔 Alertas de la red (what happens in the network) never silences
+    it."""
     sent: list[tuple[int, int]] = []
     for uid in await admin_ids(session, bot_rec):
         bu = await session.get(BotUser, (bot_rec.id, uid))
         if bu is None:
             continue  # never started the bot: we can't write to them
-        if only_with_notifications and not bu.notify:
-            continue
         text, markup = render(bu.lang)
         msg = await send_dm(bot, session, uid, text, markup)
         if msg is not None:

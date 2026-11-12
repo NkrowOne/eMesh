@@ -96,6 +96,7 @@ class FakeTelegram:
         self.chats: dict[int, FakeChat] = {}
         self.updates: dict[str, deque[dict[str, Any]]] = defaultdict(deque)
         self.failures: list[Failure] = []
+        self.rich_refused = False  # Telegram refuses rich messages (the panels fall back to plain text)
         self.managed_tokens: dict[int, str] = {}
         self.star_balance: dict[int, int] = {}  # bot id -> stars (getMyStarBalance)
         self._invoice_ids = itertools.count(1)
@@ -399,6 +400,13 @@ class FakeTelegram:
         self._sender_check(token, p)
         return self._new_message(token, p["chat_id"], {"text": p.get("text", ""), **self._markup(p)})
 
+    def m_sendRichMessage(self, token: str, p: dict[str, Any]) -> dict[str, Any]:
+        """A rich message (Bot API 10.1). ``rich_refused`` makes Telegram refuse them, as an old server would."""
+        self._sender_check(token, p)
+        if self.rich_refused:
+            raise ApiError(400, "Bad Request: RICH_MESSAGE_INVALID")
+        return self._new_message(token, p["chat_id"], {"text": "", **self._markup(p)})
+
     def m_sendPhoto(self, token: str, p: dict[str, Any]) -> dict[str, Any]:
         self._sender_check(token, p)
         extra = {"photo": self._photo(str(p.get("photo"))), **self._markup(p)}
@@ -483,6 +491,8 @@ class FakeTelegram:
                 "from": self.bot_user(token), **fields}
 
     def m_editMessageText(self, token: str, p: dict[str, Any]) -> Any:
+        if p.get("rich_message") and self.rich_refused:
+            raise ApiError(400, "Bad Request: RICH_MESSAGE_INVALID")
         return self._edit(token, p, {"text": p.get("text", ""), **self._markup(p)})
 
     def m_editMessageCaption(self, token: str, p: dict[str, Any]) -> Any:
