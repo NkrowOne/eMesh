@@ -78,6 +78,15 @@ STRINGS = {
         "3. Done: you'll be told here as soon as it's in."
     ),
     "home.join.min": "👤 Minimum to join: <b>{n}</b> members.",
+    # The same welcome as a rich message (a card and a numbered list). Rich HTML: line breaks are tags, not "\n".
+    "home.join.rich": (
+        "<table bordered><tr><th>🤝 Join the network of @{bot}</th></tr>"
+        "<tr><td>Your channel or group will get its posts automatically. Joining takes a minute.</td></tr></table>"
+        "<ol><li>Tap ➕ <b>Add channel</b> (or ➕ <b>Add group</b>) and pick which one.</li>"
+        "<li>Keep the suggested rights: they are used to post the messages and delete them.</li>"
+        "<li>Done: you'll be told here as soon as it's in.</li></ol>"
+    ),
+    "home.join.rich.pause": "⏸ You can pause the posts whenever you want from 📣 <b>My channels</b>.",
     "home.join.approval": "⏳ Every channel is reviewed by the team before it is accepted.",
     "home.private": "🔒 <b>This network is private.</b>\nOnly its team can add channels and groups.",
     "home.btn.join_channel": "➕ Add channel",

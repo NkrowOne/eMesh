@@ -18,6 +18,7 @@ from aiogram.types import (
     InlineKeyboardButton,
     InlineKeyboardMarkup,
     InputFile,
+    InputRichMessage,
     LinkPreviewOptions,
     Message,
 )
@@ -251,6 +252,36 @@ async def _send(
         raise
 
 
+async def _show_rich(event: Message | CallbackQuery, html: str, markup: InlineKeyboardMarkup | None,
+                     new: bool) -> Message:
+    """The panel as a rich message (Bot API 10.1: tables, lists, footers). Raises ``TelegramBadRequest`` when Telegram
+    refuses it: the caller then shows the plain panel."""
+    bot = event.bot
+    assert bot is not None
+    content = InputRichMessage(html=html)
+    if isinstance(event, Message):
+        return await bot.send_rich_message(event.chat.id, content, reply_markup=markup)
+    msg = event.message
+    old = msg if msg is not None and not isinstance(msg, InaccessibleMessage) else None
+    if old is not None and not new and not _has_media(old):
+        try:
+            edited = await bot.edit_message_text(chat_id=old.chat.id, message_id=old.message_id, rich_message=content,
+                                                 reply_markup=markup)
+            return edited if isinstance(edited, Message) else old
+        except TelegramBadRequest as exc:
+            if is_not_modified(exc):
+                return old
+            raise
+    sent = await bot.send_rich_message(old.chat.id if old is not None else event.from_user.id, content,
+                                       reply_markup=markup)
+    if old is not None and not new:
+        try:
+            await old.delete()
+        except TelegramBadRequest:
+            pass
+    return sent
+
+
 async def show(
     event: Message | CallbackQuery,
     text: str,
@@ -260,17 +291,27 @@ async def show(
     media_type: str | None = None,
     preview: bool = False,
     new: bool = False,
+    rich: str | None = None,
 ) -> Message | None:
     """Renders a panel.
 
     * Callback: edits the message in place when possible (text -> text); otherwise deletes it and
       sends a new one (media changes, too old to edit...).
     * Message: always sends a new panel (and deletes the input prompt it answers).
+    * ``rich``: the same panel as rich HTML (tables, lists...). It is tried first and ``text`` is what is shown when
+      Telegram refuses it, so a screen never depends on it.
     """
     await release_prompt(event, new)
     banner = ws_banner.get()
     if banner and not text.startswith(banner):
         text = f"{banner}\n\n{text}"
+    if rich is not None and media_id is None:
+        try:
+            return await _show_rich(event, f"<p>{banner}</p>{rich}" if banner else rich, markup, new)
+        except TelegramBadRequest as exc:
+            log.warning("Rich panel refused, showing the plain one: %s", exc)
+        except TelegramForbiddenError:
+            return None
     try:
         if isinstance(event, CallbackQuery):
             msg = event.message

@@ -79,6 +79,15 @@ STRINGS = {
     ),
     "home.join.min": "👤 Mínimo para unirse: <b>{n}</b> miembros.",
     "home.join.approval": "⏳ La administración revisa cada canal antes de aceptarlo.",
+    # The same welcome as a rich message (a card and a numbered list). Rich HTML: line breaks are tags, not "\n".
+    "home.join.rich": (
+        "<table bordered><tr><th>🤝 Únete a la red de @{bot}</th></tr>"
+        "<tr><td>Tu canal o grupo recibirá sus mensajes automáticamente. Unirse lleva un minuto.</td></tr></table>"
+        "<ol><li>Pulsa ➕ <b>Añadir canal</b> (o ➕ <b>Añadir grupo</b>) y elige cuál.</li>"
+        "<li>Conserva los permisos que se proponen: sirven para publicar los mensajes y borrarlos.</li>"
+        "<li>Listo: se te avisará por aquí cuando ya esté dentro.</li></ol>"
+    ),
+    "home.join.rich.pause": "⏸ Puedes pausar los mensajes cuando quieras desde 📣 <b>Mis canales</b>.",
     "home.private": "🔒 <b>Esta red es privada.</b>\nSolo la administración puede añadir canales y grupos.",
     "home.btn.join_channel": "➕ Añadir canal",
     "home.btn.join_group": "➕ Añadir grupo",

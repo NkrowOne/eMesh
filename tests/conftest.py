@@ -265,7 +265,7 @@ class App:
 
     def panels(self, chat_id: int, token: str | None = None) -> list[Call]:
         """Messages sent or edited in a private chat, oldest first."""
-        methods = {"sendMessage", "sendPhoto", "sendVideo", "sendAnimation", "editMessageText",
+        methods = {"sendMessage", "sendRichMessage", "sendPhoto", "sendVideo", "sendAnimation", "editMessageText",
                    "editMessageCaption", "editMessageReplyMarkup"}
         return [c for c in self.fake.calls
                 if c.method in methods and str(c.params.get("chat_id")) == str(chat_id)
@@ -278,7 +278,8 @@ class App:
 
     def last_text(self, chat_id: int) -> str:
         p = self.last_panel(chat_id).params
-        return str(p.get("text") or p.get("caption") or "")
+        rich = p.get("rich_message")  # a rich panel: its HTML
+        return str(p.get("text") or p.get("caption") or (rich.get("html") if isinstance(rich, dict) else rich) or "")
 
     @staticmethod
     def buttons(call: Call) -> list[dict[str, Any]]:

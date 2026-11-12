@@ -362,20 +362,58 @@ async def test_the_main_bot_also_explains_how_to_join_its_network_when_it_is_ope
 
 
 async def test_visitors_of_a_clone_get_the_steps_to_join(app: App) -> None:
+    """A rich message: a card with the title, the steps as a list and the conditions in a footer."""
     await add_clone(app)
     async with edit_bot(app, CLONE_ID) as rec:
         rec.join_open = True
+        rec.min_members = 500
     await app.send(USER_ID, "/start", bot_id=CLONE_ID)
-    assert app.last_text(USER_ID) == (f"{JOIN_STEPS.format(bot=CLONE_USERNAME)}\n\n{JOIN_PAUSE}\n\n"
-                                      "⏳ La administración revisa cada canal antes de aceptarlo.")
+    panel = app.last_panel(USER_ID)
+    assert panel.method == "sendRichMessage"
+    assert app.last_text(USER_ID) == (
+        f"<table bordered><tr><th>🤝 Únete a la red de @{CLONE_USERNAME}</th></tr>"
+        "<tr><td>Tu canal o grupo recibirá sus mensajes automáticamente. Unirse lleva un minuto.</td></tr></table>"
+        "<ol><li>Pulsa ➕ <b>Añadir canal</b> (o ➕ <b>Añadir grupo</b>) y elige cuál.</li>"
+        "<li>Conserva los permisos que se proponen: sirven para publicar los mensajes y borrarlos.</li>"
+        "<li>Listo: se te avisará por aquí cuando ya esté dentro.</li></ol>"
+        "<p>⏸ Puedes pausar los mensajes cuando quieras desde 📣 <b>Mis canales</b>.</p>"
+        "<footer>👤 Mínimo para unirse: <b>500</b> miembros.<br>"
+        "⏳ La administración revisa cada canal antes de aceptarlo.</footer>")
     rows = button_rows(app, USER_ID)
     assert rows[0] == ["➕ Añadir canal", "➕ Añadir grupo"] and rows[-1] == ["🤖 Crea tu propio bot"]
     assert url_of(app, USER_ID, "Añadir canal") == add_to_channel_url(CLONE_USERNAME)
     app.fake.add_user(779, "Eng", "eng", lang="en")
     await app.send(779, "/start", bot_id=CLONE_ID)
-    assert app.last_text(779).startswith(f"🤝 <b>Join the network of @{CLONE_USERNAME}</b>\nYour channel or group "
-                                         "will get its posts automatically. Joining takes a minute:\n\n1. Tap ➕ <b>Add "
-                                         "channel</b> (or ➕ <b>Add group</b>) and pick which one.\n")
+    assert app.last_text(779).startswith(f"<table bordered><tr><th>🤝 Join the network of @{CLONE_USERNAME}</th></tr>")
+
+
+async def test_the_plain_welcome_is_shown_when_telegram_refuses_the_rich_one(app: App) -> None:
+    await add_clone(app)
+    async with edit_bot(app, CLONE_ID) as rec:
+        rec.join_open = True
+    app.fake.rich_refused = True
+    await app.send(USER_ID, "/start", bot_id=CLONE_ID)
+    assert app.last_panel(USER_ID).method == "sendMessage"
+    assert app.last_text(USER_ID) == (f"{JOIN_STEPS.format(bot=CLONE_USERNAME)}\n\n{JOIN_PAUSE}\n\n"
+                                      "⏳ La administración revisa cada canal antes de aceptarlo.")
+    assert button_rows(app, USER_ID)[0] == ["➕ Añadir canal", "➕ Añadir grupo"]
+
+
+async def test_a_custom_welcome_stays_plain_and_buttons_edit_the_rich_one(app: App) -> None:
+    await add_clone(app)
+    async with edit_bot(app, CLONE_ID) as rec:
+        rec.join_open = True
+    await app.send(USER_ID, "/start", bot_id=CLONE_ID)
+    await app.click(USER_ID, "Guía", bot_id=CLONE_ID)  # a plain screen opened from the rich one
+    assert app.last_panel(USER_ID).method == "editMessageText" and "rich_message" not in app.last_panel(USER_ID).params
+    await app.click(USER_ID, "Regresar", bot_id=CLONE_ID)  # and back: the same message becomes rich again
+    back = app.last_panel(USER_ID)
+    assert back.method == "editMessageText" and "Únete a la red" in app.last_text(USER_ID)
+    assert isinstance(back.params.get("rich_message"), dict | str)
+    async with edit_bot(app, CLONE_ID) as rec:
+        rec.join_text = "Bienvenido a <b>mi red</b>"
+    await app.send(USER_ID, "/start", bot_id=CLONE_ID)
+    assert app.last_panel(USER_ID).method == "sendMessage" and "Bienvenido a <b>mi red</b>" in app.last_text(USER_ID)
 
 
 async def test_the_default_welcome_promises_pauses_only_when_partners_can_pause(app: App) -> None:
