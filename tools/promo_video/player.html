@@ -1,0 +1,634 @@
+<!doctype html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<title>eMesh promo video player (1:1)</title>
+<style>
+:root {
+  --blue: #6ab3ff; --gray: #9a94a6; --sep: rgba(255, 255, 255, .1); --bar: rgba(22, 17, 31, .94);
+  --in: #211c2b; --out: #7a4be0; --btn: rgba(92, 78, 120, .5); --card: #3d3650; --head: #2a2438;
+  --green: #35c46a; --green2: #0e7a3a;
+}
+* { box-sizing: border-box; margin: 0; padding: 0; }
+html, body { width: 1080px; height: 1080px; overflow: hidden; background: #08060c; }
+body { font-family: "Inter", "Segoe UI", "Helvetica Neue", "Noto Color Emoji", "Segoe UI Emoji", "Apple Color Emoji", sans-serif;
+  -webkit-font-smoothing: antialiased; color: #fff; }
+
+/* ---------- stage (1:1) ---------- */
+#stage { position: relative; width: 1080px; height: 1080px; overflow: hidden;
+  background:
+    radial-gradient(circle at 12% 8%, rgba(53, 196, 106, .20) 0, transparent 42%),
+    radial-gradient(circle at 92% 96%, rgba(122, 75, 224, .28) 0, transparent 46%),
+    radial-gradient(circle at 78% 6%, rgba(116, 24, 62, .34) 0, transparent 40%),
+    linear-gradient(160deg, #120d1b 0, #0a0710 60%, #0d0816 100%); }
+#stage::after { content: ""; position: absolute; inset: 0; opacity: .5; pointer-events: none;
+  background-image: radial-gradient(rgba(255, 255, 255, .055) 1px, transparent 1px); background-size: 26px 26px; }
+
+/* ---------- left column: brand + headline of the scene ---------- */
+#side { position: absolute; z-index: 3; left: 64px; top: 64px; width: 440px; bottom: 64px; display: flex;
+  flex-direction: column; }
+#brand { display: flex; align-items: center; gap: 16px; }
+#brand img { width: 132px; height: 73px; object-fit: cover; border-radius: 14px; box-shadow: 0 10px 30px rgba(0, 0, 0, .45); }
+#brand .tag { font-size: 17px; line-height: 1.25; color: #b9b3c6; font-weight: 500; max-width: 250px; }
+#count { margin-top: 150px; display: inline-flex; align-items: center; gap: 10px; font-size: 18px; font-weight: 700;
+  letter-spacing: 2px; color: var(--green); }
+#count i { display: block; width: 44px; height: 3px; border-radius: 2px; background: var(--green); }
+#headline { margin-top: 22px; font-size: 56px; line-height: 1.06; font-weight: 800; letter-spacing: -1.6px; }
+#headline em { font-style: normal; color: var(--green); }
+#sub { margin-top: 24px; font-size: 25px; line-height: 1.36; color: #c2bccf; font-weight: 450; }
+#step { margin-top: 30px; align-self: flex-start; padding: 12px 20px; border-radius: 26px; font-size: 22px; font-weight: 700;
+  color: #06210f; background: linear-gradient(90deg, var(--green), #8be3a8); box-shadow: 0 12px 30px rgba(53, 196, 106, .22);
+  opacity: 0; max-width: 430px; line-height: 1.25; }
+#dots { margin-top: auto; display: flex; gap: 10px; }
+#dots b { display: block; height: 6px; flex: 1 1 0; border-radius: 3px; background: rgba(255, 255, 255, .14); overflow: hidden; }
+#dots b span { display: block; height: 100%; width: 0; background: linear-gradient(90deg, var(--green), #8be3a8); }
+
+/* ---------- the iPhone: burgundy towards dark purple ---------- */
+#device { position: absolute; z-index: 4; right: 54px; top: 34px; width: 418px; height: 872px; transform-origin: top right;
+  transform: scale(1.16); border-radius: 66px; padding: 14px;
+  background: linear-gradient(150deg, #7a1f3f 0, #5a1638 28%, #3b1240 62%, #23092a 100%);
+  box-shadow: 0 0 0 1.5px rgba(255, 190, 215, .22) inset, 0 0 0 3px rgba(20, 4, 18, .75) inset,
+    0 40px 90px rgba(0, 0, 0, .65), 0 0 120px rgba(122, 31, 63, .22); }
+#device::before { content: ""; position: absolute; left: -4px; top: 150px; width: 4px; height: 34px; border-radius: 3px 0 0 3px;
+  background: #5a1638; box-shadow: 0 62px 0 #4a143b, 0 124px 0 #4a143b; }
+#device::after { content: ""; position: absolute; right: -4px; top: 226px; width: 4px; height: 96px; border-radius: 0 3px 3px 0;
+  background: #47133c; }
+#phone { position: relative; width: 390px; height: 844px; overflow: hidden; background: #000; border-radius: 52px; }
+
+/* ---------- status bar ---------- */
+#status { position: absolute; z-index: 50; top: 0; left: 0; right: 0; height: 54px; display: flex;
+  align-items: center; justify-content: space-between; padding: 6px 30px 0 44px; font-weight: 600;
+  font-size: 17px; letter-spacing: -.2px; color: #fff; pointer-events: none; }
+#status .icons { display: flex; gap: 6px; align-items: center; } #status svg { fill: #fff; }
+#island { position: absolute; z-index: 51; top: 11px; left: 50%; width: 124px; height: 36px;
+  margin-left: -62px; border-radius: 20px; background: #000; }
+#homebar { position: absolute; z-index: 60; bottom: 8px; left: 50%; width: 136px; height: 5px;
+  margin-left: -68px; border-radius: 3px; background: #fff; opacity: .9; }
+
+/* ---------- screens ---------- */
+.screen { position: absolute; inset: 0; overflow: hidden; background: #0f0b16; }
+.wall { position: absolute; inset: 0;
+  background:
+    radial-gradient(circle at 18% 16%, rgba(96, 52, 150, .34) 0, transparent 48%),
+    radial-gradient(circle at 86% 30%, rgba(122, 31, 63, .26) 0, transparent 50%),
+    radial-gradient(circle at 30% 84%, rgba(60, 40, 120, .30) 0, transparent 52%),
+    #0f0b16; }
+.wall::after { content: ""; position: absolute; inset: 0; opacity: .16; background-size: 140px 140px;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='140' height='140' fill='none' stroke='%23a98fd6' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M18 30l22-10-8 22-4-8z'/%3E%3Ccircle cx='100' cy='26' r='9'/%3E%3Cpath d='M60 70l3 7 8 1-6 5 2 8-7-4-7 4 2-8-6-5 8-1z'/%3E%3Cpath d='M112 92c0-6 9-6 9 0 0-6 9-6 9 0 0 7-9 12-9 12s-9-5-9-12z'/%3E%3Crect x='20' y='96' width='22' height='16' rx='4'/%3E%3Cpath d='M96 58h18M105 49v18'/%3E%3Ccircle cx='60' cy='122' r='4'/%3E%3C/svg%3E"); }
+.nav { position: absolute; z-index: 20; top: 0; left: 0; right: 0; height: 98px; padding-top: 54px;
+  background: var(--bar); border-bottom: .5px solid var(--sep); display: flex; align-items: center; }
+.nav .back { position: absolute; left: 8px; bottom: 11px; color: var(--blue); font-size: 17px;
+  display: flex; align-items: center; gap: 2px; }
+.nav .back svg { width: 13px; height: 22px; }
+.nav .title { position: absolute; left: 70px; right: 70px; bottom: 6px; text-align: center; }
+.nav .title b { display: block; font-size: 16.5px; font-weight: 600; white-space: nowrap; overflow: hidden;
+  text-overflow: ellipsis; }
+.nav .title span { display: block; font-size: 13px; color: var(--gray); margin-top: 1px; }
+.nav .ava { position: absolute; right: 12px; bottom: 4px; }
+.ava { width: 37px; height: 37px; border-radius: 50%; color: #fff; font-weight: 600; font-size: 15px;
+  display: flex; align-items: center; justify-content: center; overflow: hidden; }
+.ava img { width: 100%; height: 100%; object-fit: cover; }
+.g1 { background: linear-gradient(180deg, #3ad17a, #0e7a3a); }
+.g2 { background: linear-gradient(180deg, #ffbf6d, #fa8a3d); }
+.g3 { background: linear-gradient(180deg, #a695e7, #6f61e8); }
+.g4 { background: linear-gradient(180deg, #72d5fd, #2a9ef1); }
+.g5 { background: linear-gradient(180deg, #ff8a8a, #ea5050); }
+.g6 { background: linear-gradient(180deg, #6ce5c7, #26b8a4); }
+
+/* ---------- chat ---------- */
+.msgs { position: absolute; z-index: 5; left: 0; right: 0; top: 98px; bottom: 84px; overflow: hidden; }
+.col { position: absolute; left: 0; right: 0; top: 0; display: flex; flex-direction: column; padding: 0 8px 8px;
+  will-change: transform; }
+.date { align-self: center; margin: 10px 0 6px; padding: 3px 9px; border-radius: 12px; font-size: 13px;
+  font-weight: 500; color: #fff; background: rgba(60, 44, 90, .6); }
+.row { display: flex; flex-direction: column; flex: 0 0 auto; }
+.row.in { align-items: flex-start; }
+.row.out { align-items: flex-end; }
+.bubble { position: relative; max-width: 326px; margin-top: 6px; padding: 8px 12px; border-radius: 17px;
+  font-size: 15px; line-height: 1.34; color: #fff; word-wrap: break-word; }
+.in .bubble { background: var(--in); border-bottom-left-radius: 5px; }
+.out .bubble { background: var(--out); border-bottom-right-radius: 5px; }
+.bubble b { font-weight: 650; }
+.bubble.withpic { width: 326px; padding: 3px 3px 7px; }
+.bubble.withpic .cap { padding: 6px 9px 0; }
+.bubble.withpic .pic { display: block; width: 100%; border-radius: 14px 14px 6px 6px; }
+.bubble code { font-family: "JetBrains Mono", "Consolas", monospace; font-size: 13px; color: #ff9db5; }
+.bubble pre { font-family: "JetBrains Mono", "Consolas", monospace; font-size: 12.5px; background: rgba(0, 0, 0, .28);
+  border-radius: 8px; padding: 8px 10px; margin: 0 0 8px; white-space: pre-wrap; }
+.bubble a, .bubble .lnk { color: var(--blue); text-decoration: none; }
+.meta { float: right; margin: 7px -3px -4px 10px; font-size: 11.5px; color: var(--gray); display: flex;
+  align-items: center; gap: 3px; white-space: nowrap; }
+.out .meta { color: #d8c9ff; }
+.row.haskb .bubble { width: 326px; }
+/* rich panels (cards, lists, footers) */
+.bubble table { width: 100%; border-collapse: separate; border-spacing: 0; border: 1px solid var(--card);
+  border-radius: 10px; overflow: hidden; margin: 2px 0 10px; }
+.bubble th { background: var(--head); border-bottom: 1px solid var(--card); padding: 9px 11px; text-align: center; font-weight: 700; }
+.bubble tr:only-child th { border-bottom: 0; }
+.bubble td { padding: 9px 11px; }
+.bubble ol, .bubble ul { margin: 0 0 9px; padding-left: 25px; } .bubble li { margin-bottom: 5px; }
+.bubble p { margin: 0 0 9px; }
+.bubble footer { color: var(--gray); font-size: 13px; line-height: 1.4; border-top: 1px solid #322c40; padding-top: 7px; margin-bottom: 4px; }
+.kb { display: flex; flex-direction: column; gap: 3px; margin-top: 3px; width: 326px; }
+.kb .r { display: flex; gap: 3px; }
+.kb .k { position: relative; flex: 1 1 0; min-width: 0; height: 40px; border-radius: 9px; background: var(--btn);
+  color: #fff; font-size: 14.5px; font-weight: 600; display: flex; align-items: center; justify-content: center;
+  padding: 0 10px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.kb .k span { overflow: hidden; text-overflow: ellipsis; }
+.kb .r.n3 .k { padding: 0 4px; font-size: 13.5px; }
+.kb .k.primary { background: #3b8cf1; } .kb .k.success { background: #2fb34c; } .kb .k.danger { background: #e2504a; }
+.kb .k.off { opacity: .55; }
+.kb .k .arr { position: absolute; right: 5px; top: 4px; width: 8px; height: 8px; }
+.kb .k.press { filter: brightness(1.5); }
+.input { position: absolute; z-index: 10; left: 0; right: 0; bottom: 0; height: 84px; background: var(--bar);
+  border-top: .5px solid var(--sep); padding: 8px 10px 0; display: flex; align-items: flex-start; gap: 8px; }
+.input .menu { height: 34px; padding: 0 11px; border-radius: 17px; background: #3b8cf1; color: #fff;
+  font-weight: 600; font-size: 15px; display: flex; align-items: center; gap: 6px; flex: 0 0 auto; }
+.input .field { flex: 1; height: 34px; border-radius: 17px; border: .5px solid #3a3446; background: #17121f;
+  display: flex; align-items: center; padding: 0 13px; font-size: 16px; color: #fff; overflow: hidden;
+  white-space: nowrap; }
+.input .field.ph { color: #6f6880; }
+.input .ico { width: 34px; height: 34px; display: flex; align-items: center; justify-content: center; flex: 0 0 auto; }
+.input .send { width: 32px; height: 32px; border-radius: 50%; background: #3b8cf1; display: none;
+  align-items: center; justify-content: center; margin-top: 1px; }
+.caret { display: inline-block; width: 2px; height: 20px; background: var(--blue); margin-left: 1px;
+  vertical-align: middle; }
+
+/* ---------- keyboard ---------- */
+#kbd { position: absolute; z-index: 30; left: 0; right: 0; bottom: 0; height: 336px; background: #1d1a22;
+  padding: 8px 3px 0; transform: translateY(100%); }
+#kbd .kr { display: flex; justify-content: center; gap: 6px; margin-bottom: 11px; }
+#kbd .key { width: 32.5px; height: 43px; border-radius: 5px; background: #5c5866; box-shadow: 0 1px 0 #0b0a0d;
+  display: flex; align-items: center; justify-content: center; font-size: 22px; color: #fff; }
+#kbd .key.fn { background: #3a3741; font-size: 15px; }
+#kbd .key.wide { width: 44px; } #kbd .key.space { width: 188px; font-size: 16px; } #kbd .key.ret { width: 90px; font-size: 16px; }
+#kbd .key.down { background: #8a8596; }
+
+/* ---------- sheets / grouped lists (Telegram's own screens) ---------- */
+.sheet { position: absolute; z-index: 40; left: 0; right: 0; top: 48px; bottom: 0; border-radius: 12px 12px 0 0;
+  overflow: hidden; background: #1c1a21; transform: translateY(100%); }
+.dim { position: absolute; z-index: 35; inset: 0; background: #000; opacity: 0; }
+.snav { position: relative; height: 56px; display: flex; align-items: center; justify-content: center;
+  font-size: 17px; font-weight: 600; background: #24212b; border-bottom: .5px solid var(--sep); }
+.snav .l { position: absolute; left: 10px; color: var(--blue); font-weight: 400; display: flex; align-items: center; gap: 4px; }
+.snav .l svg { width: 11px; height: 19px; }
+.adim { position: absolute; z-index: 69; inset: 0; background: #000; opacity: 0; }
+.search { margin: 8px 14px; height: 36px; border-radius: 10px; background: rgba(118, 118, 128, .24); color: var(--gray);
+  display: flex; align-items: center; gap: 6px; padding: 0 9px; font-size: 16px; }
+.list { background: #24212b; }
+.prow { position: relative; display: flex; align-items: center; gap: 12px; height: 62px; padding-left: 14px; }
+.prow .ava { width: 46px; height: 46px; font-size: 17px; }
+.prow .tx { flex: 1; height: 62px; display: flex; flex-direction: column; justify-content: center;
+  border-bottom: .5px solid var(--sep); }
+.prow .tx b { font-size: 16.5px; font-weight: 600; } .prow .tx span { font-size: 14.5px; color: var(--gray); margin-top: 2px; }
+.prow.press, .cell.press { background: #3a3644; }
+.page { position: absolute; inset: 56px 0 0 0; overflow: hidden; background: #1c1a21; }
+.ghead { padding: 22px 30px 7px; font-size: 13px; color: #8d879a; text-transform: uppercase; }
+.group { margin: 0 16px; border-radius: 11px; overflow: hidden; background: #2a2732; }
+.cell { position: relative; display: flex; align-items: center; min-height: 46px; padding: 0 16px; font-size: 16px; }
+.cell + .cell::before { content: ""; position: absolute; top: 0; left: 16px; right: 0; border-top: .5px solid var(--sep); }
+.cell .grow { flex: 1; } .cell.center { justify-content: center; color: var(--blue); font-weight: 500; }
+.sw { width: 51px; height: 31px; border-radius: 16px; background: #46424f; position: relative; flex: 0 0 auto; }
+.sw::after { content: ""; position: absolute; top: 2px; left: 2px; width: 27px; height: 27px; border-radius: 50%;
+  background: #fff; box-shadow: 0 2px 4px rgba(0, 0, 0, .2); }
+.sw.on { background: #34c759; } .sw.on::after { left: 22px; }
+.botcard { display: flex; align-items: center; gap: 12px; padding: 12px 16px; }
+.botcard .ava { width: 56px; height: 56px; font-size: 20px; }
+.botcard b { font-size: 17px; font-weight: 600; display: block; } .botcard span { color: var(--gray); font-size: 14.5px; }
+.alert { position: absolute; z-index: 70; left: 50%; top: 50%; width: 270px; margin-left: -135px;
+  border-radius: 14px; background: rgba(44, 41, 52, .96); text-align: center; overflow: hidden; opacity: 0; }
+.alert .at { padding: 19px 16px 18px; font-size: 16px; font-weight: 600; line-height: 1.3; }
+.alert .ab { display: flex; border-top: .5px solid rgba(255, 255, 255, .16); }
+.alert .ab div { flex: 1; height: 44px; display: flex; align-items: center; justify-content: center; font-size: 17px; color: var(--blue); }
+.alert .ab div + div { border-left: .5px solid rgba(255, 255, 255, .16); font-weight: 600; }
+.alert .ab div.press { background: rgba(255, 255, 255, .1); }
+
+/* ---------- channel ---------- */
+.cbottom { position: absolute; z-index: 10; left: 0; right: 0; bottom: 0; height: 84px; background: var(--bar);
+  border-top: .5px solid var(--sep); display: flex; justify-content: center; padding-top: 16px; color: var(--blue); font-size: 17px; }
+.views { display: inline-flex; align-items: center; gap: 3px; }
+
+/* ---------- overlays inside the phone ---------- */
+#toast { position: absolute; z-index: 85; left: 50%; top: 60px; transform: translateX(-50%); max-width: 330px;
+  padding: 11px 16px; border-radius: 14px; background: rgba(50, 46, 60, .96); color: #fff; font-size: 15px;
+  font-weight: 500; opacity: 0; white-space: nowrap; }
+#finger { position: absolute; z-index: 90; width: 46px; height: 46px; margin: -23px 0 0 -23px; border-radius: 50%;
+  background: rgba(255, 255, 255, .5); border: 2px solid rgba(255, 255, 255, .8); box-shadow: 0 2px 14px rgba(0, 0, 0, .5);
+  opacity: 0; }
+
+/* ---------- intro / outro (the whole stage) ---------- */
+#cover { position: absolute; z-index: 20; inset: 0; display: flex; flex-direction: column; align-items: center;
+  justify-content: center; text-align: center; padding: 0 110px; opacity: 0; pointer-events: none;
+  background:
+    radial-gradient(circle at 50% 30%, rgba(53, 196, 106, .22) 0, transparent 48%),
+    radial-gradient(circle at 80% 90%, rgba(122, 31, 63, .42) 0, transparent 50%),
+    linear-gradient(160deg, #140d1e 0, #0a0710 70%); }
+#cover img { width: 520px; border-radius: 30px; box-shadow: 0 30px 80px rgba(0, 0, 0, .6); }
+#cover h1 { margin-top: 56px; font-size: 68px; line-height: 1.05; font-weight: 800; letter-spacing: -2px; }
+#cover p { margin-top: 26px; font-size: 30px; line-height: 1.35; color: #c2bccf; max-width: 760px; }
+#cover .cta { margin-top: 44px; padding: 20px 38px; border-radius: 40px; font-size: 30px; font-weight: 700; color: #06210f;
+  background: linear-gradient(90deg, var(--green), #8be3a8); box-shadow: 0 16px 40px rgba(53, 196, 106, .28); display: none; }
+</style>
+</head>
+<body>
+<div id="stage">
+  <div id="side">
+    <div id="brand"><img id="logo" alt=""><div class="tag" id="tagline"></div></div>
+    <div id="count"><i></i><span></span></div>
+    <div id="headline"></div>
+    <div id="sub"></div>
+    <div id="step"></div>
+    <div id="dots"></div>
+  </div>
+  <div id="device"><div id="phone">
+    <div id="status"><span>9:41</span><span class="icons">
+      <svg width="18" height="12" viewBox="0 0 18 12"><rect x="0" y="8" width="3" height="4" rx="1"/><rect x="5" y="5.5" width="3" height="6.5" rx="1"/><rect x="10" y="3" width="3" height="9" rx="1"/><rect x="15" y="0" width="3" height="12" rx="1"/></svg>
+      <svg width="16" height="12" viewBox="0 0 16 12"><path d="M8 11.6l2.6-2.7a3.7 3.7 0 00-5.2 0zM3.6 7.1a6.2 6.2 0 018.8 0l1.5-1.5a8.3 8.3 0 00-11.8 0zM.8 4.2a10.2 10.2 0 0114.4 0L16 3.4A11.3 11.3 0 000 3.4z"/></svg>
+      <svg width="27" height="13" viewBox="0 0 27 13"><rect x=".5" y=".5" width="23" height="12" rx="3.5" fill="none" stroke="#fff" opacity=".4"/><rect x="2" y="2" width="20" height="9" rx="2"/><path d="M25 4.5v4a2 2 0 000-4z" opacity=".4"/></svg>
+    </span></div>
+    <div id="island"></div>
+    <div id="screens"></div>
+    <div id="kbd"></div>
+    <div id="toast"></div>
+    <div id="finger"></div>
+    <div id="homebar"></div>
+  </div></div>
+  <div id="cover"><img id="coverlogo" alt=""><h1></h1><p></p><div class="cta"></div></div>
+</div>
+<script>
+"use strict";
+const $ = (sel, root = document) => root.querySelector(sel);
+const el = (html) => { const t = document.createElement("template"); t.innerHTML = html.trim(); return t.content.firstChild; };
+const esc = (s) => String(s).replace(/[&<>"]/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" }[c]));
+const ease = (p) => (p < .5 ? 2 * p * p : 1 - Math.pow(-2 * p + 2, 2) / 2);
+const out = (p) => 1 - Math.pow(1 - p, 3);
+const CHECKS = '<svg width="16" height="11" viewBox="0 0 16 11" fill="none" stroke="#d8c9ff" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M1 6l3 3 6-7"/><path d="M6.5 8.7l.8.8 6-7"/></svg>';
+const ARROW = '<svg class="arr" viewBox="0 0 8 8" fill="none" stroke="#fff" stroke-width="1.4" stroke-linecap="round"><path d="M2 6l4.5-4.5M3 1.5h3.5V5"/></svg>';
+const BACK = '<svg viewBox="0 0 13 22" fill="none" stroke="#6ab3ff" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><path d="M11 2L2 11l9 9"/></svg>';
+let DATA, UI;
+
+// ------------------------------------------------------------------ text formatting
+function linkify(html) {
+  return html.split(/(<[^>]+>)/).map((part) => part.startsWith("<") ? part :
+    part.replace(/(https?:\/\/[^\s<]+|t\.me\/[^\s<]+|@[A-Za-z][A-Za-z0-9_]{3,})/g, '<span class="lnk">$1</span>')).join("");
+}
+function fmt(text) { return linkify(String(text || "").replace(/\n/g, "<br>")); }
+function initials(name) { return name.replace(/[^\p{L}\p{N} ]/gu, "").split(/\s+/).filter(Boolean).slice(0, 2).map((w) => w[0]).join("").toUpperCase(); }
+
+// ------------------------------------------------------------------ virtual clock: steps run one after another,
+// tweens run in the background. A step's start() may return its real duration (when it depends on the layout).
+const steps = []; const tweens = []; let clock = 0; let stepIndex = 0; let stepStart = 0;
+function step(dur, start, update) { steps.push({ dur, start, update }); }
+function tween(dur, update, delay = 0) { tweens.push({ at: clock + delay, dur, update, done: false }); }
+function frame(t) {
+  clock = t;
+  while (stepIndex < steps.length) {
+    const s = steps[stepIndex];
+    if (!s.begun) { s.begun = true; s.t0 = stepStart; if (s.start) { const d = s.start(); if (typeof d === "number") s.dur = d; } }
+    const p = s.dur > 0 ? Math.min(1, (t - s.t0) / s.dur) : 1;
+    if (s.update) s.update(p);
+    if (t - s.t0 >= s.dur) { stepStart = s.t0 + s.dur; stepIndex++; } else break;
+  }
+  for (const tw of tweens) {
+    if (tw.done || t < tw.at) continue;
+    const p = tw.dur > 0 ? Math.min(1, (t - tw.at) / tw.dur) : 1;
+    tw.update(p);
+    if (p >= 1) tw.done = true;
+  }
+  return stepIndex >= steps.length && tweens.every((tw) => tw.done);
+}
+
+// ------------------------------------------------------------------ chat screen
+let chat, msgs, col, field, sendBtn;
+const chats = {};
+function navHtml(title, subtitle, avaClass, ava) {
+  return `<div class="nav"><div class="back">${BACK}<span>${esc(UI.chats)}</span></div>
+    <div class="title"><b>${esc(title)}</b><span>${esc(subtitle)}</span></div>
+    <div class="ava ${avaClass}">${ava}</div></div>`;
+}
+function buildChat(name) {
+  const logo = DATA.banner ? `<img src="${DATA.banner}">` : esc(initials(name));
+  const screen = el(`<div class="screen"><div class="wall"></div>${navHtml(name, UI["chat.bot"], "g1", logo)}
+    <div class="msgs"><div class="col"><div class="date">${esc(UI.today)}</div></div></div>
+    <div class="input"><div class="menu"><svg width="16" height="12" viewBox="0 0 16 12" stroke="#fff" stroke-width="2" stroke-linecap="round"><path d="M1 1h14M1 6h14M1 11h14"/></svg>${esc(UI.menu)}</div>
+      <div class="field ph">${esc(UI.message)}</div>
+      <div class="ico mic"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#9a94a6" stroke-width="1.8" stroke-linecap="round"><rect x="9" y="3" width="6" height="11" rx="3"/><path d="M5 11a7 7 0 0014 0M12 18v3"/></svg></div>
+      <div class="send"><svg width="14" height="16" viewBox="0 0 14 16" fill="none" stroke="#fff" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M7 15V2M1.5 7.5L7 2l5.5 5.5"/></svg></div></div></div>`);
+  $("#screens").appendChild(screen);
+  chats[name] = screen;
+  return screen;
+}
+function useChat(screen) { chat = screen; msgs = $(".msgs", chat); col = $(".col", chat); field = $(".field", chat); sendBtn = $(".send", chat); }
+
+// The conversation is a column inside a window: `pos` is how far the column is moved (0 = its top at the top of the
+// window). A conversation shorter than the window sits at the bottom, as in Telegram.
+function bottomPos(c = col) { return c.parentNode.clientHeight - c.scrollHeight; }
+function setPos(y, c = col) { c._pos = y; c.style.transform = `translateY(${y}px)`; }
+function clampPos(y, c = col) { const b = bottomPos(c); return b >= 0 ? b : Math.max(b, Math.min(0, y)); }
+function moveTo(target, p, from, c = col) { setPos(from + (clampPos(target, c) - from) * ease(p), c); }
+// After a message appears or changes: one that fits goes to the bottom; a tall one shows its top first, then the
+// conversation scrolls down to its buttons.
+function settleStep(getRow, quick) {
+  let from, top, tall;
+  step(.5, () => {
+    const row = getRow(); from = col._pos === undefined ? bottomPos() : col._pos;
+    tall = !quick && Boolean(row) && bottomPos() < 0 && row.offsetHeight > msgs.clientHeight - 12;
+    top = tall ? -(row.offsetTop - 8) : bottomPos();
+    return tall ? 2.8 : .45;
+  }, (p) => {
+    if (!tall) { moveTo(bottomPos(), p, from); return; }
+    if (p < .14) moveTo(top, p / .14, from);
+    else if (p < .55) setPos(clampPos(top));
+    else moveTo(bottomPos(), (p - .55) / .45, clampPos(top));
+  });
+}
+function kbHtml(kb) {
+  if (!kb || !kb.length) return "";
+  return `<div class="kb">` + kb.map((row) => `<div class="r${row.length >= 3 ? " n3" : ""}">` + row.map((b) =>
+    `<div class="k${b.style ? " " + b.style : ""}${b.disabled ? " off" : ""}" data-t="${esc(b.text)}"><span>${esc(b.text)}</span>${b.url ? ARROW : ""}</div>`
+  ).join("") + `</div>`).join("") + `</div>`;
+}
+function bodyHtml(ev) {
+  if (ev.rich !== undefined) return linkify(ev.rich.replace(/<img src="tg:\/\/photo[^>]*>/g, "").replace(/<table bordered>/g, "<table>"));
+  return fmt(ev.text);
+}
+function bubbleHtml(ev, meta) {
+  const body = `${bodyHtml(ev)}<span class="meta">${meta}</span>`;
+  if (!ev.photo) return `<div class="bubble">${body}</div>`;
+  return `<div class="bubble withpic"><img class="pic" src="${ev.photo}"><div class="cap">${body}</div></div>`;
+}
+function addRow(row, container = col) {
+  container.appendChild(row);
+  row.style.opacity = "0";
+  tween(.32, (p) => { row.style.opacity = Math.min(1, p * 1.6); row.style.transform = `translateY(${(1 - out(p)) * 14}px)`;
+    if (p >= 1) row.style.transform = ""; });
+}
+function botMessage(ev) {
+  const row = el(`<div class="row in${ev.kb ? " haskb" : ""}" data-mid="${ev.id}">${bubbleHtml(ev, "9:41")}${kbHtml(ev.kb)}</div>`);
+  addRow(row);
+}
+function editMessage(ev) {
+  const row = col.querySelector(`[data-mid="${ev.id}"]`);
+  if (!row) return;
+  if (ev.text !== undefined || ev.rich !== undefined) {
+    const pic = $(".pic", row);
+    $(".bubble", row).outerHTML = bubbleHtml({ ...ev, photo: ev.photo || (ev.rich === undefined && pic ? pic.src : null) },
+      `${esc(UI.edited)} 9:41`);
+  }
+  const old = $(".kb", row); if (old) old.remove();
+  if (ev.kb) row.insertAdjacentHTML("beforeend", kbHtml(ev.kb));
+  row.classList.toggle("haskb", !!ev.kb);
+}
+function userMessage(text, id) {
+  addRow(el(`<div class="row out"${id ? ` data-mid="${id}"` : ""}><div class="bubble">${esc(text)}<span class="meta">9:41 ${CHECKS}</span></div></div>`));
+}
+function deleteStep(ev) {
+  let row, h;
+  step(.3, () => { row = col.querySelector(`[data-mid="${ev.id}"]`); if (row) h = row.offsetHeight; },
+    (p) => { if (!row) return; const e = ease(p); row.style.opacity = 1 - e; row.style.height = (h * (1 - e)) + "px";
+      row.style.overflow = "hidden"; if (p >= 1) { row.remove(); setPos(clampPos(col._pos || 0)); } });
+}
+function clearStep() {
+  let rows;
+  step(.35, () => { rows = [...col.querySelectorAll(".row")]; }, (p) => {
+    for (const r of rows) r.style.opacity = 1 - ease(p);
+    if (p >= 1) { for (const r of rows) r.remove(); setPos(bottomPos()); }
+  });
+}
+
+// ------------------------------------------------------------------ keyboard
+const ROWS = { es: ["qwertyuiop", "asdfghjklñ", "zxcvbnm"], en: ["qwertyuiop", "asdfghjkl", "zxcvbnm"] };
+function buildKeyboard() {
+  const rows = ROWS[DATA.lang] || ROWS.es;
+  $("#kbd").innerHTML = rows.map((r, i) => `<div class="kr">${i === 2 ? '<div class="key fn wide">⇧</div>' : ""}${[...r].map((c) =>
+    `<div class="key" data-k="${c}">${c}</div>`).join("")}${i === 2 ? '<div class="key fn wide">⌫</div>' : ""}</div>`).join("") +
+    `<div class="kr"><div class="key fn wide">123</div><div class="key fn wide">🙂</div><div class="key space" data-k=" ">${DATA.lang === "es" ? "espacio" : "space"}</div><div class="key fn ret">${DATA.lang === "es" ? "intro" : "return"}</div></div>`;
+}
+function setKeyboard(p) {
+  const shift = (336 - 34) * p;
+  $("#kbd").style.transform = `translateY(${(1 - p) * 100}%)`;
+  $(".input", chat).style.transform = `translateY(${-shift}px)`;
+  msgs.style.bottom = (84 + shift) + "px";
+  setPos(bottomPos());
+}
+
+// ------------------------------------------------------------------ finger and overlays
+function center(node) {
+  const r = node.getBoundingClientRect(); const ph = $("#phone").getBoundingClientRect(); const k = ph.width / 390;
+  return { x: (r.left - ph.left + r.width / 2) / k, y: (r.top - ph.top + r.height / 2) / k };
+}
+function revealStep(getNode) {  // the conversation scrolls until the button to tap is in sight
+  let from, target = null;
+  step(0, () => {
+    const node = getNode(); if (!node || !col.contains(node)) return 0;
+    const k = $("#phone").getBoundingClientRect().width / 390;
+    const win = msgs.getBoundingClientRect(); const r = node.getBoundingClientRect();
+    if (r.top >= win.top + 8 * k && r.bottom <= win.bottom - 8 * k) return 0;
+    from = col._pos || 0;
+    target = from - ((r.top + r.height / 2) - (win.top + win.height / 2)) / k;
+    return .45;
+  }, (p) => { if (target !== null) moveTo(target, p, from); });
+}
+function tapStep(getNode, onTap, { hold = .25 } = {}) {
+  let node, pos, fired = false;
+  revealStep(getNode);
+  step(.72, () => { node = getNode(); pos = node ? center(node) : { x: 195, y: 420 }; }, (p) => {
+    const f = $("#finger");
+    f.style.left = pos.x + "px"; f.style.top = pos.y + "px";
+    if (p < .3) { f.style.opacity = p / .3; f.style.transform = `scale(${1.25 - .25 * (p / .3)})`; }
+    else if (p < .55) { f.style.opacity = 1; f.style.transform = "scale(.82)"; if (node) node.classList.add("press"); }
+    else { f.style.opacity = Math.max(0, 1 - (p - .55) / .45); f.style.transform = "scale(1)"; if (node) node.classList.remove("press"); }
+    if (p >= .55 && onTap && node && !fired) { fired = true; onTap(node); }
+  });
+  if (hold) step(hold);
+}
+// The caption of the moment is a chip in the left column, under the headline (nothing covers the phone).
+let captionText = null;
+function captionStep(text) {
+  step(.12, () => {
+    const c = $("#step"); const had = captionText !== null; captionText = text;
+    if (had) tween(.18, (p) => { c.style.opacity = 1 - p; });
+    tween(.32, (p) => { if (c.textContent !== text) c.textContent = text;
+      c.style.opacity = out(p); c.style.transform = `translateX(${(1 - out(p)) * -14}px)`; }, had ? .18 : 0);
+  });
+}
+function hideCaption() {
+  step(0, () => { const c = $("#step"); if (captionText !== null) { captionText = null; tween(.22, (p) => { c.style.opacity = 1 - p; }); } });
+}
+function toastStep(text) {
+  step(0, () => {
+    const t = $("#toast"); t.textContent = text;
+    tween(2.0, (p) => { t.style.opacity = p < .12 ? p / .12 : p > .85 ? (1 - p) / .15 : 1; });
+  });
+}
+
+// ------------------------------------------------------------------ the left column: scene, headline, progress
+function sceneStep(ev) {
+  const head = $("#headline"), sub = $("#sub"), count = $("#count");
+  hideCaption();
+  step(.3, null, (p) => { const o = 1 - ease(p); head.style.opacity = o; sub.style.opacity = o; count.style.opacity = o; });
+  step(.55, () => {
+    head.textContent = ev.title; sub.textContent = ev.sub;
+    $("span", count).textContent = `${String(ev.n).padStart(2, "0")} / ${String(DATA.scenes).padStart(2, "0")}`;
+    [...$("#dots").children].forEach((d, i) => { $("span", d).style.width = i < ev.n - 1 ? "100%" : "0"; });
+  }, (p) => { const e = out(p);
+    head.style.opacity = e; head.style.transform = `translateY(${(1 - e) * 26}px)`;
+    sub.style.opacity = Math.max(0, (p - .25) / .75); sub.style.transform = `translateY(${(1 - e) * 18}px)`;
+    count.style.opacity = e;
+    $("span", $("#dots").children[ev.n - 1]).style.width = (e * 100) + "%"; });
+}
+function coverStep(ev, last) {
+  const cover = $("#cover");
+  step(.5, () => {
+    $("h1", cover).textContent = ev.title; $("p", cover).textContent = ev.sub;
+    const cta = $(".cta", cover); cta.textContent = ev.cta || ""; cta.style.display = ev.cta ? "block" : "none";
+  }, (p) => { const e = out(p); cover.style.opacity = last ? e : 1;
+    $("#coverlogo").style.transform = `scale(${.86 + .14 * e})`; $("#coverlogo").style.opacity = e;
+    $("h1", cover).style.opacity = e; $("h1", cover).style.transform = `translateY(${(1 - e) * 30}px)`; });
+  step(.45, null, (p) => { $("p", cover).style.opacity = out(p); $(".cta", cover).style.opacity = out(p); });
+  step(last ? 3.2 : 2.3);
+  if (!last) step(.6, null, (p) => { const e = ease(p); cover.style.opacity = 1 - e;
+    $("#device").style.transform = `translateY(${(1 - e) * 80}px) scale(1.16)`; $("#device").style.opacity = e;
+    $("#side").style.opacity = e; });
+}
+
+// ------------------------------------------------------------------ Telegram's own screens (choose a channel, rights)
+let sheet, dim;
+function presentSheet(html) {
+  step(.45, () => {
+    dim = el('<div class="dim"></div>'); sheet = el(`<div class="sheet">${html}</div>`);
+    $("#phone").appendChild(dim); $("#phone").appendChild(sheet);
+  }, (p) => { const e = ease(p); sheet.style.transform = `translateY(${(1 - e) * 100}%)`; dim.style.opacity = .5 * e;
+    chat.style.transform = `scale(${1 - .06 * e})`; chat.style.borderRadius = (12 * e) + "px"; });
+}
+function dismissSheet() {
+  hideCaption();
+  step(.42, null, (p) => { const e = ease(p); sheet.style.transform = `translateY(${e * 100}%)`; dim.style.opacity = .5 * (1 - e);
+    chat.style.transform = `scale(${.94 + .06 * e})`; chat.style.borderRadius = (12 * (1 - e)) + "px";
+    if (p >= 1) { sheet.remove(); dim.remove(); chat.style.transform = ""; } });
+}
+function pushPage(html) {
+  let page, prev;
+  step(.4, () => { prev = sheet.querySelector(".page:last-of-type") || null;
+    page = el(`<div class="page">${html}</div>`); sheet.appendChild(page); },
+  (p) => { const e = ease(p); page.style.transform = `translateX(${(1 - e) * 100}%)`; if (prev) prev.style.transform = `translateX(${-30 * e}%)`; });
+}
+function pickerUi(ev) {
+  const rows = ev.channels.map((c, i) => `<div class="prow" data-i="${i}"><div class="ava g${(i % 5) + 2}">${esc(initials(c.name))}</div>
+    <div class="tx"><b>${esc(c.name)}</b><span>${esc(c.subs)}</span></div></div>`).join("");
+  presentSheet(`<div class="snav"><div class="l">${esc(UI["picker.cancel"])}</div>${esc(UI["picker.title"])}</div>
+    <div class="page" style="transform:none"><div class="search">🔍 ${esc(UI["picker.search"])}</div><div class="list">${rows}</div></div>`);
+  step(.7);
+  tapStep(() => sheet.querySelector(`.prow[data-i="${ev.pick}"]`), null, { hold: .1 });
+}
+function rightsUi(ev) {
+  const cells = UI["rights.list"].map(([label, on]) => `<div class="cell"><span class="grow">${esc(label)}</span><div class="sw${on ? " on" : ""}"></div></div>`).join("");
+  const logo = DATA.banner ? `<img src="${DATA.banner}">` : esc(initials(ev.bot));
+  pushPage(`<div class="group" style="margin-top:16px"><div class="botcard"><div class="ava g1">${logo}</div>
+      <div><b>${esc(ev.bot)}</b><span>${esc(UI["chat.bot"])}</span></div></div></div>
+    <div class="ghead">${esc(UI["rights.header"])}</div><div class="group">${cells}</div>
+    <div class="group" style="margin-top:26px"><div class="cell center add">${esc(UI["rights.button"])}</div></div>`);
+  step(0, () => { $(".snav", sheet).innerHTML = `<div class="l">${BACK}<span>${esc(UI.back)}</span></div>${esc(UI["rights.title"])}`; });
+  step(1.2);
+  tapStep(() => sheet.querySelector(".add"), null, { hold: .05 });
+  let alertBox, adim;
+  step(.28, () => {
+    adim = el('<div class="adim"></div>');
+    alertBox = el(`<div class="alert"><div class="at">${esc(UI["rights.alert"].replace("{bot}", ev.bot).replace("{chat}", ev.chat))}</div>
+      <div class="ab"><div>${esc(UI.cancel)}</div><div class="yes">${esc(UI["rights.ok"])}</div></div></div>`);
+    $("#phone").appendChild(adim); $("#phone").appendChild(alertBox);
+  }, (p) => { adim.style.opacity = .35 * p; alertBox.style.opacity = p;
+    alertBox.style.transform = `translateY(-50%) scale(${1.1 - .1 * out(p)})`; });
+  step(.7);
+  tapStep(() => alertBox.querySelector(".yes"), null, { hold: .05 });
+  step(.2, null, (p) => { alertBox.style.opacity = 1 - p; adim.style.opacity = .35 * (1 - p);
+    if (p >= 1) { alertBox.remove(); adim.remove(); } });
+  dismissSheet();
+}
+
+// ------------------------------------------------------------------ a channel of the network, with the post in it
+let channelScreen = null;
+function channelUi(ev) {
+  let c;
+  step(.45, () => {
+    channelScreen = el(`<div class="screen"><div class="wall"></div>${navHtml(ev.title, ev.subs, "g2", esc(initials(ev.title)))}
+      <div class="msgs"><div class="col"></div></div><div class="cbottom">${esc(UI["channel.mute"])}</div></div>`);
+    $("#screens").appendChild(channelScreen);
+    c = $(".col", channelScreen);
+    c.appendChild(el(`<div class="row in"><div class="bubble">${esc(ev.old)}<span class="meta"><span class="views">👁 ${esc(UI.views)}</span> 22:10</span></div></div>`));
+    setPos(bottomPos(c), c);
+  }, (p) => { const e = ease(p); channelScreen.style.transform = `translateX(${(1 - e) * 100}%)`; chat.style.transform = `translateX(${-30 * e}%)`; });
+  step(.6);
+  let from;
+  step(.6, () => {
+    const row = el(`<div class="row in${ev.post.kb ? " haskb" : ""}"><div class="bubble">${fmt(ev.post.text)}<span class="meta"><span class="views">👁 1</span> 9:41</span></div>${kbHtml(ev.post.kb)}</div>`);
+    from = c._pos; addRow(row, c);
+  }, (p) => moveTo(bottomPos(c), p, from, c));
+}
+function backStep() {
+  hideCaption();
+  step(.45, null, (p) => { const e = ease(p); if (!channelScreen) return;
+    channelScreen.style.transform = `translateX(${e * 100}%)`; chat.style.transform = `translateX(${-30 * (1 - e)}%)`;
+    if (p >= 1) { channelScreen.remove(); channelScreen = null; chat.style.transform = ""; } });
+}
+
+// ------------------------------------------------------------------ typing
+function typeStep(text, id) {
+  step(.3, () => { field.classList.remove("ph"); field.innerHTML = '<span class="caret"></span>'; },
+    (p) => setKeyboard(ease(p)));
+  const cps = 13; const chars = [...text]; let last = null;
+  step(chars.length / cps + .2, null, (p) => {
+    const n = Math.min(chars.length, Math.floor(p * (chars.length + 2)));
+    field.innerHTML = esc(chars.slice(0, n).join("")) + '<span class="caret"></span>';
+    $(".mic", chat).style.display = n ? "none" : "flex"; sendBtn.style.display = n ? "flex" : "none";
+    const c = chars[Math.max(0, n - 1)]; const key = n && $(`#kbd .key[data-k="${CSS.escape(c.toLowerCase())}"]`);
+    if (last && last !== key) last.classList.remove("down");
+    if (key && p < 1) { key.classList.add("down"); last = key; }
+    if (p >= 1 && last) last.classList.remove("down");
+  });
+  tapStep(() => sendBtn, () => { field.innerHTML = esc(UI.message); field.classList.add("ph");
+    sendBtn.style.display = "none"; $(".mic", chat).style.display = "flex"; userMessage(text, id); setPos(bottomPos()); }, { hold: .3 });
+  step(.3, null, (p) => setKeyboard(1 - ease(p)));
+}
+
+// ------------------------------------------------------------------ the guion
+function findButton(ev) {
+  const row = col.querySelector(`[data-mid="${ev.id}"]`);
+  return [...(row || col).querySelectorAll(".kb .k")].find((k) => k.dataset.t === ev.text) || null;
+}
+function build(data) {
+  DATA = data; UI = data.ui;
+  if (data.banner) { $("#logo").src = data.banner; $("#coverlogo").src = data.banner; }
+  else { $("#logo").remove(); $("#coverlogo").remove(); }
+  $("#tagline").textContent = UI["brand.tagline"];
+  $("#dots").innerHTML = Array.from({ length: data.scenes }, () => "<b><span></span></b>").join("");
+  useChat(buildChat(data.header.name)); buildKeyboard(); setPos(bottomPos());
+  const hasIntro = data.events.some((e) => e.t === "intro");
+  if (hasIntro) { $("#cover").style.opacity = 1; $("#side").style.opacity = 0; $("#device").style.opacity = 0; }
+  data.events.forEach((ev) => {
+    if (ev.t === "intro") coverStep(ev, false);
+    else if (ev.t === "outro") { hideCaption(); step(.4); coverStep(ev, true); }
+    else if (ev.t === "scene") sceneStep(ev);
+    else if (ev.t === "caption") { captionStep(ev.text); step(.35); }
+    else if (ev.t === "user") typeStep(ev.text, ev.id);
+    else if (ev.t === "msg") { step(.35); step(0, () => botMessage(ev)); settleStep(() => col.querySelector(`[data-mid="${ev.id}"]`), ev.quick); step(.4); }
+    else if (ev.t === "edit") { step(.2); step(0, () => editMessage(ev)); settleStep(() => col.querySelector(`[data-mid="${ev.id}"]`)); step(.35); }
+    else if (ev.t === "delete") deleteStep(ev);
+    else if (ev.t === "clear") { hideCaption(); clearStep(); }
+    else if (ev.t === "tap") tapStep(() => findButton(ev), null, { hold: .1 });
+    else if (ev.t === "toast") toastStep(ev.text);
+    else if (ev.t === "wait") step(ev.s);
+    else if (ev.t === "ui" && ev.screen === "picker") pickerUi(ev);
+    else if (ev.t === "ui" && ev.screen === "rights") rightsUi(ev);
+    else if (ev.t === "channel") channelUi(ev);
+    else if (ev.t === "back") backStep();
+  });
+  step(.6);
+}
+// `speed` > 1 plays the story faster (render.js: SPEED=1.2).
+let SPEED = 1;
+window.__load = (data, speed) => { SPEED = speed || 1; build(data); return true; };
+window.__frame = (t) => frame(t * SPEED);
+</script>
+</body>
+</html>
