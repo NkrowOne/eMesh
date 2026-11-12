@@ -15,7 +15,7 @@ from aiogram.types import BufferedInputFile, CallbackQuery, InlineKeyboardMarkup
 
 from app.services import brand
 from app.telegram.errors import is_not_modified, short
-from app.ui.common import release_prompt, show, ws_banner
+from app.ui.common import release_prompt, show, show_photo_rich, ws_banner
 
 if TYPE_CHECKING:
     from sqlalchemy.ext.asyncio import AsyncSession
@@ -52,6 +52,10 @@ async def show_with_photo(event: Message | CallbackQuery, ctx: Ctx, session: Asy
     photo = await brand.photo_for(session, bot, name, ctx.manager) if bot is not None else None
     if photo is None:
         return await show(event, text, markup)
+    if isinstance(photo, str):  # ✨ the image and the card in one rich message (once this bot has its file id)
+        rich = await show_photo_rich(event, text, markup, photo)
+        if rich is not False:
+            return rich
     pressed = event.message if isinstance(event, CallbackQuery) and isinstance(event.message, Message) else None
     if isinstance(event, CallbackQuery) and pressed is not None and _same_photo(pressed, photo):
         if await _edit_caption(event, pressed, text, markup):

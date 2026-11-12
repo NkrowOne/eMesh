@@ -44,6 +44,8 @@ class Settings(BaseSettings):
     DEFAULT_LANG: str = "es"
     DEFAULT_TIMEZONE: str = "Europe/Madrid"
     LOG_LEVEL: str = "INFO"
+    # ✨ Panels as rich messages (cards, lists, footers). False = the plain text panels, as before.
+    RICH_PANELS: bool = True
 
     # --- Rate limits (per bot token) ---
     RL_GLOBAL_PER_SEC: float = 27.0

@@ -20,6 +20,7 @@ from app.services.publisher import Publisher
 from app.services.scheduler import Scheduler
 from app.telegram.fsm_storage import SQLStorage
 from app.telegram.manager import BotManager
+from app.ui import common as ui_common
 
 log = logging.getLogger("app")
 ROOT = Path(__file__).resolve().parent.parent
@@ -54,6 +55,7 @@ def build_dispatcher(settings: Settings, sm) -> tuple[Dispatcher, SQLStorage]:  
     storage = SQLStorage(sm)
     dp = Dispatcher(storage=storage, events_isolation=SimpleEventIsolation())
     setup_dispatcher(dp, sm, settings)
+    ui_common.rich_mode = ui_common.RICH_ALL if settings.RICH_PANELS else ui_common.RICH_OFF
     return dp, storage
 
 

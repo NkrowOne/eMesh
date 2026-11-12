@@ -26,6 +26,7 @@ from app.services import clones  # noqa: E402
 from app.services.publisher import Publisher  # noqa: E402
 from app.services.scheduler import Scheduler  # noqa: E402
 from app.telegram.manager import BotManager  # noqa: E402
+from app.ui import common as ui_common  # noqa: E402
 from tests.fake_tg import ADMIN_RIGHTS_FULL, Call, FakeTelegram  # noqa: E402
 
 MAIN_BOT_ID = 5_000_000_001
@@ -336,6 +337,8 @@ async def app(settings: Settings, fake: FakeTelegram) -> AsyncIterator[App]:
             await conn.run_sync(Base.metadata.drop_all)
         await conn.run_sync(Base.metadata.create_all)
     dp, storage = build_dispatcher(settings, sm)
+    # The tests read the plain panels (what a screen writes); the rich ones are checked in tests/test_ui_rich.py.
+    ui_common.rich_mode = ui_common.RICH_EXPLICIT
     manager = BotManager(dp, settings, sm)
     publisher = Publisher(manager, sm, settings)
     scheduler = Scheduler(manager, sm, settings, publisher)
