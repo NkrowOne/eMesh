@@ -10,6 +10,7 @@ from __future__ import annotations
 import asyncio
 import logging
 import weakref
+from dataclasses import dataclass
 from datetime import datetime, timedelta
 from typing import TYPE_CHECKING
 
@@ -18,10 +19,10 @@ from aiogram.enums import ChatMemberStatus
 from aiogram.exceptions import TelegramAPIError, TelegramMigrateToChat
 from aiogram.filters.callback_data import CallbackData
 from aiogram.types import ChatFullInfo, InlineKeyboardMarkup
-from sqlalchemy import delete, select
+from sqlalchemy import ColumnElement, and_, case, delete, func, or_, select
 
 from app.db.base import utcnow
-from app.db.models import Chat, ChatGroup, ChatOrigin, ChatStatus, EventKind, RequestNotice, User
+from app.db.models import Chat, ChatGroup, ChatOrigin, ChatStatus, ChatType, EventKind, GroupChat, RequestNotice, User
 from app.i18n import t
 from app.services import audience, events, limits, moderation
 from app.services.chatinfo import apply_rights, chat_type_of
@@ -161,6 +162,60 @@ async def listed_chats(session: AsyncSession, ws_id: int) -> list[Chat]:
     """The chats of the network (approved and pending), by title."""
     chats = await audience.bot_chats(session, ws_id, statuses=list(ACTIVE))
     return sorted(chats, key=lambda c: (c.display_title.casefold(), c.id))
+
+
+def paused_clause(now: datetime | None = None) -> ColumnElement[bool]:
+    """``Chat.is_paused()`` for the database: paused by an admin, or by its owner and that pause hasn't ended."""
+    now = now or utcnow()
+    return or_(Chat.admin_paused,
+               and_(Chat.owner_paused, or_(Chat.owner_paused_until.is_(None), Chat.owner_paused_until > now)))
+
+
+@dataclass
+class ListTotals:
+    chats: int = 0  # approved and pending
+    channels: int = 0
+    external: int = 0
+    members: int = 0
+    pending: int = 0
+    partners: int = 0  # external chats with a known owner
+
+
+async def list_totals(session: AsyncSession, ws_id: int) -> ListTotals:
+    """The numbers over the 📣 list, counted by the database (a network may have thousands of chats)."""
+    def count(cond: ColumnElement[bool]) -> ColumnElement[int]:
+        return func.coalesce(func.sum(case((cond, 1), else_=0)), 0)
+
+    external = Chat.origin == ChatOrigin.EXTERNAL
+    row = (await session.execute(select(
+        func.count(), count(Chat.type == ChatType.CHANNEL), count(external), func.coalesce(func.sum(Chat.members), 0),
+        count(Chat.status == ChatStatus.PENDING), count(and_(external, Chat.owner_user_id.is_not(None))),
+    ).where(Chat.bot_id == ws_id, Chat.status.in_(list(ACTIVE))))).one()
+    return ListTotals(*(int(x or 0) for x in row))
+
+
+async def list_page(session: AsyncSession, ws_id: int, page: int, per_page: int,
+                    where: ColumnElement[bool] | None = None) -> tuple[list[Chat], int, int, int]:
+    """A page of the network's chats (approved and pending) by title: ``(chats, page, pages, matching)``. Only that
+    page is read."""
+    conds = [Chat.bot_id == ws_id, Chat.status.in_(list(ACTIVE))]
+    if where is not None:
+        conds.append(where)
+    total = int((await session.execute(select(func.count()).select_from(Chat).where(*conds))).scalar() or 0)
+    pages = max(1, (total + per_page - 1) // per_page)
+    page = min(max(0, page), pages - 1)
+    q = select(Chat).where(*conds).order_by(func.lower(Chat.title), Chat.id).offset(page * per_page).limit(per_page)
+    return list((await session.execute(q)).scalars()), page, pages, total
+
+
+async def groups_of(session: AsyncSession, chat_pks: list[int]) -> dict[int, set[int]]:
+    """``{chat pk: {group ids}}`` of these chats only."""
+    out: dict[int, set[int]] = {}
+    if chat_pks:
+        rows = await session.execute(select(GroupChat.chat_pk, GroupChat.group_id).where(GroupChat.chat_pk.in_(chat_pks)))
+        for chat_pk, group_id in rows.all():
+            out.setdefault(chat_pk, set()).add(group_id)
+    return out
 
 
 async def partner_ids(session: AsyncSession, ws_id: int) -> list[int]:

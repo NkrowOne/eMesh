@@ -5,7 +5,7 @@ from dataclasses import dataclass, field
 from datetime import datetime, timedelta
 from typing import TYPE_CHECKING
 
-from sqlalchemy import func, select
+from sqlalchemy import ColumnElement, and_, case, func, not_, or_, select
 
 from app.db.base import utcnow
 from app.db.models import (
@@ -50,27 +50,26 @@ async def summary(session: AsyncSession, bot_id: int, *, hours: int = 24, now: d
     """Chats, posts and the activity of the last ``hours``."""
     now = now or utcnow()
     out = Summary()
-    chats = (await session.execute(select(Chat).where(Chat.bot_id == bot_id))).scalars().all()
-    for c in chats:
-        if c.status == ChatStatus.PENDING:
-            out.pending += 1
-            continue
-        if c.status != ChatStatus.APPROVED:
-            continue
-        out.chats += 1
-        out.members += c.members or 0
-        if c.origin == ChatOrigin.EXTERNAL:
-            out.external += 1
-        else:
-            out.own += 1
-        if c.owner_pause_active(now):
-            out.owner_paused += 1
-        if c.admin_paused:
-            out.admin_paused += 1
-        if not c.rights_ok:
-            out.no_rights += 1
-        if c.rights_ok and not c.is_paused(now):
-            out.sendable += 1
+    # Counted by the database: a network may have thousands of chats and this runs at every home screen.
+    approved = Chat.status == ChatStatus.APPROVED
+    owner_pause = and_(Chat.owner_paused, or_(Chat.owner_paused_until.is_(None), Chat.owner_paused_until > now))
+
+    def count(*conds: ColumnElement[bool]) -> ColumnElement[int]:
+        return func.coalesce(func.sum(case((and_(*conds), 1), else_=0)), 0)
+
+    row = (await session.execute(select(
+        count(Chat.status == ChatStatus.PENDING),
+        count(approved),
+        func.coalesce(func.sum(case((approved, func.coalesce(Chat.members, 0)), else_=0)), 0),
+        count(approved, Chat.origin == ChatOrigin.EXTERNAL),
+        count(approved, owner_pause),
+        count(approved, Chat.admin_paused),
+        count(approved, Chat.rights_ok.is_(False)),
+        count(approved, Chat.rights_ok, Chat.admin_paused.is_(False), not_(owner_pause)),
+    ).where(Chat.bot_id == bot_id))).one()
+    (out.pending, out.chats, out.members, out.external, out.owner_paused, out.admin_paused, out.no_rights,
+     out.sendable) = (int(x or 0) for x in row)
+    out.own = out.chats - out.external
     out.groups = int((await session.execute(
         select(func.count()).select_from(ChatGroup).where(ChatGroup.bot_id == bot_id))).scalar() or 0)
     rows = (await session.execute(

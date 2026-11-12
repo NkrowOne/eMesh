@@ -38,6 +38,12 @@ _msg_ids = itertools.count(10_000)
 _cb_ids = itertools.count(1)
 
 
+def pytest_xdist_auto_num_workers(config: pytest.Config) -> int | None:
+    """``-n auto``: one worker with PostgreSQL (every test drops and creates the tables of the same database), one per
+    CPU with SQLite (a file per test)."""
+    return 1 if os.environ.get("TEST_DATABASE_URL") else None
+
+
 @pytest.fixture(autouse=True)
 def _skip_user_timezone_question(request: pytest.FixtureRequest, monkeypatch: pytest.MonkeyPatch) -> None:
     """Users are asked their timezone before the menu; most tests are about other screens, so they skip it

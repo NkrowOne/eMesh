@@ -13,11 +13,12 @@ from aiogram.filters.callback_data import CallbackData
 from aiogram.fsm.context import FSMContext
 from aiogram.fsm.state import State, StatesGroup
 from aiogram.types import CallbackQuery, InlineKeyboardButton, InlineKeyboardMarkup, InputFile, Message
+from sqlalchemy import ColumnElement
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.bot.context import Ctx
 from app.db.base import utcnow
-from app.db.models import Chat, ChatGroup, ChatStatus, Post, User
+from app.db.models import Chat, ChatGroup, ChatOrigin, ChatStatus, Post, User
 from app.db.session import SessionMaker
 from app.i18n import t
 from app.services import audience, blast, chatstate, content, stats
@@ -121,16 +122,16 @@ async def _ws_bot(call: CallbackQuery, ctx: Ctx) -> Bot | None:
 
 
 # --------------------------------------------------------------------------- list
-def _matches(chat: Chat, flt: int) -> bool:
+def _filter_clause(flt: int) -> ColumnElement[bool] | None:
     if flt == FILTER_OWN:
-        return not chat.is_external
+        return Chat.origin != ChatOrigin.EXTERNAL
     if flt == FILTER_EXT:
-        return chat.is_external
+        return Chat.origin == ChatOrigin.EXTERNAL
     if flt == FILTER_PAUSED:
-        return chat.is_paused()
+        return chat_svc.paused_clause()
     if flt == FILTER_RIGHTS:
-        return not chat.rights_ok
-    return True
+        return Chat.rights_ok.is_(False)
+    return None
 
 
 def _row_details(ctx: Ctx, chat: Chat, owners: dict[int, User], names: list[str]) -> str:
@@ -155,20 +156,18 @@ async def render_list(event: Message | CallbackQuery, ctx: Ctx, session: AsyncSe
         await show(event, ctx.t("common.no_permission"), kb(back_row(ctx.lang)))
         return
     flt = flt if 0 <= flt < len(FILTERS) else FILTER_ALL
-    chats = await chat_svc.listed_chats(session, ctx.ws_id)
-    shown = [c for c in chats if _matches(c, flt)]
-    items, page, pages = paginate(shown, page, PER_PAGE)
-    channels = sum(1 for c in chats if c.is_channel)
-    external = sum(1 for c in chats if c.is_external)
+    # Only the page is read: the totals and the filter are the database's work.
+    totals = await chat_svc.list_totals(session, ctx.ws_id)
+    items, page, pages, shown = await chat_svc.list_page(session, ctx.ws_id, page, PER_PAGE, _filter_clause(flt))
     lines = [
         ctx.t("ch.list.title"),
-        ctx.t("ch.list.totals", channels=num(channels), groups=num(len(chats) - channels),
-              members=num(sum(c.members or 0 for c in chats))),
-        ctx.t("ch.list.origins", own=num(len(chats) - external), ext=num(external)),
+        ctx.t("ch.list.totals", channels=num(totals.channels), groups=num(totals.chats - totals.channels),
+              members=num(totals.members)),
+        ctx.t("ch.list.origins", own=num(totals.chats - totals.external), ext=num(totals.external)),
         "",
     ]
     groups = {g.id: g.name for g in await audience.bot_groups(session, ctx.ws_id)}
-    members = await audience.memberships(session, ctx.ws_id)
+    members = await chat_svc.groups_of(session, [c.id for c in items])
     owners = await chat_svc.users_by_id(session, {c.owner_user_id for c in items if c.is_external})
     buttons: list[InlineKeyboardButton] = []
     for i, chat in enumerate(items, start=page * PER_PAGE + 1):
@@ -179,14 +178,13 @@ async def render_list(event: Message | CallbackQuery, ctx: Ctx, session: AsyncSe
                            status=chat_svc.status_icon(chat), details=_row_details(ctx, chat, owners, names)))
         buttons.append(btn(f"#{i} {icon} {truncate(chat.display_title, 24)}", ChCB(a="op", id=chat.id, f=flt, p=page)))
     if not shown:
-        lines.append(ctx.t("ch.list.empty_filter" if chats else "ch.list.empty"))
+        lines.append(ctx.t("ch.list.empty_filter" if totals.chats else "ch.list.empty"))
     else:
         lines += ["", ctx.t("ch.list.legend")]
     if pages > 1:
         lines += ["", ctx.t("common.page", page=page + 1, pages=pages)]
 
-    pending = sum(1 for c in chats if c.status == ChatStatus.PENDING)
-    has_partners = any(c.is_external and c.owner_user_id for c in chats)
+    pending, has_partners = totals.pending, totals.partners > 0
     filters_row = [btn(ctx.t(key), ChCB(a="ls", f=value), style="primary" if value == flt else None)
                    for value, key in FILTERS]
     markup = kb(

@@ -20,7 +20,7 @@ pydantic-settings.
 ```bash
 pip install -r requirements-dev.txt   # install
 python -m app                          # run (needs .env, see .env.example)
-pytest -q                              # all tests (fake Telegram server, no token needed)
+pytest -q                              # all tests, in parallel (fake Telegram server, no token needed)
 alembic revision --autogenerate -m "msg"   # new migration (needs DATABASE_URL + BOT_TOKEN env)
 alembic upgrade head                   # migrations also run automatically at startup
 ```
