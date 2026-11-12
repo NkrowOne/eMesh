@@ -39,7 +39,9 @@ titular entran al ritmo y el brillo del fondo sigue el volumen (`assets/music.js
 
 | Segundo | En la música | Qué pasa |
 |---|---|---|
-| 0 – 6,2 | Subida | «Un mensaje.» «Todos tus canales.» «A la vez.» |
+| 0 – 2,4 | Subida | El gancho: «¿Sigues publicando canal por canal?» y el mismo mensaje pegado en los 6 canales, uno a uno |
+| 2,4 – 4 | | «Escríbelo una vez»: los seis se juntan en un solo mensaje |
+| 4 – 6,2 | | «eMesh lo publica en todos a la vez»: un toque y llega a cada canal |
 | 6,2 | Primer golpe | Aparece el logo de eMesh |
 | 10,4 – 12 | | El logo sube a su esquina y entra el iPhone girando |
 | 12 – 18,4 | Golpe | **Toda tu red, de un vistazo**: el inicio del bot y los números de la red |
@@ -52,7 +54,7 @@ titular entran al ritmo y el brillo del fondo sigue el volumen (`assets/music.js
 | 43,6 – 46,8 | | **Mide cada envío**: entregados y alcance |
 | 46,8 – 50 | Golpe final | Logo, «Crea tu red en un minuto» y eSoft |
 
-Cambiar los textos del spot: `TEXTS` en `spot.html`. Cambiar los tiempos: `T` (los golpes), `VIEWS` (qué pantalla
+Cambiar los textos del spot: `TEXTS` en `spot.html` (`hook` son las frases del gancho). Cambiar los tiempos: `T` (los golpes), `HK` (el gancho), `VIEWS` (qué pantalla
 se ve), `TAPS` (los toques del dedo) y `POSE` (la posición 3D del teléfono), también en `spot.html`.
 Con otra música hay que volver a medir sus golpes y cambiar esos tiempos.
 

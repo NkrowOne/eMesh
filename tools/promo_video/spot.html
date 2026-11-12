@@ -127,8 +127,49 @@ body { font-family: "Inter", "Segoe UI", "Helvetica Neue", "Noto Color Emoji", "
 .col.spot { padding-bottom: 10px; }
 
 /* ---------- intro and outro ---------- */
-#words { position: absolute; z-index: 20; left: 0; right: 0; top: 0; bottom: 0; display: flex; align-items: center; justify-content: center; text-align: center;
-  font-size: 104px; font-weight: 900; letter-spacing: -4px; line-height: 1; padding: 0 70px; opacity: 0; }
+/* the hook (the first six seconds): the same message pasted channel by channel -> written once -> eMesh sends it to all */
+#hookbg { position: absolute; inset: -70px; background-size: cover; background-position: center; filter: blur(20px) saturate(1.3); opacity: 0; }
+#hookbg::after { content: ""; position: absolute; inset: 0; background: linear-gradient(165deg, rgba(255, 45, 85, .6), rgba(86, 12, 52, .66) 55%, rgba(34, 8, 34, .74)); }
+#hook { position: absolute; z-index: 20; inset: 0; opacity: 0; pointer-events: none; transform-origin: 540px 486px; }
+#hcap { position: absolute; left: 0; right: 0; top: 60px; text-align: center; font-size: 90px; font-weight: 900; letter-spacing: -3.6px; line-height: 1.02; }
+#hcap .l1 { display: block; text-shadow: 0 5px 0 rgba(0, 0, 0, .28), 0 16px 44px rgba(0, 0, 0, .6); transform-origin: 50% 60%; white-space: nowrap; }
+#hcap .l2 { display: inline-block; margin-top: 18px; padding: 6px 32px 16px; border-radius: 26px; white-space: nowrap; box-shadow: 0 18px 50px rgba(0, 0, 0, .45); }
+#hcap .l2.red { background: #ff2d55; color: #fff; }
+#hcap .l2.green { background: linear-gradient(90deg, #b6f07a, #35c46a); color: #05230f; }
+#hgrid { position: absolute; left: 81px; top: 378px; width: 918px; height: 626px; perspective: 1500px; }
+#hgridin { position: absolute; inset: 0; transform-style: preserve-3d; }
+.hc { position: absolute; width: 290px; height: 300px; border-radius: 26px; background: #2a2238; border: 2px solid rgba(255, 255, 255, .14); padding: 14px;
+  box-shadow: 0 24px 54px rgba(0, 0, 0, .55); transform-origin: center; }
+.hc .hd, .hn .hd { display: flex; align-items: center; gap: 10px; }
+.hc .a { width: 42px; height: 42px; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 15px; font-weight: 700; flex: 0 0 auto; }
+.hc .nm { font-size: 18px; font-weight: 700; line-height: 1.15; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.hc .mb { font-size: 14.5px; color: #a9a3b8; margin-top: 2px; }
+.hc .ghost, .hc .fill { position: absolute; left: 14px; right: 14px; top: 68px; bottom: 14px; border-radius: 16px; }
+.hc .ghost { border: 2.5px dashed rgba(255, 255, 255, .3); background-size: cover; background-position: center; }
+.hc .fill { background: #2a2238; opacity: 0; transform-origin: center; }
+.hc .fill img { display: block; width: 100%; height: 152px; object-fit: cover; border-radius: 14px; }
+.hc .fill .ln { height: 10px; width: 78%; border-radius: 5px; background: rgba(255, 255, 255, .2); margin-top: 12px; }
+.hc .fill .bt { display: flex; gap: 6px; margin-top: 12px; }
+.hc .fill .bt i { flex: 1; height: 24px; border-radius: 8px; display: block; }
+#hfinger { position: absolute; z-index: 4; width: 74px; height: 74px; margin: -37px 0 0 -37px; border-radius: 50%; background: rgba(255, 255, 255, .34);
+  border: 3px solid rgba(255, 255, 255, .85); box-shadow: 0 8px 24px rgba(0, 0, 0, .45); }
+#hbadge, #hone { position: absolute; z-index: 5; padding: 6px 22px 10px; border-radius: 40px; font-size: 44px; font-weight: 900; letter-spacing: -1px; white-space: nowrap; }
+#hbadge { background: #ff2d55; color: #fff; box-shadow: 0 12px 30px rgba(255, 45, 85, .55); transform-origin: 50% 50%; }
+#hpostw { position: absolute; left: 325px; top: 470px; width: 430px; transform-origin: 50% 60%; opacity: 0; }
+#hpostw .post { position: relative; }
+#hone { right: -46px; top: -34px; background: linear-gradient(90deg, #b6f07a, #35c46a); color: #05230f; box-shadow: 0 12px 30px rgba(53, 196, 106, .5); opacity: 0; }
+#hava { position: absolute; z-index: 5; left: -44px; top: -44px; width: 116px; height: 116px; border-radius: 50%; overflow: hidden; opacity: 0;
+  box-shadow: 0 0 0 6px #fff, 0 16px 40px rgba(0, 0, 0, .55); }
+#hava img { width: 100%; height: 100%; object-fit: cover; display: block; }
+#hlines { position: absolute; inset: 0; overflow: visible; }
+#hring { position: absolute; border-radius: 50%; border: 5px solid rgba(166, 232, 106, .95); box-shadow: 0 0 40px rgba(53, 196, 106, .7); opacity: 0; }
+.hn { position: absolute; width: 250px; margin: -48px 0 0 -125px; text-align: center; opacity: 0; transform-origin: 50% 48px; }
+.hn .a { position: relative; width: 96px; height: 96px; margin: 0 auto; border-radius: 50%; display: flex; align-items: center; justify-content: center;
+  font-size: 32px; font-weight: 800; }
+.hn .a i { position: absolute; right: -8px; top: -8px; width: 40px; height: 40px; border-radius: 50%; background: var(--green); color: #05230f; font-style: normal;
+  font-size: 24px; font-weight: 900; display: flex; align-items: center; justify-content: center; transform: scale(0); }
+.hn b { display: block; margin-top: 10px; font-size: 22px; font-weight: 700; white-space: nowrap; }
+.hn span { display: block; font-size: 17px; color: #b9b3c6; margin-top: 2px; }
 #logocard { position: absolute; z-index: 22; left: 50%; top: 50%; width: 640px; margin-left: -320px; padding: 34px 46px; border-radius: 44px; background: #fff;
   box-shadow: 0 40px 110px rgba(0, 0, 0, .6), 0 0 120px rgba(53, 196, 106, .35); opacity: 0; transform-origin: 50% 50%; overflow: hidden; }
 #logocard img { width: 100%; display: block; }
@@ -148,6 +189,7 @@ body { font-family: "Inter", "Segoe UI", "Helvetica Neue", "Noto Color Emoji", "
 <body>
 <div id="stage">
   <div id="glow1"></div><div id="glow2"></div><div id="glow3"></div>
+  <div id="hookbg"></div>
   <canvas id="mesh" width="1080" height="1080"></canvas>
   <div id="corner"><img src="assets/logo.png" alt=""></div>
   <div id="side"><div id="tag"><i></i><span></span></div><div id="head"></div><div id="subline"></div></div>
@@ -170,7 +212,12 @@ body { font-family: "Inter", "Segoe UI", "Helvetica Neue", "Noto Color Emoji", "
     <div id="homebar"></div>
   </div></div></div>
   <div id="flies"></div>
-  <div id="words"></div>
+  <div id="hook">
+    <svg id="hlines" width="1080" height="1080"></svg><div id="hring"></div><div id="hnodes"></div>
+    <div id="hgrid"><div id="hgridin"></div></div>
+    <div id="hpostw"></div><div id="hflies"></div>
+    <div id="hcap"><span class="l1"></span><span class="l2"></span></div>
+  </div>
   <div id="logocard"><img src="assets/logo.png" alt=""></div>
   <div id="tagline"></div><div id="tagline2"></div>
   <div id="outro"><h1></h1><div class="cta"></div><div class="by"><em style="font-style:normal"></em><span><img src="assets/esoft.png" alt=""></span></div></div>
@@ -203,12 +250,13 @@ let D, UI, M, TXT;
 const env = (name, t) => { const a = M[name]; const i = clamp(Math.round(t * M.fps), 0, a.length - 1); return a[i]; };
 const T = { logo: 6.2, logoMove: 10.36, s1: 11.96, s2: 18.36, added: 25.5, post: 26.36, roll: 28.17, drop: 30.56, dropTail: 35.18, s4: 37.18, s5: 40.36,
   s6: 43.56, outro: 46.76, end: 50.04 };
-const FLASH = [[T.logo, .95], [T.s1, .5], [T.s2, .22], [T.added, .55], [T.drop, 1], [T.dropTail, .4], [T.s4, .5], [T.s5, .25], [T.s6, .25], [T.outro, .85]];
+const HK = { b: 2.36, c: 3.96, out: 5.5 };  // the hook: the pain until `b`, "write it once" until `c`, "eMesh sends it" until `out`
+const FLASH = [[HK.b, .5], [HK.c, .3], [T.logo, .95], [T.s1, .5], [T.s2, .22], [T.added, .55], [T.drop, 1], [T.dropTail, .4], [T.s4, .5], [T.s5, .25], [T.s6, .25], [T.outro, .85]];
 
 // ------------------------------------------------------------------ texts of the spot
 const TEXTS = {
   es: {
-    words: ["Un mensaje.", "Todos tus canales.", "A la vez."],
+    hook: [["¿Sigues publicando", "canal por canal?"], ["Escríbelo", "una vez"], ["eMesh lo publica", "en todos a la vez"]],
     tagline: "Tu red de distribución en Telegram", tagline2: "Escribes una vez. eMesh lo publica en toda tu red, a su hora.",
     scenes: {
       s1: { tag: "01 · TU RED", head: "Toda tu red, de un |vistazo", sub: "Canales, miembros y mensajes activos en una sola pantalla." },
@@ -544,15 +592,92 @@ function drawDrop(t) {
   tail.style.opacity = clamp(tp * 3); tail.style.transform = `scale(${lerp(1.7, 1, outC(tp)) * (1 + .04 * env("flux", t) * seg(t, 34.5, T.s4))})`;
 }
 
-// ------------------------------------------------------------------ intro, outro and the flashes on the hits
-function drawCovers(t) {
-  const w = $("#words"); const bars = [.76, 2.36, 3.96, 5.5]; let k = -1; for (let i = 0; i < 3; i++) if (t >= bars[i] && t < bars[i + 1]) k = i;
-  if (k < 0) w.style.opacity = 0; else {
-    if (w.dataset.k !== String(k)) { w.dataset.k = String(k); w.textContent = TXT.words[k]; }
-    const p = seg(t, bars[k], bars[k] + .34), o = 1 - seg(t, bars[k + 1] - .2, bars[k + 1]);
-    w.style.opacity = p * o; w.style.transform = `scale(${lerp(1.5, 1, outC(p)) + .05 * (t - bars[k])})`; w.style.filter = `blur(${(1 - p) * 14}px)`;
-    w.style.color = k === 2 ? "#7be29a" : "#fff";
+// ------------------------------------------------------------------ the hook: something moves and says why from the first frame
+const PASTE = (i) => (i ? .36 + (i - 1) * .4 : -.5);  // the same message again, one channel per beat (the first is there on frame 0)
+const HNODE = [[160, 500], [920, 500], [160, 700], [920, 700], [160, 900], [920, 900]];
+const HNODE_AT = (i) => HK.c + .5 + i * .18;
+const HPOST = [540, 692];
+function buildHook() {
+  const st = D.states.channel, lines = st.text.split("\n").filter(Boolean);
+  $("#hookbg").style.backgroundImage = `url(${st.photo})`;
+  $("#hgridin").innerHTML = D.channels.map((c, i) => `<div class="hc" style="left:${(i % 3) * 314}px;top:${Math.floor(i / 3) * 326}px">
+    <div class="hd"><div class="a" style="background:${GRAD[i % 6]}">${esc(initials(c.name))}</div><div style="min-width:0"><div class="nm">${esc(c.name)}</div><div class="mb">👤 ${fmtN(c.members)}</div></div></div>
+    <div class="ghost" style="background-image:linear-gradient(rgba(42,34,56,.8),rgba(42,34,56,.8)),url(${st.photo})"></div><div class="fill"><img src="${st.photo}"><div class="ln"></div>
+      <div class="bt"><i style="background:#3b8cf1"></i><i style="background:#2fb34c"></i><i style="background:rgba(120,104,150,.85)"></i></div></div></div>`).join("")
+    + `<div id="hfinger"></div><div id="hbadge"></div>`;
+  $("#hpostw").innerHTML = `<div class="post"><img src="${st.photo}"><div class="tx">${lines[0]}${lines[1] ? "<br>" + lines[1].slice(0, 62) + "…" : ""}</div>
+    <div class="bt"><i style="background:#3b8cf1">▶️ Ver tráiler</i><i style="background:#2fb34c">🎟 -20 %</i><i style="background:rgba(92,78,120,.7)">⭐ Opiniones</i></div></div>
+    <div id="hone">✅ ×1</div><div id="hava"><img src="assets/avatar.jpg"></div>`;
+  $("#hnodes").innerHTML = D.channels.map((c, i) => `<div class="hn" style="left:${HNODE[i][0]}px;top:${HNODE[i][1]}px">
+    <div class="a" style="background:${GRAD[i % 6]}">${esc(initials(c.name))}<i>✓</i></div><b>${esc(c.name)}</b><span>👤 ${fmtN(c.members)}</span></div>`).join("");
+  $("#hflies").innerHTML = D.channels.map(() => `<div class="fly"><img src="${st.photo}"></div>`).join("");
+}
+function drawHook(t) {
+  const h = $("#hook"), bg = $("#hookbg");
+  if (t >= T.logo) { h.style.opacity = 0; bg.style.opacity = 0; return; }
+  bg.style.opacity = 1 - seg(t, HK.b - .04, HK.b + .3); bg.style.transform = `scale(${1.06 + .03 * t})`;
+  const suck = Math.pow(seg(t, HK.out, T.logo), 2);  // before the first hit everything falls into the centre, where the logo lands
+  h.style.opacity = 1 - seg(t, T.logo - .2, T.logo - .02); h.style.transform = `scale(${lerp(1, .05, suck)}) rotate(${-12 * suck}deg)`;
+  // the caption: a line, and the words that matter stamped under it one beat later
+  const k = t < HK.b ? 0 : t < HK.c ? 1 : 2, at = [0, HK.b, HK.c][k], cap = $("#hcap"), l1 = $(".l1", cap), l2 = $(".l2", cap);
+  if (cap.dataset.k !== String(k)) { cap.dataset.k = String(k); l1.textContent = TXT.hook[k][0]; l2.textContent = TXT.hook[k][1]; l2.className = "l2 " + (k ? "green" : "red"); }
+  const p1 = seg(t, at, at + .26), p2 = k ? seg(t, at + .4, at + .68) : 1;
+  let shake = 0, n = 0; for (let i = 0; i < 6; i++) if (t >= PASTE(i)) { n = i + 1; shake += decay(t, PASTE(i), 10); }
+  if (t >= HK.b) shake = 0;
+  l1.style.opacity = k ? clamp(p1 * 4) : 1; l1.style.transform = `scale(${lerp(k ? 1.4 : 1.07, 1, outC(p1))})`;
+  l2.style.opacity = p2 > 0 ? 1 : 0;
+  l2.style.transform = `rotate(${-2.5 + 3 * shake * Math.sin(t * 40)}deg) scale(${k ? lerp(1.9, 1, back(p2)) : lerp(1.12, 1, outC(seg(t, 0, .3))) + .06 * shake})`;
+  cap.style.opacity = 1 - seg(t, HK.out, HK.out + .22);
+  // 1. the pain: the same message, pasted channel by channel
+  const grid = $("#hgrid"), merge = ease(seg(t, HK.b, HK.b + .3));
+  grid.style.display = t < HK.b + .32 ? "" : "none";
+  if (t < HK.b + .32) {
+    $("#hgridin").style.transform = `rotateX(${9 - 4 * merge}deg) rotateY(${lerp(-9, 5, clamp(t / HK.b))}deg) translate(${9 * shake * Math.sin(t * 70)}px, ${6 * shake * Math.cos(t * 55)}px)`;
+    const centre = (i) => [(i % 3) * 314 + 145, Math.floor(i / 3) * 326 + 176];
+    document.querySelectorAll("#hgridin .hc").forEach((c, i) => {
+      const pa = PASTE(i), p = seg(t, pa, pa + .16), hot = decay(t, pa, 3.2), [cx, cy] = centre(i);
+      const fill = $(".fill", c); fill.style.opacity = p > 0 ? 1 : 0; fill.style.transform = `scale(${p > 0 ? lerp(1.3, 1, outC(p)) : 1})`;
+      c.style.borderColor = p > 0 ? `rgba(255,${Math.round(lerp(255, 70, hot))},${Math.round(lerp(255, 105, hot))},${lerp(.14, .95, hot)})` : "rgba(255,255,255,.14)";
+      c.style.boxShadow = `0 24px 54px rgba(0,0,0,.55), 0 0 ${46 * hot}px rgba(255,45,85,${.85 * hot})`;
+      c.style.opacity = 1 - seg(t, HK.b + .1, HK.b + .3);
+      c.style.transform = `translate(${(459 - cx) * merge}px, ${(HPOST[1] - 378 - cy) * merge}px) scale(${(1 + .07 * decay(t, pa, 8)) * lerp(1, .4, merge)})`;
+    });
+    let j = 0; for (let i = 1; i < 6; i++) if (t >= PASTE(i) - .26) j = i;
+    const from = centre(Math.max(0, j - 1)), to = centre(j), mv = j ? ease(seg(t, PASTE(j) - .26, PASTE(j) - .04)) : 1, f = $("#hfinger");
+    f.style.left = lerp(from[0], to[0], mv) + "px"; f.style.top = lerp(from[1], to[1], mv) + "px";
+    f.style.opacity = 1 - seg(t, HK.b - .1, HK.b); f.style.transform = `scale(${t >= PASTE(j) && t < PASTE(j) + .13 ? .76 : 1})`;
+    const bd = $("#hbadge"), last = n === 6;
+    if (n) { const [bx, by] = centre(n - 1), bp = seg(t, PASTE(n - 1), PASTE(n - 1) + .26);
+      bd.textContent = `${last ? "😩" : "📋"} ×${n}`; bd.style.left = (bx + 14) + "px"; bd.style.top = (by - 128) + "px";
+      bd.style.opacity = 1 - seg(t, HK.b - .02, HK.b + .1);
+      bd.style.transform = `scale(${back(bp) * (last ? 1.18 : 1)}) rotate(${last ? 7 * Math.sin(t * 38) : 4}deg)`; } else bd.style.opacity = 0;
   }
+  // 2. written once: one message
+  const pw = $("#hpostw"), pb = seg(t, HK.b + .06, HK.b + .42), small = ease(seg(t, HK.c, HK.c + .32));
+  pw.style.opacity = pb > 0 ? 1 : 0;
+  pw.style.transform = `translateY(${6 * Math.sin(t * 2.6)}px) rotate(${lerp(-6, 0, outC(pb)) + 1.1 * Math.sin(t * 2.2)}deg) scale(${(pb > 0 ? back(pb) : 0)
+    * lerp(1.2, .62, small) * (1 + .05 * decay(t, HK.b + .66, 7)) * (1 - .07 * decay(t, HK.c, 9))})`;
+  const one = $("#hone"), op = seg(t, HK.b + .66, HK.b + .92);
+  one.style.opacity = (op > 0 ? 1 : 0) * (1 - seg(t, HK.c - .12, HK.c)); one.style.transform = `rotate(5deg) scale(${op > 0 ? back(op) : 0})`;
+  // 3. eMesh sends it: one touch and it lands in every channel
+  const av = $("#hava"), ap = seg(t, HK.c + .04, HK.c + .4); av.style.opacity = ap > 0 ? 1 : 0; av.style.transform = `scale(${ap > 0 ? back(ap) * 1.5 : 0})`;
+  const ring = $("#hring"), rp = seg(t, HK.c, HK.c + .6); setRing(ring, HPOST[0], HPOST[1], 90 + 470 * outC(rp), rp > 0 ? 1 - rp : 0);
+  const flies = [...$("#hflies").children]; let svg = "";
+  document.querySelectorAll("#hnodes .hn").forEach((node, i) => {
+    const [x, y] = HNODE[i], at2 = HNODE_AT(i), inP = seg(t, HK.c + .08 + i * .05, HK.c + .4 + i * .05), got = seg(t, at2, at2 + .3), fp = seg(t, at2 - .34, at2);
+    node.style.opacity = clamp(inP * 3) * (got > 0 ? 1 : .6); node.style.transform = `scale(${(inP > 0 ? back(inP) : 0) * (1 + .14 * decay(t, at2, 6))})`;
+    $(".a", node).style.boxShadow = got > 0 ? "0 0 0 5px rgba(53,196,106,.95), 0 0 36px rgba(53,196,106,.7)" : "0 0 0 3px rgba(255,255,255,.16)";
+    $(".a i", node).style.transform = `scale(${got > 0 ? back(got) : 0})`;
+    if (fp > 0) svg += line(null, HPOST[0], HPOST[1], x, y, outC(fp), "rgba(166,232,106,.85)");
+    const f = flies[i];
+    if (fp > 0 && fp < 1) { const e = ease(fp); f.style.opacity = 1; f.style.left = lerp(HPOST[0], x, e) + "px"; f.style.top = (lerp(HPOST[1], y, e) - 70 * Math.sin(Math.PI * e)) + "px";
+      f.style.transform = `scale(${lerp(.7, 1.3, Math.sin(Math.PI * e))}) rotate(${lerp(-18, 6, e)}deg)`; } else f.style.opacity = 0;
+  });
+  $("#hlines").innerHTML = svg;
+}
+
+// ------------------------------------------------------------------ the logo, the outro and the flashes on the hits
+function drawCovers(t) {
   // the logo: lands on the first hit, then goes to its corner while the phone comes in; it comes back to close
   const card = $("#logocard"), inA = seg(t, T.logo, T.logo + .5), toCorner = ease(seg(t, T.logoMove, T.logoMove + .9)), outroIn = seg(t, T.outro, T.outro + .5);
   const showA = inA > 0 && t < T.outro - .5;
@@ -582,12 +707,12 @@ function drawCovers(t) {
   $("#stage").style.transform = `scale(${1 + .035 * punch + .006 * env("low", t)})`;
 }
 
-function draw(t) { drawMesh(t); drawPhone(t); drawPose(t); drawSide(t); drawDrop(t); drawCovers(t); return t >= T.end; }
+function draw(t) { drawMesh(t); drawPhone(t); drawPose(t); drawSide(t); drawDrop(t); drawHook(t); drawCovers(t); return t >= T.end; }
 window.__load = (data, music) => {
   D = data; UI = data.ui; M = music; TXT = TEXTS[data.lang] || TEXTS.es;
   $("#tagline").textContent = TXT.tagline; $("#tagline2").textContent = TXT.tagline2;
   $("#outro h1").textContent = TXT.outro; $("#outro .cta").textContent = TXT.cta; $("#outro .by em").textContent = TXT.by;
-  views = VIEWS(); buildViz(); buildDrop(); draw(0);
+  views = VIEWS(); buildViz(); buildDrop(); buildHook(); draw(0);
   return T.end;
 };
 window.__frame = (t) => draw(t);
