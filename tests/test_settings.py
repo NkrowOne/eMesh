@@ -123,7 +123,8 @@ async def test_notifications_of_an_admin(app: App) -> None:
     await app.click(SUPER_ID, "Mis avisos")
     text = app.last_text(SUPER_ID)
     assert text == ("🔔 <b>Mis avisos</b>\n\n🔔 Alertas de la red: ✅\n"
-                    "   └ Canales que se pausan, se unen, salen o pierden permisos.\n📋 Resumen diario: ✅\n"
+                    "   └ Canales que se pausan, se unen, salen o pierden permisos. Las solicitudes te llegan siempre.\n"
+                    "📋 Resumen diario: ✅\n"
                     "   └ Cada mañana, los envíos del día anterior y lo que necesita atención.\n"
                     "📤 Informe de cada envío: ✖️\n"
                     "   └ Un mensaje al terminar cada envío: entregados, fallos y omitidos.")

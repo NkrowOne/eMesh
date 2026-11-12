@@ -3,9 +3,9 @@ from __future__ import annotations
 
 from sqlalchemy import select
 
-from app.db.models import ChatOrigin, ChatStatus, EventKind, RequestNotice
+from app.db.models import BotUser, ChatOrigin, ChatStatus, EventKind, RequestNotice
 from app.services.chats import SRC_CHAT, RqCB
-from tests.conftest import OWNER2_ID, SUPER_ID, USER_ID, App
+from tests.conftest import MAIN_BOT_ID, OWNER2_ID, SUPER_ID, USER_ID, App
 from tests.test_chats_support import (  # noqa: F401  (reset_chat_caches is an autouse fixture)
     CHANNEL,
     GROUP,
@@ -185,3 +185,13 @@ async def test_requests_of_another_network_are_out_of_reach(app: App) -> None:
         from app.db.models import Chat
 
         assert (await s.get(Chat, pk)).status == ChatStatus.PENDING
+
+
+async def test_request_reaches_an_admin_who_turned_the_network_alerts_off(app: App) -> None:
+    """🔔 Alertas de la red is about what happens in the network: a request waits for a decision and still arrives."""
+    await start(app, SUPER_ID, USER_ID)
+    async with app.db() as s:
+        (await s.get(BotUser, (MAIN_BOT_ID, SUPER_ID))).notify = False
+    await set_bot(app, join_open=True)
+    await add_chat(app)
+    assert len(notices(app)) == 1

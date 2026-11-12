@@ -234,7 +234,9 @@ STRINGS = {
     # --- Mis avisos --------------------------------------------------------------------------------
     "set.nt.title": "🔔 <b>Mis avisos</b>",
     "set.nt.notify": "🔔 Alertas de la red: {v}",
-    "set.nt.hint.notify": "   └ Canales que se pausan, se unen, salen o pierden permisos.",
+    "set.nt.hint.notify": (
+        "   └ Canales que se pausan, se unen, salen o pierden permisos. Las solicitudes te llegan siempre."
+    ),
     "set.nt.hint.notify_user": "   └ Los avisos sobre tus propios canales llegan siempre.",
     "set.nt.summary": "📋 Resumen diario: {v}",
     "set.nt.hint.summary": "   └ Cada mañana, los envíos del día anterior y lo que necesita atención.",

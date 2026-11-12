@@ -235,7 +235,7 @@ STRINGS = {
     # --- My notifications --------------------------------------------------------------------------
     "set.nt.title": "🔔 <b>My notifications</b>",
     "set.nt.notify": "🔔 Network alerts: {v}",
-    "set.nt.hint.notify": "   └ Channels that pause, join, leave or lose rights.",
+    "set.nt.hint.notify": "   └ Channels that pause, join, leave or lose rights. Requests always reach you.",
     "set.nt.hint.notify_user": "   └ Notices about your own channels are always sent.",
     "set.nt.summary": "📋 Daily summary: {v}",
     "set.nt.hint.summary": "   └ Every morning, the previous day's sends and what needs attention.",
