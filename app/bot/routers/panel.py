@@ -44,7 +44,7 @@ from app.ui.common import (
     visible_len,
     ws_banner,
 )
-from app.ui.fmt import esc, num, to_local, truncate, user_link
+from app.ui.fmt import dt, esc, num, to_local, truncate, user_link
 from app.ui.photos import show_with_photo
 from app.ui.screens import open_screen, screen
 
@@ -207,6 +207,7 @@ async def _rows(ctx: Ctx, session: AsyncSession, bots: list[BotRecord], start: i
     paused = await per_bot(select(Chat.bot_id, func.count()).where(
         Chat.bot_id.in_(ids), *_owner_paused_now(utcnow())).group_by(Chat.bot_id))
     lines, buttons = [], []
+    conflicts = ctx.manager.token_conflicts if ctx.manager is not None else {}
     for i, rec in enumerate(bots, start):
         owner = owners.get(rec.owner_id)
         lines.append(ctx.t(
@@ -214,7 +215,8 @@ async def _rows(ctx: Ctx, session: AsyncSession, bots: list[BotRecord], start: i
             owner=user_link(rec.owner_id, truncate(owner.full_name, 32) if owner else None,
                             owner.username if owner else None),
             chats=num(chats.get(rec.id, 0)), posts=num(posts.get(rec.id, 0)),
-            paused=ctx.t("sa.bots.paused", n=num(paused[rec.id])) if paused.get(rec.id) else "",
+            paused=(ctx.t("sa.bots.paused", n=num(paused[rec.id])) if paused.get(rec.id) else "")
+            + (ctx.t("sa.bots.conflict") if rec.id in conflicts else ""),
         ))
         buttons.append(btn(f"#{i} @{truncate(rec.username or str(rec.id), 20)}",
                            PanelCB(action="bot", id=rec.id, page=page, f=f)))
@@ -353,6 +355,13 @@ async def _bot_view(ctx: Ctx, session: AsyncSession, rec: BotRecord, page: int,
     )
     if rec.paused:
         text += "\n" + ctx.t("sa.bot.net_paused")
+    if ctx.manager is not None:  # its token in use by another program: now, or the last time it was seen
+        since = ctx.manager.token_conflicts.get(rec.id)
+        last = None if since else await ctx.manager.last_token_conflict(rec.id)
+        if since:
+            text += "\n" + ctx.t("sa.bot.conflict_now", date=dt(since, ctx.tz))
+        elif last:
+            text += "\n" + ctx.t("sa.bot.conflict_last", date=dt(last, ctx.tz))
 
     def cb(action: str) -> PanelCB:
         return PanelCB(action=action, id=rec.id, page=page, f=f)

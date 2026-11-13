@@ -175,6 +175,11 @@ STRINGS = {
         "🔒 Limits: {limits}"
     ),
     "sa.bot.net_paused": "⏸ <b>The distribution of its whole network is paused.</b>",
+    "sa.bot.conflict_now": (
+        "⚠️ <b>Token in use somewhere else</b> since {date}: the bot gets nothing of what its users write or press."
+    ),
+    "sa.bot.conflict_last": "⚠️ Last token conflict: {date}",
+    "sa.bots.conflict": " · ⚠️ token used elsewhere",
     "sa.lim.chats": "{n} chats",
     "sa.lim.chats_free": "unlimited chats",
     "sa.lim.posts": "{n} posts",

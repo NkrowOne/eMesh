@@ -625,7 +625,11 @@ Managed bot update (`managed_bot`, main bot): `getManagedBotToken` → `connect_
 `manager.on_bot_invalid`: DM the owner through the main bot (register the callback once).
 `manager.on_token_conflict` (polling: another program keeps answering getUpdates with the token of a bot for a
 minute, `CONFLICT_TRIES` tries; the bot gets no updates meanwhile): DM every super admin through the main bot with
-the bot, its owner and `[🤖 Ver bot]` (`panel_bot`); not again for the same bot before `CONFLICT_AGAIN` (6 h).
+the bot, its owner and `[🤖 Ver bot]` (`panel_bot`). Once per bot: the last conflict seen is kept in the KV table
+(`conflict:<bot_id>`), so it isn't told again while it lasts, when it comes and goes or after a restart (only after
+`CONFLICT_REARM`, 30 days, without any). The 👑 panel shows it: `manager.token_conflicts` (bots in conflict now)
+marks the bot in the list («⚠️ token en otro sitio») and its screen says since when, or when it was last seen
+(`manager.last_token_conflict`).
 `panel` (super admins, main bots):
 ```
 👑 <b>Panel de la plataforma</b>

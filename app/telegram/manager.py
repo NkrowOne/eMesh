@@ -5,8 +5,8 @@ import asyncio
 import hashlib
 import hmac
 import logging
-import time
 from collections.abc import Callable
+from datetime import datetime, timedelta, timezone
 from typing import TYPE_CHECKING, Any
 
 from aiogram import Bot, Dispatcher
@@ -29,7 +29,7 @@ from sqlalchemy import select, update
 
 from app.db.base import utcnow
 from app.db.models import Bot as BotRecord
-from app.db.models import BotStatus
+from app.db.models import KV, BotStatus
 from app.db.session import SessionMaker, session_scope
 from app.telegram.context import bot_scope
 from app.telegram.crypto import TokenCipher
@@ -64,7 +64,20 @@ WEBHOOK_REQUEST_TIMEOUT = 20
 
 CONFLICT_WAIT = 15  # seconds between two tries while another program polls with the same token
 CONFLICT_TRIES = 4  # tries in conflict before it is told (a minute: the overlap of a restart is shorter)
-CONFLICT_AGAIN = 6 * 3600.0  # seconds before the conflict of the same bot is told again
+CONFLICT_TOUCH = 20  # tries between two notes of "still in conflict" in the KV table (5 minutes)
+CONFLICT_REARM = timedelta(days=30)  # without any conflict before a new one of the same bot is told again
+
+
+def conflict_key(bot_id: int) -> str:
+    return f"conflict:{bot_id}"
+
+
+def _as_datetime(value: Any) -> datetime | None:
+    try:
+        parsed = datetime.fromisoformat(value) if isinstance(value, str) else None
+    except ValueError:
+        return None
+    return parsed if parsed is None or parsed.tzinfo is not None else parsed.replace(tzinfo=timezone.utc)
 
 class BotTokenError(Exception):
     """The token is invalid or the bot can't be used."""
@@ -90,7 +103,7 @@ class BotManager:
         self.on_bot_invalid: list[Callable[[int], Any]] = []
         # Another program polls with the token of a bot (it gets no updates meanwhile): told to the super admins.
         self.on_token_conflict: list[Callable[[int], Any]] = []
-        self._conflict_told: dict[int, float] = {}  # bot id -> time.monotonic() of its last notice
+        self.token_conflicts: dict[int, datetime] = {}  # bots in conflict right now -> since when
 
     # ------------------------------------------------------------------ bots
     def _api_server(self) -> TelegramAPIServer | None:
@@ -341,6 +354,7 @@ class BotManager:
     async def _drop(self, bot_id: int) -> None:
         bot = self.bots.pop(bot_id, None)
         self._semaphores.pop(bot_id, None)
+        self.token_conflicts.pop(bot_id, None)
         if bot:
             await bot.session.close()
 
@@ -388,13 +402,15 @@ class BotManager:
             except Exception:  # noqa: BLE001
                 log.exception("on_bot_invalid callback failed")
 
-    async def _token_conflict(self, bot_id: int) -> None:
-        """Another program keeps using the token of this bot: runs the ``on_token_conflict`` callbacks (the notice to
-        the super admins), not again for the same bot before ``CONFLICT_AGAIN``."""
-        told = self._conflict_told.get(bot_id)
-        if told is not None and time.monotonic() - told < CONFLICT_AGAIN:
+    async def _token_conflict(self, bot_id: int, since: datetime) -> None:
+        """Another program keeps using the token of this bot: it shows in the 👑 panel while it lasts
+        (``token_conflicts``) and the ``on_token_conflict`` callbacks run (the notice to the super admins) once
+        per bot, not on every restart nor while it comes and goes: again only after ``CONFLICT_REARM`` without any
+        conflict. The last conflict seen is kept in the KV table (``conflict:<bot id>``)."""
+        self.token_conflicts[bot_id] = since
+        last = await self._conflict_seen(bot_id)
+        if last is not None and utcnow() - last < CONFLICT_REARM:
             return
-        self._conflict_told[bot_id] = time.monotonic()
         log.error("The token of bot %s is being used by another program: the bot gets no updates meanwhile", bot_id)
         for cb in self.on_token_conflict:
             try:
@@ -403,6 +419,25 @@ class BotManager:
                     await out
             except Exception:  # noqa: BLE001
                 log.exception("on_token_conflict callback failed")
+
+    async def _conflict_seen(self, bot_id: int) -> datetime | None:
+        """Stores that the bot is in conflict now. Returns when it was seen in conflict before, if ever."""
+        now = utcnow()
+        async with session_scope(self.sm) as s:
+            rec = await s.get(KV, conflict_key(bot_id))
+            last = _as_datetime(rec.value) if rec is not None else None
+            if rec is None:
+                s.add(KV(key=conflict_key(bot_id), value=now.isoformat(), updated_at=now))
+            else:
+                rec.value = now.isoformat()
+                rec.updated_at = now
+        return last
+
+    async def last_token_conflict(self, bot_id: int) -> datetime | None:
+        """When another program was last seen using the token of this bot (None: never)."""
+        async with session_scope(self.sm) as s:
+            rec = await s.get(KV, conflict_key(bot_id))
+        return _as_datetime(rec.value) if rec is not None else None
 
     # --------------------------------------------------------------- updates
     async def feed(self, bot: Bot, update: Update) -> None:
@@ -456,6 +491,7 @@ class BotManager:
         offset: int | None = None
         backoff = 1.0
         conflicts = 0
+        since = utcnow()
         try:
             await bot.delete_webhook(drop_pending_updates=False)
         except TelegramUnauthorizedError:
@@ -469,6 +505,7 @@ class BotManager:
                 updates, offset = await self._get_updates(bot, offset)
                 backoff = 1.0
                 conflicts = 0
+                self.token_conflicts.pop(bot.id, None)
                 for upd in updates:
                     sem = self._semaphores.get(bot.id)
                     if sem is None:
@@ -486,8 +523,15 @@ class BotManager:
             except TelegramConflictError:
                 log.warning("Polling conflict for bot %s (another instance?). Retrying in 15s", bot.id)
                 conflicts += 1
-                if conflicts == CONFLICT_TRIES:
-                    await self._token_conflict(bot.id)
+                if conflicts == 1:
+                    since = utcnow()
+                try:
+                    if conflicts == CONFLICT_TRIES:
+                        await self._token_conflict(bot.id, since)
+                    elif conflicts > CONFLICT_TRIES and (conflicts - CONFLICT_TRIES) % CONFLICT_TOUCH == 0:
+                        await self._conflict_seen(bot.id)
+                except Exception:  # noqa: BLE001 - noting the conflict never stops the polling
+                    log.exception("The token conflict of bot %s could not be noted", bot.id)
                 await asyncio.sleep(CONFLICT_WAIT)
             except (TelegramNetworkError, TelegramServerError, asyncio.TimeoutError) as exc:
                 log.warning("Polling error for bot %s: %s. Retrying in %.0fs", bot.id, exc, backoff)

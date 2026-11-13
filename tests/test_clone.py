@@ -541,5 +541,30 @@ async def test_a_token_used_somewhere_else_is_told_to_the_super_admins(app: App,
     assert "no recibe lo que escriben o pulsan" in text
     assert app.find_button(SUPER_ID, "Ver bot")[0]["callback_data"] == MenuCB(screen="panel_bot", arg=CLONE_ID).pack()
     assert dms(app, USER_ID) == [] or not any("Token en uso" in t for t in dms(app, USER_ID))  # only the platform
-    await poll(manager_mod.CONFLICT_TRIES + 3)  # still in conflict: not told again so soon
+    # While it lasts, the 👑 panel shows it: in the list of bots and in the bot.
+    assert CLONE_ID in app.manager.token_conflicts
+    await app.press(SUPER_ID, MenuCB(screen="panel_bots").pack())
+    assert "⚠️ token en otro sitio" in app.last_text(SUPER_ID)
+    await app.press(SUPER_ID, MenuCB(screen="panel_bot", arg=CLONE_ID).pack())
+    assert "⚠️ <b>Token en uso en otro sitio</b> desde el " in app.last_text(SUPER_ID)
+
+    # Told once: not while it goes on, not when it comes back, not after a restart of the process.
+    await poll(manager_mod.CONFLICT_TRIES + manager_mod.CONFLICT_TOUCH + 1)
+    app.manager.token_conflicts.clear()  # (a restart forgets what is in memory)
+    await poll(manager_mod.CONFLICT_TRIES + 1)
     assert len(notices()) == 1
+
+    # It polls again without conflict: the panel keeps when it was last seen.
+    async def fine(*_: object) -> tuple[list[object], None]:
+        app.manager._stopping = True  # noqa: SLF001
+        return [], None
+
+    monkeypatch.setattr(app.manager, "_get_updates", fine)
+    try:
+        await app.manager._poll(bot)  # noqa: SLF001
+    finally:
+        app.manager._stopping = False  # noqa: SLF001
+    assert CLONE_ID not in app.manager.token_conflicts
+    await app.press(SUPER_ID, MenuCB(screen="panel_bot", arg=CLONE_ID).pack())
+    text = app.last_text(SUPER_ID)
+    assert "⚠️ Último conflicto de token: " in text and "Token en uso en otro sitio" not in text
