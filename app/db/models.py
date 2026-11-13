@@ -122,6 +122,8 @@ class EventKind:
     CHAT_RIGHTS_OK = "chat_rights_ok"  # the rights are back
     BOT_PAUSED = "bot_paused"  # ⏸ the whole distribution
     BOT_RESUMED = "bot_resumed"
+    # a scheduled send that didn't go out (data: {"reason": "late"|"no_chats", "post", "post_id", "due": iso})
+    POST_MISSED = "post_missed"
 
 
 # A new post stays in the chats until it is deleted (the wizard asks how long; 0 = never deleted).

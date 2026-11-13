@@ -71,6 +71,15 @@ STRINGS = {
         "Para reactivarlo, conéctalo de nuevo con el token nuevo en «🤖 Crear mi bot» › «🔑 Usar token»: sus datos "
         "se conservan."
     ),
+    "cl.conflict_dm": (
+        "⚠️ <b>Token en uso en otro sitio</b>\n\n"
+        "🤖 @{bot} (<code>{bot_id}</code>)\n"
+        "👤 Dueño: {owner} (<code>{owner_id}</code>)\n\n"
+        "Otro programa está usando el token de este bot. Mientras dure, el bot no recibe lo que escriben o pulsan "
+        "sus usuarios.\n\n"
+        "Un token solo funciona en un sitio: hay que retirarlo del otro programa o usar un bot distinto."
+    ),
+    "cl.btn.conflict_bot": "🤖 Ver bot",
     "cl.new_admin": (
         "🤖 <b>Nuevo clon</b>\n\n"
         "🤖 @{bot} (<code>{bot_id}</code>)\n"

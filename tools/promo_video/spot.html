@@ -1,0 +1,721 @@
+<!doctype html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<title>eMesh spot (1:1, cut to the music)</title>
+<link rel="stylesheet" href="phone.css">
+<style>
+* { box-sizing: border-box; margin: 0; padding: 0; }
+html, body { width: 1080px; height: 1080px; overflow: hidden; background: #07050b; }
+body { font-family: "Inter", "Segoe UI", "Helvetica Neue", "Noto Color Emoji", "Segoe UI Emoji", "Apple Color Emoji", sans-serif;
+  -webkit-font-smoothing: antialiased; color: #fff; }
+#stage { position: relative; width: 1080px; height: 1080px; overflow: hidden; background: linear-gradient(160deg, #140d1f 0, #09060f 62%, #0e0818 100%); }
+#glow1, #glow2, #glow3 { position: absolute; border-radius: 50%; filter: blur(70px); pointer-events: none; }
+#glow1 { width: 620px; height: 620px; background: rgba(53, 196, 106, .30); }
+#glow2 { width: 700px; height: 700px; background: rgba(122, 75, 224, .30); }
+#glow3 { width: 520px; height: 520px; background: rgba(140, 28, 70, .34); }
+#mesh { position: absolute; inset: 0; }
+#vignette { position: absolute; inset: 0; pointer-events: none; z-index: 30;
+  background: radial-gradient(circle at 50% 50%, transparent 55%, rgba(0, 0, 0, .55) 100%); }
+#flash { position: absolute; inset: 0; z-index: 40; pointer-events: none; opacity: 0;
+  background: radial-gradient(circle at 50% 46%, #fff 0, rgba(190, 255, 215, .85) 30%, rgba(53, 196, 106, .25) 62%, transparent 82%); }
+#shock { position: absolute; z-index: 39; left: 50%; top: 46%; width: 300px; height: 300px; margin: -150px 0 0 -150px; border-radius: 50%;
+  border: 6px solid rgba(190, 255, 215, .9); box-shadow: 0 0 60px rgba(53, 196, 106, .8), inset 0 0 60px rgba(53, 196, 106, .5); opacity: 0; pointer-events: none; }
+#black { position: absolute; inset: 0; z-index: 60; background: #000; opacity: 0; pointer-events: none; }
+
+/* ---------- brand corner, headline and the working animation of each scene ---------- */
+#corner { position: absolute; z-index: 12; left: 56px; top: 52px; height: 62px; padding: 9px 20px; border-radius: 18px; background: #fff;
+  box-shadow: 0 12px 34px rgba(0, 0, 0, .5); opacity: 0; }
+#corner img { height: 44px; display: block; }
+#side { position: absolute; z-index: 10; left: 60px; top: 176px; width: 470px; }
+#tag { font-size: 18px; font-weight: 700; letter-spacing: 3px; color: var(--green); display: flex; align-items: center; gap: 12px; }
+#tag i { width: 46px; height: 3px; border-radius: 2px; background: var(--green); display: block; }
+#head { margin-top: 20px; font-size: 62px; line-height: 1.04; font-weight: 800; letter-spacing: -2px; min-height: 196px; }
+#head span { display: inline-block; white-space: pre; will-change: transform; }
+#head span.hl { background: linear-gradient(90deg, #a6e86a, #35c46a); -webkit-background-clip: text; background-clip: text; color: transparent; }
+#subline { margin-top: 18px; font-size: 27px; line-height: 1.34; color: #c8c2d6; font-weight: 450; }
+#viz { position: absolute; z-index: 10; left: 60px; top: 580px; width: 470px; height: 440px; }
+.v { position: absolute; inset: 0; opacity: 0; }
+
+/* scene 1: the numbers of the network */
+.stat { position: absolute; left: 0; display: flex; align-items: center; gap: 18px; padding: 16px 26px 16px 18px; border-radius: 26px;
+  background: rgba(255, 255, 255, .06); border: 1px solid rgba(255, 255, 255, .1); }
+.stat .ic { width: 62px; height: 62px; border-radius: 18px; display: flex; align-items: center; justify-content: center; font-size: 32px;
+  background: linear-gradient(140deg, rgba(53, 196, 106, .35), rgba(53, 196, 106, .08)); }
+.stat b { font-size: 46px; font-weight: 800; letter-spacing: -1.4px; line-height: 1; font-variant-numeric: tabular-nums; }
+.stat span { display: block; font-size: 19px; color: #b9b3c6; margin-top: 4px; }
+
+/* scene 2 and 5: the mesh grows */
+.net { position: absolute; inset: 0; }
+.net svg { position: absolute; inset: 0; overflow: visible; }
+.node { position: absolute; display: flex; align-items: center; gap: 10px; padding: 8px 16px 8px 8px; border-radius: 30px; white-space: nowrap;
+  background: rgba(34, 28, 46, .96); border: 1px solid rgba(255, 255, 255, .14); font-size: 19px; font-weight: 600; max-width: 232px;
+  transform-origin: center; box-shadow: 0 10px 24px rgba(0, 0, 0, .4); }
+.node .a { width: 36px; height: 36px; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 14px; font-weight: 700; }
+.node.new { border-color: var(--green); box-shadow: 0 0 0 4px rgba(53, 196, 106, .22), 0 10px 30px rgba(53, 196, 106, .3); }
+.node small { color: #b9b3c6; font-weight: 500; font-size: 15px; }
+.node .nm { overflow: hidden; text-overflow: ellipsis; }
+.node.wide { max-width: 330px; }
+.hub { position: absolute; width: 104px; height: 104px; border-radius: 50%; overflow: hidden; box-shadow: 0 0 0 5px rgba(255, 255, 255, .14), 0 16px 40px rgba(0, 0, 0, .5); }
+.hub img { width: 100%; height: 100%; object-fit: cover; }
+.ring { position: absolute; border-radius: 50%; border: 3px solid var(--green); opacity: 0; pointer-events: none; }
+
+/* scene 3: the message */
+.post { position: absolute; left: 0; top: 0; width: 430px; border-radius: 26px; overflow: hidden; background: #211c2b;
+  border: 1px solid rgba(255, 255, 255, .12); box-shadow: 0 30px 70px rgba(0, 0, 0, .6); transform-origin: 50% 60%; }
+.post img { display: block; width: 100%; height: 242px; object-fit: cover; }
+.post .tx { padding: 16px 20px 6px; font-size: 19px; line-height: 1.36; color: #e8e4f0; }
+.post .tx b { font-size: 22px; display: block; margin-bottom: 4px; color: #fff; }
+.post .bt { display: flex; gap: 8px; padding: 10px 16px 16px; }
+.post .bt i { flex: 1; font-style: normal; text-align: center; font-size: 16px; font-weight: 700; padding: 11px 6px; border-radius: 12px; white-space: nowrap; }
+
+/* the drop: one message, every channel */
+#drop { position: absolute; z-index: 11; inset: 0; opacity: 0; pointer-events: none; }
+#droptitle { position: absolute; left: 0; right: 0; top: 54px; text-align: center; font-size: 86px; font-weight: 900; letter-spacing: -3.2px; line-height: 1;
+  background: linear-gradient(90deg, #b6f07a, #35c46a 55%, #8be3a8); -webkit-background-clip: text; background-clip: text; color: transparent;
+  transform-origin: 50% 50%; }
+#dropsub { position: absolute; left: 0; right: 0; top: 150px; text-align: center; font-size: 30px; font-weight: 600; color: #d9d4e6; }
+#tiles { position: absolute; left: 540px; top: 236px; width: 440px; height: 660px; perspective: 1400px; }
+#tilesin { position: absolute; inset: 0; transform-style: preserve-3d; transform: rotateY(-13deg) rotateX(4deg); }
+.tile { position: absolute; width: 210px; height: 204px; border-radius: 24px; background: rgba(30, 24, 42, .96); border: 1.5px solid rgba(255, 255, 255, .12);
+  padding: 14px; box-shadow: 0 18px 40px rgba(0, 0, 0, .5); transform-origin: center; }
+.tile .hd { display: flex; align-items: center; gap: 10px; }
+.tile .a { width: 40px; height: 40px; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 15px; font-weight: 700; flex: 0 0 auto; }
+.tile .nm { font-size: 16.5px; font-weight: 700; line-height: 1.15; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.tile .mb { font-size: 13.5px; color: #a9a3b8; margin-top: 2px; }
+.tile .ph { position: relative; margin-top: 12px; height: 106px; border-radius: 14px; overflow: hidden; background: rgba(255, 255, 255, .06); }
+.tile .ph img { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; opacity: 0; }
+.tile .ok { position: absolute; right: -10px; top: -10px; width: 44px; height: 44px; border-radius: 50%; background: var(--green); color: #05230f;
+  font-size: 26px; font-weight: 900; display: flex; align-items: center; justify-content: center; box-shadow: 0 8px 22px rgba(53, 196, 106, .5); transform: scale(0); }
+.fly { position: absolute; z-index: 13; width: 96px; height: 54px; margin: -27px 0 0 -48px; border-radius: 10px; overflow: hidden; opacity: 0;
+  box-shadow: 0 0 0 2px rgba(255, 255, 255, .85), 0 0 34px rgba(53, 196, 106, .9); }
+.fly img { width: 100%; height: 100%; object-fit: cover; display: block; }
+#dropcount { position: absolute; left: 520px; width: 500px; top: 918px; text-align: center; font-size: 30px; font-weight: 800; letter-spacing: -.6px; font-variant-numeric: tabular-nums; }
+#dropcount em { font-style: normal; color: var(--green); }
+#droptail { position: absolute; left: 0; right: 0; bottom: 34px; text-align: center; font-size: 46px; font-weight: 900; letter-spacing: -1.4px; opacity: 0; }
+
+/* scene 4: the day, with the time of each message */
+.day { position: absolute; left: 0; right: 0; top: 30px; height: 300px; border-radius: 28px; background: rgba(255, 255, 255, .055);
+  border: 1px solid rgba(255, 255, 255, .1); }
+.day .t { position: absolute; left: 28px; top: 22px; font-size: 20px; font-weight: 700; color: #b9b3c6; letter-spacing: 1px; }
+.day .clock { position: absolute; right: 28px; top: 14px; font-size: 40px; font-weight: 800; letter-spacing: -1px; font-variant-numeric: tabular-nums; }
+.day .line { position: absolute; left: 34px; right: 34px; top: 210px; height: 6px; border-radius: 3px; background: rgba(255, 255, 255, .14); }
+.day .fill { position: absolute; left: 0; top: 0; bottom: 0; width: 0; border-radius: 3px; background: linear-gradient(90deg, #a6e86a, #35c46a); }
+.day .headp { position: absolute; top: 196px; width: 34px; height: 34px; margin-left: -17px; border-radius: 50%; background: #fff; box-shadow: 0 0 0 7px rgba(53, 196, 106, .35), 0 0 30px rgba(53, 196, 106, .9); }
+.day .hr { position: absolute; top: 236px; font-size: 16px; color: #8f899e; transform: translateX(-50%); font-variant-numeric: tabular-nums; }
+.slot { position: absolute; top: 84px; width: 104px; margin-left: -52px; text-align: center; transform-origin: 50% 100%; }
+.slot img { width: 96px; height: 60px; object-fit: cover; border-radius: 12px; display: block; margin: 0 auto; box-shadow: 0 10px 22px rgba(0, 0, 0, .5); border: 2px solid rgba(255, 255, 255, .2); }
+.slot b { display: block; margin-top: 7px; font-size: 18px; font-weight: 800; font-variant-numeric: tabular-nums; }
+.slot i { position: absolute; right: 0; top: -10px; width: 30px; height: 30px; border-radius: 50%; background: var(--green); color: #05230f; font-style: normal;
+  font-weight: 900; font-size: 18px; display: flex; align-items: center; justify-content: center; transform: scale(0); }
+.pill { position: absolute; left: 0; top: 352px; padding: 13px 22px; border-radius: 26px; font-size: 21px; font-weight: 700; color: #05230f;
+  background: linear-gradient(90deg, #a6e86a, #35c46a); box-shadow: 0 12px 30px rgba(53, 196, 106, .25); white-space: nowrap; }
+
+/* scene 6: the numbers of the day */
+.big { position: absolute; left: 0; }
+.big b { display: block; font-size: 92px; font-weight: 900; letter-spacing: -4px; line-height: .95; font-variant-numeric: tabular-nums;
+  background: linear-gradient(90deg, #b6f07a, #35c46a); -webkit-background-clip: text; background-clip: text; color: transparent; }
+.big span { display: block; font-size: 23px; color: #c8c2d6; margin-top: 6px; font-weight: 500; }
+.bars { position: absolute; left: 0; right: 0; bottom: 6px; height: 150px; display: flex; align-items: flex-end; gap: 14px; }
+.bars i { flex: 1; border-radius: 12px 12px 4px 4px; background: linear-gradient(180deg, #a6e86a, #1f8a4c); transform-origin: 50% 100%; display: block; }
+
+/* ---------- the phone in 3D ---------- */
+#cam { position: absolute; z-index: 14; inset: 0; perspective: 1700px; perspective-origin: 50% 46%; pointer-events: none; }
+#device { position: absolute; left: 0; top: 0; transform-style: preserve-3d; will-change: transform; opacity: 0; }
+#shine { position: absolute; z-index: 95; inset: 0; border-radius: 52px; pointer-events: none; mix-blend-mode: screen;
+  background: linear-gradient(115deg, transparent 30%, rgba(255, 255, 255, .28) 46%, rgba(255, 255, 255, .06) 54%, transparent 66%); background-size: 260% 100%; opacity: .0; }
+.col.spot { padding-bottom: 10px; }
+
+/* ---------- intro and outro ---------- */
+/* the hook (the first six seconds): the same message pasted channel by channel -> written once -> eMesh sends it to all */
+#hookbg { position: absolute; inset: -70px; background-size: cover; background-position: center; filter: blur(20px) saturate(1.3); opacity: 0; }
+#hookbg::after { content: ""; position: absolute; inset: 0; background: linear-gradient(165deg, rgba(255, 45, 85, .6), rgba(86, 12, 52, .66) 55%, rgba(34, 8, 34, .74)); }
+#hook { position: absolute; z-index: 20; inset: 0; opacity: 0; pointer-events: none; transform-origin: 540px 486px; }
+#hcap { position: absolute; left: 0; right: 0; top: 60px; text-align: center; font-size: 90px; font-weight: 900; letter-spacing: -3.6px; line-height: 1.02; }
+#hcap .l1 { display: block; text-shadow: 0 5px 0 rgba(0, 0, 0, .28), 0 16px 44px rgba(0, 0, 0, .6); transform-origin: 50% 60%; white-space: nowrap; }
+#hcap .l2 { display: inline-block; margin-top: 18px; padding: 6px 32px 16px; border-radius: 26px; white-space: nowrap; box-shadow: 0 18px 50px rgba(0, 0, 0, .45); }
+#hcap .l2.red { background: #ff2d55; color: #fff; }
+#hcap .l2.green { background: linear-gradient(90deg, #b6f07a, #35c46a); color: #05230f; }
+#hgrid { position: absolute; left: 81px; top: 378px; width: 918px; height: 626px; perspective: 1500px; }
+#hgridin { position: absolute; inset: 0; transform-style: preserve-3d; }
+.hc { position: absolute; width: 290px; height: 300px; border-radius: 26px; background: #2a2238; border: 2px solid rgba(255, 255, 255, .14); padding: 14px;
+  box-shadow: 0 24px 54px rgba(0, 0, 0, .55); transform-origin: center; }
+.hc .hd, .hn .hd { display: flex; align-items: center; gap: 10px; }
+.hc .a { width: 42px; height: 42px; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 15px; font-weight: 700; flex: 0 0 auto; }
+.hc .nm { font-size: 18px; font-weight: 700; line-height: 1.15; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.hc .mb { font-size: 14.5px; color: #a9a3b8; margin-top: 2px; }
+.hc .ghost, .hc .fill { position: absolute; left: 14px; right: 14px; top: 68px; bottom: 14px; border-radius: 16px; }
+.hc .ghost { border: 2.5px dashed rgba(255, 255, 255, .3); background-size: cover; background-position: center; }
+.hc .fill { background: #2a2238; opacity: 0; transform-origin: center; }
+.hc .fill img { display: block; width: 100%; height: 152px; object-fit: cover; border-radius: 14px; }
+.hc .fill .ln { height: 10px; width: 78%; border-radius: 5px; background: rgba(255, 255, 255, .2); margin-top: 12px; }
+.hc .fill .bt { display: flex; gap: 6px; margin-top: 12px; }
+.hc .fill .bt i { flex: 1; height: 24px; border-radius: 8px; display: block; }
+#hfinger { position: absolute; z-index: 4; width: 74px; height: 74px; margin: -37px 0 0 -37px; border-radius: 50%; background: rgba(255, 255, 255, .34);
+  border: 3px solid rgba(255, 255, 255, .85); box-shadow: 0 8px 24px rgba(0, 0, 0, .45); }
+#hbadge, #hone { position: absolute; z-index: 5; padding: 6px 22px 10px; border-radius: 40px; font-size: 44px; font-weight: 900; letter-spacing: -1px; white-space: nowrap; }
+#hbadge { background: #ff2d55; color: #fff; box-shadow: 0 12px 30px rgba(255, 45, 85, .55); transform-origin: 50% 50%; }
+#hpostw { position: absolute; left: 325px; top: 470px; width: 430px; transform-origin: 50% 60%; opacity: 0; }
+#hpostw .post { position: relative; }
+#hone { right: -46px; top: -34px; background: linear-gradient(90deg, #b6f07a, #35c46a); color: #05230f; box-shadow: 0 12px 30px rgba(53, 196, 106, .5); opacity: 0; }
+#hava { position: absolute; z-index: 5; left: -44px; top: -44px; width: 116px; height: 116px; border-radius: 50%; overflow: hidden; opacity: 0;
+  box-shadow: 0 0 0 6px #fff, 0 16px 40px rgba(0, 0, 0, .55); }
+#hava img { width: 100%; height: 100%; object-fit: cover; display: block; }
+#hlines { position: absolute; inset: 0; overflow: visible; }
+#hring { position: absolute; border-radius: 50%; border: 5px solid rgba(166, 232, 106, .95); box-shadow: 0 0 40px rgba(53, 196, 106, .7); opacity: 0; }
+.hn { position: absolute; width: 250px; margin: -48px 0 0 -125px; text-align: center; opacity: 0; transform-origin: 50% 48px; }
+.hn .a { position: relative; width: 96px; height: 96px; margin: 0 auto; border-radius: 50%; display: flex; align-items: center; justify-content: center;
+  font-size: 32px; font-weight: 800; }
+.hn .a i { position: absolute; right: -8px; top: -8px; width: 40px; height: 40px; border-radius: 50%; background: var(--green); color: #05230f; font-style: normal;
+  font-size: 24px; font-weight: 900; display: flex; align-items: center; justify-content: center; transform: scale(0); }
+.hn b { display: block; margin-top: 10px; font-size: 22px; font-weight: 700; white-space: nowrap; }
+.hn span { display: block; font-size: 17px; color: #b9b3c6; margin-top: 2px; }
+#logocard { position: absolute; z-index: 22; left: 50%; top: 50%; width: 640px; margin-left: -320px; padding: 34px 46px; border-radius: 44px; background: #fff;
+  box-shadow: 0 40px 110px rgba(0, 0, 0, .6), 0 0 120px rgba(53, 196, 106, .35); opacity: 0; transform-origin: 50% 50%; overflow: hidden; }
+#logocard img { width: 100%; display: block; }
+#logocard::after { content: ""; position: absolute; top: 0; bottom: 0; width: 46%; left: var(--sweep, -60%);
+  background: linear-gradient(100deg, transparent, rgba(255, 255, 255, .95), transparent); transform: skewX(-18deg); }
+#tagline { position: absolute; z-index: 21; left: 0; right: 0; text-align: center; font-size: 38px; font-weight: 700; letter-spacing: -.8px; opacity: 0; }
+#tagline2 { position: absolute; z-index: 21; left: 0; right: 0; text-align: center; font-size: 27px; color: #c8c2d6; opacity: 0; padding: 0 150px; line-height: 1.35; }
+#outro { position: absolute; z-index: 21; inset: 0; opacity: 0; text-align: center; }
+#outro h1 { position: absolute; left: 0; right: 0; top: 566px; font-size: 76px; font-weight: 900; letter-spacing: -3px; line-height: 1; }
+#outro .cta { position: absolute; left: 50%; top: 690px; transform: translateX(-50%); padding: 22px 44px; border-radius: 44px; font-size: 32px; font-weight: 800;
+  color: #05230f; background: linear-gradient(90deg, #a6e86a, #35c46a); box-shadow: 0 18px 46px rgba(53, 196, 106, .35); white-space: nowrap; }
+#outro .by { position: absolute; left: 0; right: 0; top: 856px; display: flex; align-items: center; justify-content: center; gap: 20px; font-size: 29px; color: #c8c2d6; font-weight: 500; }
+#outro .by span { background: #fff; border-radius: 18px; padding: 10px 20px; display: inline-flex; box-shadow: 0 12px 30px rgba(0, 0, 0, .5); }
+#outro .by img { height: 60px; display: block; }
+</style>
+</head>
+<body>
+<div id="stage">
+  <div id="glow1"></div><div id="glow2"></div><div id="glow3"></div>
+  <div id="hookbg"></div>
+  <canvas id="mesh" width="1080" height="1080"></canvas>
+  <div id="corner"><img src="assets/logo.png" alt=""></div>
+  <div id="side"><div id="tag"><i></i><span></span></div><div id="head"></div><div id="subline"></div></div>
+  <div id="viz"></div>
+  <div id="drop">
+    <div id="droptitle"></div><div id="dropsub"></div>
+    <div id="tiles"><div id="tilesin"></div></div>
+    <div id="dropcount"></div><div id="droptail"></div>
+  </div>
+  <div id="cam"><div id="device"><div id="phone">
+    <div id="status"><span>9:41</span><span class="icons">
+      <svg width="18" height="12" viewBox="0 0 18 12"><rect x="0" y="8" width="3" height="4" rx="1"/><rect x="5" y="5.5" width="3" height="6.5" rx="1"/><rect x="10" y="3" width="3" height="9" rx="1"/><rect x="15" y="0" width="3" height="12" rx="1"/></svg>
+      <svg width="16" height="12" viewBox="0 0 16 12"><path d="M8 11.6l2.6-2.7a3.7 3.7 0 00-5.2 0zM3.6 7.1a6.2 6.2 0 018.8 0l1.5-1.5a8.3 8.3 0 00-11.8 0zM.8 4.2a10.2 10.2 0 0114.4 0L16 3.4A11.3 11.3 0 000 3.4z"/></svg>
+      <svg width="27" height="13" viewBox="0 0 27 13"><rect x=".5" y=".5" width="23" height="12" rx="3.5" fill="none" stroke="#fff" opacity=".4"/><rect x="2" y="2" width="20" height="9" rx="2"/><path d="M25 4.5v4a2 2 0 000-4z" opacity=".4"/></svg>
+    </span></div>
+    <div id="island"></div>
+    <div id="screens"></div>
+    <div id="finger"></div>
+    <div id="shine"></div>
+    <div id="homebar"></div>
+  </div></div></div>
+  <div id="flies"></div>
+  <div id="hook">
+    <svg id="hlines" width="1080" height="1080"></svg><div id="hring"></div><div id="hnodes"></div>
+    <div id="hgrid"><div id="hgridin"></div></div>
+    <div id="hpostw"></div><div id="hflies"></div>
+    <div id="hcap"><span class="l1"></span><span class="l2"></span></div>
+  </div>
+  <div id="logocard"><img src="assets/logo.png" alt=""></div>
+  <div id="tagline"></div><div id="tagline2"></div>
+  <div id="outro"><h1></h1><div class="cta"></div><div class="by"><em style="font-style:normal"></em><span><img src="assets/esoft.png" alt=""></span></div></div>
+  <div id="vignette"></div><div id="shock"></div><div id="flash"></div><div id="black"></div>
+</div>
+<script>
+"use strict";
+// The spot is a pure function of time: draw(t) sets everything for the second `t` of the music, so any frame can be
+// rendered on its own. The times below are the music's: 150 bpm, bars every 1.6 s from 0.76 s, and its big hits.
+const $ = (sel, root = document) => root.querySelector(sel);
+const el = (html) => { const t = document.createElement("template"); t.innerHTML = html.trim(); return t.content.firstChild; };
+const esc = (s) => String(s).replace(/[&<>"]/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" }[c]));
+const clamp = (x, a = 0, b = 1) => Math.max(a, Math.min(b, x));
+const seg = (t, a, b) => clamp((t - a) / (b - a));
+const lerp = (a, b, p) => a + (b - a) * p;
+const ease = (p) => (p < .5 ? 2 * p * p : 1 - Math.pow(-2 * p + 2, 2) / 2);
+const outC = (p) => 1 - Math.pow(1 - p, 3);
+const back = (p) => { const c = 1.9; return 1 + (c + 1) * Math.pow(p - 1, 3) + c * Math.pow(p - 1, 2); };  // overshoots, then settles
+const decay = (t, at, k = 6) => (t < at ? 0 : Math.exp(-k * (t - at)));
+const fmtN = (n) => Math.round(n).toLocaleString("es-ES").replace(/ /g, ".");
+const initials = (name) => name.replace(/[^\p{L}\p{N} ]/gu, "").split(/\s+/).filter(Boolean).slice(0, 2).map((w) => w[0]).join("").toUpperCase();
+const GRAD = ["linear-gradient(180deg,#ffbf6d,#fa8a3d)", "linear-gradient(180deg,#a695e7,#6f61e8)", "linear-gradient(180deg,#72d5fd,#2a9ef1)",
+  "linear-gradient(180deg,#ff8a8a,#ea5050)", "linear-gradient(180deg,#6ce5c7,#26b8a4)", "linear-gradient(180deg,#f7a8d8,#d1508f)"];
+const CHECKS = '<svg width="16" height="11" viewBox="0 0 16 11" fill="none" stroke="#d8c9ff" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M1 6l3 3 6-7"/><path d="M6.5 8.7l.8.8 6-7"/></svg>';
+const ARROW = '<svg class="arr" viewBox="0 0 8 8" fill="none" stroke="#fff" stroke-width="1.4" stroke-linecap="round"><path d="M2 6l4.5-4.5M3 1.5h3.5V5"/></svg>';
+const BACK = '<svg viewBox="0 0 13 22" fill="none" stroke="#6ab3ff" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><path d="M11 2L2 11l9 9"/></svg>';
+
+let D, UI, M, TXT;
+// ------------------------------------------------------------------ the music
+const env = (name, t) => { const a = M[name]; const i = clamp(Math.round(t * M.fps), 0, a.length - 1); return a[i]; };
+const T = { logo: 6.2, logoMove: 10.36, s1: 11.96, s2: 18.36, added: 25.5, post: 26.36, roll: 28.17, drop: 30.56, dropTail: 35.18, s4: 37.18, s5: 40.36,
+  s6: 43.56, outro: 46.76, music: 50.04, end: 53.4 };  // the picture stays 3 s after the music, so the end isn't abrupt
+const HK = { b: 2.36, c: 3.96, out: 5.5 };  // the hook: the pain until `b`, "write it once" until `c`, "eMesh sends it" until `out`
+const FLASH = [[HK.b, .5], [HK.c, .3], [T.logo, .95], [T.s1, .5], [T.s2, .22], [T.added, .55], [T.drop, 1], [T.dropTail, .4], [T.s4, .5], [T.s5, .25], [T.s6, .25], [T.outro, .85]];
+
+// ------------------------------------------------------------------ texts of the spot
+const TEXTS = {
+  es: {
+    hook: [["¿Sigues publicando", "canal por canal?"], ["Escríbelo", "una vez"], ["eMesh lo publica", "en todos a la vez"]],
+    tagline: "Tu red de distribución en Telegram", tagline2: "Escribes una vez. eMesh lo publica en toda tu red, a su hora.",
+    scenes: {
+      s1: { tag: "01 · TU RED", head: "Toda tu red, de un |vistazo", sub: "Canales, miembros y mensajes activos en una sola pantalla." },
+      s2: { tag: "02 · CANALES", head: "Añade canales en |dos toques", sub: "El bot entra como administrador y el canal queda en la red." },
+      s3: { tag: "03 · MENSAJES", head: "Escribe |una vez…", sub: "Texto, foto o vídeo, con botones de colores." },
+      s4: { tag: "04 · HORARIOS", head: "Cada mensaje, |a su hora", sub: "Se publica automáticamente a la hora que elijas, todos los días." },
+      s5: { tag: "05 · ASOCIADOS", head: "Tus asociados |suman canales", sub: "Piden unirse y tú decides. Sus canales entran en tu red." },
+      s6: { tag: "06 · RESULTADOS", head: "Mide |cada envío", sub: "Entregados, fallos y alcance real, al momento." },
+    },
+    stats: [["📣", 5, "canales en tu red"], ["👤", 51300, "personas"], ["📝", 3, "mensajes activos"]],
+    dropTitle: "…publica en todos", dropSub: "Un toque. Sale en toda la red.", dropCount: ["canales", "personas"], dropTail: "Un toque. Toda tu red.",
+    day: "HOY", dayPill: "⏰ Automático, sin que hagas nada", partnerPill: "🤝 Aceptado: ya recibe tus mensajes",
+    big: [[19, "mensajes entregados hoy"], [199935, "personas alcanzadas"]],
+    outro: "Crea tu red en un minuto", cta: "Búscalo en Telegram: eMesh", by: "una app de",
+  },
+};
+
+// ------------------------------------------------------------------ Telegram inside the phone
+function linkify(html) {
+  return html.split(/(<[^>]+>)/).map((part) => part.startsWith("<") ? part :
+    part.replace(/(https?:\/\/[^\s<]+|t\.me\/[^\s<]+|@[A-Za-z][A-Za-z0-9_]{3,})/g, '<span class="lnk">$1</span>')).join("");
+}
+function kbHtml(kb) {
+  if (!kb || !kb.length) return "";
+  return `<div class="kb">` + kb.map((row) => `<div class="r${row.length >= 3 ? " n3" : ""}">` + row.map((b) =>
+    `<div class="k${b.style ? " " + b.style : ""}" data-t="${esc(b.text)}"><span>${esc(b.text)}</span>${b.url ? ARROW : ""}</div>`).join("") + `</div>`).join("") + `</div>`;
+}
+function bubble(st, meta) {
+  const body = st.rich !== undefined
+    ? linkify(st.rich.replace(/<img src="tg:\/\/photo[^>]*>/g, "").replace(/<table bordered>/g, "<table>"))
+    : linkify(String(st.text || "").replace(/\n/g, "<br>"));
+  const inner = `${body}<span class="meta">${meta}</span>`;
+  return st.photo ? `<div class="bubble withpic"><img class="pic" src="${st.photo}"><div class="cap">${inner}</div></div>` : `<div class="bubble">${inner}</div>`;
+}
+const rowHtml = (name, meta = "9:41") => { const st = D.states[name];
+  return `<div class="row in${st.kb ? " haskb" : ""}" data-s="${name}">${bubble(st, meta)}${kbHtml(st.kb)}</div>`; };
+function navHtml(title, subtitle, ava) {
+  return `<div class="nav"><div class="back">${BACK}<span>${esc(UI.chats)}</span></div>
+    <div class="title"><b>${esc(title)}</b><span>${esc(subtitle)}</span></div><div class="ava" style="background:${GRAD[0]}">${ava}</div></div>`;
+}
+function botScreen(rows, extra = "") {
+  return `<div class="screen"><div class="wall"></div>${navHtml(D.bot, UI["chat.bot"], '<img src="assets/avatar.jpg">')}
+    <div class="msgs"><div class="col spot"><div class="date">${esc(UI.today)}</div>${rows}</div></div>
+    <div class="input"><div class="menu"><svg width="16" height="12" viewBox="0 0 16 12" stroke="#fff" stroke-width="2" stroke-linecap="round"><path d="M1 1h14M1 6h14M1 11h14"/></svg>${esc(UI.menu)}</div>
+      <div class="field ph">${esc(UI.message)}</div>
+      <div class="ico"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#9a94a6" stroke-width="1.8" stroke-linecap="round"><rect x="9" y="3" width="6" height="11" rx="3"/><path d="M5 11a7 7 0 0014 0M12 18v3"/></svg></div></div>${extra}</div>`;
+}
+function sheetHtml() {
+  const rows = [D.channels[1].name, "Cine de Verano", "Making of", "Bandas Sonoras"].map((n, i) => `<div class="prow" data-i="${i}">
+    <div class="ava" style="background:${GRAD[(i + 1) % 6]}">${esc(initials(n))}</div><div class="tx"><b>${esc(n)}</b><span>${esc(UI["picker.subs"].replace("{n}", ["7.815", "2.104", "936", "5.480"][i]))}</span></div></div>`).join("");
+  const cells = UI["rights.list"].map(([label, on]) => `<div class="cell"><span class="grow">${esc(label)}</span><div class="sw${on ? " on" : ""}"></div></div>`).join("");
+  return `<div class="dim"></div><div class="sheet">
+    <div class="snav p1"><div class="l">${esc(UI["picker.cancel"])}</div>${esc(UI["picker.title"])}</div>
+    <div class="page pg1" style="transform:none"><div class="search">🔍 ${esc(UI["picker.search"])}</div><div class="list">${rows}</div></div>
+    <div class="page pg2"><div class="group" style="margin-top:16px"><div class="botcard"><div class="ava"><img src="assets/avatar.jpg"></div>
+        <div><b>${esc(D.bot)}</b><span>${esc(UI["chat.bot"])}</span></div></div></div>
+      <div class="ghead">${esc(UI["rights.header"])}</div><div class="group">${cells}</div>
+      <div class="group" style="margin-top:26px"><div class="cell center add">${esc(UI["rights.button"])}</div></div></div></div>
+    <div class="adim"></div><div class="alert"><div class="at">${esc(UI["rights.alert"].replace("{bot}", D.bot).replace("{chat}", D.channels[1].name))}</div>
+      <div class="ab"><div>${esc(UI.cancel)}</div><div class="yes">${esc(UI["rights.ok"])}</div></div></div>`;
+}
+function channelScreen() {
+  const c = D.channels[0]; const st = D.states.channel;
+  return `<div class="screen"><div class="wall"></div>${navHtml(c.name, UI["channel.subs"].replace("{n}", fmtN(c.members)), esc(initials(c.name)))}
+    <div class="msgs"><div class="col spot">
+      <div class="row in"><div class="bubble">🎞 Esta noche, sesión doble de cine clásico.<span class="meta"><span class="views">👁 ${esc(UI.views)}</span> 22:10</span></div></div>
+      <div class="row in haskb" data-s="channel">${bubble(st, '<span class="views">👁 1</span> 9:41')}${kbHtml(st.kb)}</div></div></div>
+    <div class="cbottom">${esc(UI["channel.mute"])}</div></div>`;
+}
+// What the phone shows from each moment on: [from, key, html]. `scroll` keys: [time, 0 = top of the panel … 1 = bottom].
+const VIEWS = () => [
+  { at: 0, key: "home", html: botScreen(rowHtml("home")), scroll: [[13.3, 0], [15.9, 1]] },
+  { at: 19.05, key: "add", html: botScreen(rowHtml("add"), sheetHtml()), scroll: [[0, 1]] },
+  { at: T.added, key: "added", html: botScreen(rowHtml("add") + rowHtml("added")), scroll: [[0, 1]], pop: "added" },
+  { at: T.post, key: "posts", html: botScreen(rowHtml("posts")), scroll: [[0, 1]] },
+  { at: 27.36, key: "post", html: botScreen(rowHtml("post")), scroll: [[27.5, 0], [28.6, 1]] },
+  { at: 29.36, key: "confirm", html: botScreen(rowHtml("confirm")), scroll: [[0, 1]] },
+  { at: T.drop, key: "channel", html: channelScreen(), scroll: [[0, 1]], pop: "channel", popAt: T.drop + .32 },
+  { at: T.s4, key: "schedule", html: botScreen(rowHtml("schedule")), scroll: [[0, 1]] },
+  { at: T.s5, key: "request", html: botScreen(rowHtml("request")), scroll: [[0, 1]], pop: "request", popAt: T.s5 + .1 },
+  { at: 41.72, key: "accepted", html: botScreen(rowHtml("accepted")), scroll: [[0, 1]], instant: true },
+  { at: T.s6, key: "stats", html: botScreen(rowHtml("stats")), scroll: [[0, 1]] },
+];
+// The finger: [time of the press, how to find what it presses, seconds it waits over it before].
+const TAPS = [
+  [18.76, () => btn("➕ Añadir canal o grupo")], [19.96, () => btn("➕ Añadir canal")], [21.56, () => $(".prow")],
+  [23.16, () => $(".cell.add")], [24.36, () => $(".alert .yes")], [27.16, () => btn("#1 ")], [29.16, () => btn("🚀")],
+  [T.drop, () => btn("✅"), .75], [41.56, () => btn("✅ Aceptar")],
+];
+const btn = (text) => [...document.querySelectorAll("#screens .kb .k")].find((k) => k.dataset.t.includes(text)) || null;
+
+let views, viewIndex = -1;
+function drawPhone(t) {
+  let i = 0; while (i + 1 < views.length && t >= views[i + 1].at) i++;
+  const v = views[i];
+  if (i !== viewIndex) { viewIndex = i; $("#screens").innerHTML = v.html; }
+  const col = $("#screens .col"); const win = col.parentNode;
+  // a new panel comes in with a short fade; a message that "arrives" pops
+  const fresh = v.instant ? 1 : seg(t, v.at, v.at + .2);
+  col.style.opacity = i === 0 ? 1 : fresh;
+  if (v.pop) { const r = $(`[data-s="${v.pop}"]`, col); const p = seg(t, v.popAt || v.at, (v.popAt || v.at) + .36);
+    r.style.opacity = p > 0 ? 1 : 0; r.style.transformOrigin = "0 100%"; r.style.transform = `scale(${p > 0 ? lerp(.7, 1, back(p)) : .7})`; }
+  // scroll
+  const top = 0, bottom = Math.min(0, win.clientHeight - col.scrollHeight); let f = v.scroll[0][1];
+  for (let k = 0; k + 1 < v.scroll.length; k++) if (t >= v.scroll[k][0]) f = lerp(v.scroll[k][1], v.scroll[k + 1][1], ease(seg(t, v.scroll[k][0], v.scroll[k + 1][0])));
+  const y = col.scrollHeight <= win.clientHeight ? win.clientHeight - col.scrollHeight : lerp(top, bottom, f);
+  col.style.transform = `translateY(${y}px)`;
+  // Telegram's own screens of scene 2: choose the channel, the rights, the confirmation
+  const sheet = $("#screens .sheet");
+  if (sheet) {
+    const up = ease(seg(t, 20.2, 20.62)) - ease(seg(t, 24.76, 25.16));
+    sheet.style.transform = `translateY(${(1 - up) * 100}%)`; $("#screens .dim").style.opacity = .5 * up;
+    const next = ease(seg(t, 21.74, 22.1));
+    $(".pg2", sheet).style.transform = `translateX(${(1 - next) * 100}%)`; $(".pg1", sheet).style.transform = `translateX(${-30 * next}%)`;
+    $(".snav", sheet).innerHTML = next > .5 ? `<div class="l">${BACK}<span>${esc(UI.back)}</span></div>${esc(UI["rights.title"])}`
+      : `<div class="l">${esc(UI["picker.cancel"])}</div>${esc(UI["picker.title"])}`;
+    const al = seg(t, 23.34, 23.56) - seg(t, 24.46, 24.62);
+    $("#screens .alert").style.opacity = al; $("#screens .alert").style.transform = `translateY(-50%) scale(${1.1 - .1 * outC(clamp(al))})`;
+    $("#screens .adim").style.opacity = .35 * al;
+  }
+  // the finger (measured with the phone flat: the 3D pose comes after)
+  $("#device").style.transform = "none";
+  const f2 = $("#finger"); let shown = false;
+  for (const [at, find, wait = 0] of TAPS) {
+    if (t < at - .38 - wait || t > at + .34) continue;
+    const node = find(); if (!node) continue;
+    const r = node.getBoundingClientRect(), ph = $("#phone").getBoundingClientRect(), k = ph.width / 390;
+    const x = (r.left - ph.left + r.width / 2) / k, yy = (r.top - ph.top + r.height / 2) / k;
+    const inP = outC(seg(t, at - .38 - wait, at - .12 - wait)), pressed = t >= at && t < at + .16;
+    const hover = wait && t < at ? 1 + .07 * Math.sin(t * 31) * env("flux", t) : 1;
+    f2.style.left = x + "px"; f2.style.top = yy + "px"; f2.style.opacity = t < at ? inP : 1 - seg(t, at + .14, at + .34);
+    f2.style.transform = `scale(${(pressed ? .78 : lerp(1.35, 1, inP)) * hover})`;
+    document.querySelectorAll("#screens .press").forEach((n) => n.classList.remove("press"));
+    if (pressed) node.classList.add("press");
+    shown = true;
+  }
+  if (!shown) { f2.style.opacity = 0; document.querySelectorAll("#screens .press").forEach((n) => n.classList.remove("press")); }
+}
+
+// ------------------------------------------------------------------ the 3D pose of the phone, through the spot
+// [time, centre x, centre y, rotateY, rotateX, scale, opacity]
+const POSE = [
+  [T.logoMove - .1, 800, 1700, -62, 14, 1.0, 0], [T.logoMove + .25, 800, 1500, -58, 12, 1.0, 1], [T.s1, 800, 546, -19, 5, 1.1, 1],
+  [T.s2 - .2, 800, 546, -9, 2, 1.1, 1], [T.s2 + .6, 792, 546, -4, 1, 1.14, 1], [T.added - .3, 792, 546, -3, 1, 1.14, 1],
+  [T.added + .5, 800, 546, -13, 3, 1.1, 1], [T.roll, 800, 546, -9, 2, 1.12, 1], [T.drop - .1, 796, 546, -3, 0, 1.17, 1],
+  [T.drop + .75, 292, 578, 23, 4, .9, 1], [T.s4 - .25, 296, 578, 17, 3, .9, 1], [T.s4 + .55, 800, 546, -15, 4, 1.1, 1],
+  [T.s5 - .1, 800, 546, -9, 2, 1.1, 1], [T.s5 + .5, 800, 546, -17, 4, 1.1, 1], [T.s6 - .1, 800, 546, -10, 2, 1.1, 1],
+  [T.s6 + .5, 800, 546, -18, 5, 1.1, 1], [T.outro - .25, 800, 546, -10, 2, 1.1, 1], [T.outro + .5, 800, 1700, -40, 16, 1.0, 0],
+];
+function drawPose(t) {
+  let i = 0; while (i + 1 < POSE.length && t >= POSE[i + 1][0]) i++;
+  const a = POSE[i], b = POSE[Math.min(i + 1, POSE.length - 1)]; const p = ease(seg(t, a[0], b[0] === a[0] ? a[0] + 1 : b[0]));
+  const v = a.map((x, k) => lerp(x, b[k], p));
+  const kick = FLASH.reduce((s, [at, amp]) => s + amp * decay(t, at, 5), 0);  // a small swing on every hit
+  const ry = v[3] + 2.2 * Math.sin(t * .9) + 7 * kick * Math.cos((t) * 9), rx = v[4] + 1.2 * Math.sin(t * 1.3 + 1);
+  const s = v[5] * (1 + .014 * env("low", t) + .02 * kick), y = v[2] + 7 * Math.sin(t * 1.1);
+  const d = $("#device");
+  d.style.opacity = v[6];
+  d.style.transform = `translate3d(${v[1] - 209}px, ${y - 436}px, 0) rotateY(${ry}deg) rotateX(${rx}deg) scale(${s})`;
+  const sh = $("#shine"); sh.style.opacity = .55; sh.style.backgroundPosition = `${50 - ry * 4.2}% 0`;
+}
+
+// ------------------------------------------------------------------ background: a mesh that breathes with the music
+const NODES = Array.from({ length: 54 }, (_, i) => { const r = (n) => { const x = Math.sin(i * 127.1 + n * 311.7) * 43758.5453; return x - Math.floor(x); };
+  return { x: r(1) * 1080, y: r(2) * 1080, ax: 26 + r(3) * 46, ay: 26 + r(4) * 46, fx: .12 + r(5) * .3, fy: .12 + r(6) * .3, ph: r(7) * 6.28, s: 1.6 + r(8) * 2.6, g: r(9) > .42 }; });
+function drawMesh(t) {
+  const c = $("#mesh"), g = c.getContext("2d"); g.clearRect(0, 0, 1080, 1080);
+  const energy = env("rms", t), low = env("low", t);
+  const gather = ease(seg(t, 4.9, T.logo)) * (1 - outC(seg(t, T.logo, T.logo + .55)));  // before the first hit the mesh closes in, then bursts
+  const burst = decay(t, T.drop, 2.2) * 60 + decay(t, T.logo, 2.6) * 46 + decay(t, T.outro, 2.6) * 40;
+  const alpha = clamp(t / 3.2) * (1 - seg(t, T.end - 1.3, T.end - .3));
+  const pts = NODES.map((n) => {
+    let x = n.x + Math.sin(t * n.fx + n.ph) * n.ax, y = n.y + Math.cos(t * n.fy + n.ph) * n.ay;
+    const dx = x - 540, dy = y - 500, d = Math.hypot(dx, dy) || 1;
+    x = 540 + dx * (1 - .55 * gather) + dx / d * burst; y = 500 + dy * (1 - .55 * gather) + dy / d * burst;
+    return { x, y, n };
+  });
+  for (let i = 0; i < pts.length; i++) for (let j = i + 1; j < pts.length; j++) {
+    const a = pts[i], b = pts[j], d = Math.hypot(a.x - b.x, a.y - b.y); if (d > 190) continue;
+    g.strokeStyle = `rgba(${a.n.g ? "70,205,120" : "150,110,235"},${alpha * (1 - d / 190) * (.1 + .5 * energy)})`; g.lineWidth = 1.2;
+    g.beginPath(); g.moveTo(a.x, a.y); g.lineTo(b.x, b.y); g.stroke();
+  }
+  for (const p of pts) { g.fillStyle = `rgba(${p.n.g ? "120,235,160" : "185,150,255"},${alpha * (.3 + .6 * energy)})`;
+    g.beginPath(); g.arc(p.x, p.y, p.n.s * (1 + .9 * low), 0, 6.3); g.fill(); }
+  const gl = (id, x, y, s) => { const e = $(id); e.style.transform = `translate(${x}px, ${y}px) scale(${s})`; };
+  gl("#glow1", -160 + 70 * Math.sin(t * .23), -180 + 50 * Math.cos(t * .19), 1 + .22 * low);
+  gl("#glow2", 560 + 60 * Math.cos(t * .21), 560 + 60 * Math.sin(t * .17), 1 + .2 * low);
+  gl("#glow3", 640 + 50 * Math.sin(t * .15 + 2), -200 + 40 * Math.cos(t * .2), 1 + .18 * energy);
+}
+
+// ------------------------------------------------------------------ headline (word by word, on the beat) and the working animations
+const SCENES = [["s1", T.s1, T.s2], ["s2", T.s2, T.added + .7], ["s3", T.added + .7, T.drop], ["s4", T.s4, T.s5], ["s5", T.s5, T.s6], ["s6", T.s6, T.outro]];
+let headKey = null;
+function drawSide(t) {
+  const sc = SCENES.find(([, a, b]) => t >= a - .001 && t < b);
+  const side = $("#side"), viz = $("#viz");
+  if (!sc) { side.style.opacity = 0; viz.style.opacity = 0; headKey = null; return; }
+  const [key, a, b] = sc, tx = TXT.scenes[key];
+  if (headKey !== key) {
+    headKey = key; $("#tag span").textContent = tx.tag;
+    let hl = false; $("#head").innerHTML = tx.head.split(" ").map((w) => { if (w.startsWith("|")) { hl = true; w = w.slice(1); }
+      return `<span${hl ? ' class="hl"' : ""}>${esc(w)} </span>`; }).join("");
+    $("#subline").textContent = tx.sub;
+  }
+  const outP = 1 - ease(seg(t, b - .22, b)); side.style.opacity = outP; viz.style.opacity = outP;
+  side.style.transform = `translateY(${(1 - outP) * -18}px)`;
+  $("#tag").style.opacity = seg(t, a, a + .25);
+  [...$("#head").children].forEach((w, i) => { const p = seg(t, a + i * .2, a + i * .2 + .3);  // one word every 16th note
+    w.style.opacity = p; w.style.transform = `translateY(${(1 - outC(p)) * 46}px) rotate(${(1 - outC(p)) * 5}deg)`; });
+  const sp = seg(t, a + 1.2, a + 1.6); $("#subline").style.opacity = sp; $("#subline").style.transform = `translateY(${(1 - outC(sp)) * 14}px)`;
+  document.querySelectorAll("#viz .v").forEach((v) => { v.style.opacity = v.dataset.k === key ? 1 : 0; });
+  VIZ[key](t, a, b);
+}
+const pop = (node, t, at, dur = .42) => { const p = seg(t, at, at + dur); node.style.opacity = p > 0 ? 1 : 0; node.style.transform = `scale(${p > 0 ? back(p) : 0})`; return p; };
+const NET = [[0, 168], [240, 168], [0, 250], [240, 250], [0, 332], [240, 332]];  // the channels, in a grid under the hub
+function buildViz() {
+  const v = $("#viz"); const add = (k, html) => v.appendChild(el(`<div class="v" data-k="${k}">${html}</div>`));
+  add("s1", TXT.stats.map(([ic, , label], i) => `<div class="stat" style="top:${i * 128}px"><div class="ic">${ic}</div><div><b>0</b><span>${esc(label)}</span></div></div>`).join(""));
+  const chips = D.channels.map((c, i) => `<div class="node${i === 1 ? " new" : ""}" data-i="${i}" style="left:${NET[i][0]}px;top:${NET[i][1]}px">
+    <div class="a" style="background:${GRAD[i % 6]}">${esc(initials(c.name))}</div><span class="nm">${esc(c.name)}</span></div>`).join("");
+  add("s2", `<div class="net"><svg width="470" height="420"></svg><div class="hub" style="left:183px;top:8px"><img src="assets/avatar.jpg"></div>${chips}<div class="ring"></div></div>`);
+  const st = D.states.channel; const lines = st.text.split("\n").filter(Boolean);
+  add("s3", `<div class="post"><img src="${st.photo}"><div class="tx">${lines[0]}${lines[1] ? "<br>" + lines[1].slice(0, 62) + "…" : ""}</div>
+    <div class="bt"><i style="background:#3b8cf1">▶️ Ver tráiler</i><i style="background:#2fb34c">🎟 -20 %</i><i style="background:rgba(92,78,120,.7)">⭐ Opiniones</i></div></div>`);
+  const slots = [["10:00", "assets/post_sorteo.jpg"], ["14:30", "assets/post_estreno.jpg"], ["21:00", "assets/post_noche.jpg"]];
+  const X = (h) => 34 + (h - 8) / 16 * 402;
+  add("s4", `<div class="day"><div class="t">${TXT.day}</div><div class="clock">08:00</div>
+    ${slots.map(([h, img]) => `<div class="slot" data-h="${h}" style="left:${X(+h.slice(0, 2) + (+h.slice(3)) / 60)}px"><img src="${img}"><b>${h}</b><i>✓</i></div>`).join("")}
+    <div class="line"><div class="fill"></div></div><div class="headp"></div>
+    ${[8, 12, 16, 20, 24].map((h) => `<div class="hr" style="left:${X(h)}px">${String(h % 24).padStart(2, "0")}:00</div>`).join("")}</div>
+    <div class="pill">${esc(TXT.dayPill)}</div>`);
+  add("s5", `<div class="net"><svg width="470" height="420"></svg><div class="hub" style="left:189px;top:0;width:92px;height:92px"><img src="assets/avatar.jpg"></div>
+    <div class="node" data-p="0" style="left:0;top:138px"><div class="a" style="background:${GRAD[2]}">CC</div>Cine Clásico</div>
+    <div class="node" data-p="1" style="left:244px;top:138px"><div class="a" style="background:${GRAD[4]}">DH</div>Documentales</div>
+    <div class="node new wide" data-p="2"><div class="a" style="background:${GRAD[5]}">${esc(initials(D.partner.name))}</div><div>${esc(D.partner.channel)}<br><small>de ${esc(D.partner.name)} · 👤 3.460</small></div></div>
+    <div class="ring"></div></div><div class="pill">${esc(TXT.partnerPill)}</div>`);
+  add("s6", `<div class="big" style="top:0"><b>0</b><span>${esc(TXT.big[0][1])}</span></div><div class="big" style="top:150px"><b>0</b><span>${esc(TXT.big[1][1])}</span></div>
+    <div class="bars">${Array.from({ length: 7 }, () => "<i></i>").join("")}</div>`);
+}
+const line = (svg, x1, y1, x2, y2, p, color = "rgba(120,235,160,.75)") => `<line x1="${x1}" y1="${y1}" x2="${lerp(x1, x2, p)}" y2="${lerp(y1, y2, p)}" stroke="${color}" stroke-width="2.5" stroke-linecap="round"/>`;
+const setRing = (ring, cx, cy, s, o) => { ring.style.left = (cx - s / 2) + "px"; ring.style.top = (cy - s / 2) + "px";
+  ring.style.width = s + "px"; ring.style.height = s + "px"; ring.style.opacity = o; };
+const VIZ = {
+  s1(t, a) { document.querySelectorAll('#viz [data-k="s1"] .stat').forEach((n, i) => { const at = a + 1.6 + i * .8;  // one every two beats
+    pop(n, t, at); n.style.transformOrigin = "0 50%"; $("b", n).textContent = fmtN(TXT.stats[i][1] * outC(seg(t, at, at + .9))); }); },
+  s2(t, a) {
+    const root = $('#viz [data-k="s2"]'); let svg = "";
+    root.querySelectorAll(".node").forEach((n) => { const i = +n.dataset.i; const isNew = i === 1;
+      const at = isNew ? T.added : a + 1.2 + (i > 1 ? i - 1 : i) * .4; const p = pop(n, t, at, isNew ? .5 : .36);
+      if (isNew && p > 0) n.style.transform = `scale(${back(p) * (1 + .1 * decay(t, T.added, 4))})`;
+      const cx = NET[i][0] + 100, cy = NET[i][1] + 4;
+      svg += line(null, 235, 112, cx, cy, outC(seg(t, at + .1, at + .45)), isNew ? "rgba(166,232,106,1)" : "rgba(150,140,190,.55)"); });
+    $("svg", root).innerHTML = svg;
+    const ring = $(".ring", root), rp = seg(t, T.added, T.added + .7), s = 60 + 260 * outC(rp);
+    setRing(ring, NET[1][0] + 100, NET[1][1] + 26, s, rp > 0 ? 1 - rp : 0);
+    $(".hub", root).style.transform = `scale(${1 + .06 * env("low", t)})`;
+  },
+  s3(t, a) {
+    const card = $('#viz [data-k="s3"] .post'); const p = seg(t, a + .5, a + 1.0), charge = seg(t, T.roll, T.drop);
+    const shake = charge * env("flux", t);
+    card.style.opacity = p; card.style.transform = `perspective(900px) translateY(${(1 - outC(p)) * 70 - 26}px) rotateX(${(1 - outC(p)) * 28}deg) rotateZ(${-2 + shake * 2.4 * Math.sin(t * 60)}deg) scale(${.96 + .05 * charge + .02 * shake})`;
+    card.style.boxShadow = `0 30px 70px rgba(0,0,0,.6), 0 0 ${20 + 90 * charge}px rgba(53,196,106,${.15 + .6 * charge})`;
+  },
+  s4(t, a, b) {
+    const root = $('#viz [data-k="s4"]'); const p = seg(t, a + .5, b - .35), hour = 8 + 16 * p, x = 34 + p * 402;
+    pop($(".day", root), t, a + .1, .4); $(".day", root).style.transformOrigin = "0 0";
+    $(".fill", root).style.width = (p * 100) + "%"; $(".headp", root).style.left = x + "px";
+    $(".headp", root).style.transform = `scale(${1 + .25 * env("low", t)})`;
+    $(".clock", root).textContent = `${String(Math.floor(hour) % 24).padStart(2, "0")}:${String(Math.floor((hour % 1) * 60 / 5) * 5).padStart(2, "0")}`;
+    root.querySelectorAll(".slot").forEach((s) => { const h = +s.dataset.h.slice(0, 2) + (+s.dataset.h.slice(3)) / 60; const hit = a + .5 + (h - 8) / 16 * (b - .35 - a - .5);
+      const done = seg(t, hit, hit + .35); s.style.opacity = .45 + .55 * clamp(done * 3);
+      s.style.transform = `translateY(${-14 * Math.sin(Math.PI * done)}px) scale(${1 + .16 * Math.sin(Math.PI * done)})`; $("i", s).style.transform = `scale(${done > 0 ? back(done) : 0})`; });
+    const pl = $(".pill", root), pp = seg(t, a + 1.6, a + 2.0); pl.style.opacity = pp; pl.style.transform = `translateX(${(1 - outC(pp)) * -20}px)`;
+  },
+  s5(t, a) {
+    const root = $('#viz [data-k="s5"]'); const join = a + 1.2, p = seg(t, a + .35, join), q = outC(p);  // it docks when ✅ Aceptar is pressed
+    const n = $('.node[data-p="2"]', root); const x = lerp(-90, 62, q), y = lerp(330, 232, q);
+    n.style.left = x + "px"; n.style.top = y + "px"; n.style.opacity = seg(t, a + .3, a + .6); n.style.transform = `scale(${1 + .1 * decay(t, join, 4)})`;
+    n.classList.toggle("new", t >= join);
+    root.querySelectorAll('.node[data-p="0"], .node[data-p="1"]').forEach((m, i) => pop(m, t, a + .15 + i * .2, .34));
+    const j = outC(seg(t, join, join + .4));
+    $("svg", root).innerHTML = line(null, 235, 92, 100, 142, 1, "rgba(150,140,190,.5)") + line(null, 235, 92, 344, 142, 1, "rgba(150,140,190,.5)")
+      + line(null, 235, 92, 235, 236, j, "rgba(166,232,106,1)");
+    const ring = $(".ring", root), rp = seg(t, join, join + .7), s = 60 + 240 * outC(rp);
+    setRing(ring, 225, 268, s, rp > 0 ? 1 - rp : 0);
+    const pl = $(".pill", root), pp = seg(t, join + .1, join + .5); pl.style.opacity = pp; pl.style.transform = `translateX(${(1 - outC(pp)) * -20}px)`;
+  },
+  s6(t, a) {
+    const root = $('#viz [data-k="s6"]');
+    root.querySelectorAll(".big").forEach((n, i) => { const at = a + .3 + i * .8; const p = seg(t, at, at + .3);
+      n.style.opacity = p; n.style.transform = `translateY(${(1 - outC(p)) * 30}px)`; $("b", n).textContent = fmtN(TXT.big[i][0] * outC(seg(t, at, at + 1.1))); });
+    const H = [.34, .5, .42, .66, .58, .82, 1];
+    root.querySelectorAll(".bars i").forEach((n, i) => { const at = a + .8 + i * .2; n.style.height = (150 * H[i]) + "px";
+      n.style.transform = `scaleY(${outC(seg(t, at, at + .5)) * (1 + .07 * env("low", t))})`; });
+  },
+};
+
+// ------------------------------------------------------------------ the drop: the message flies to every channel
+const TILE_AT = (i) => T.drop + .6 + i * .4;  // one channel every beat
+function buildDrop() {
+  $("#droptitle").textContent = TXT.dropTitle; $("#dropsub").textContent = TXT.dropSub; $("#droptail").textContent = TXT.dropTail;
+  $("#tilesin").innerHTML = D.channels.map((c, i) => `<div class="tile" style="left:${(i % 2) * 230}px;top:${Math.floor(i / 2) * 228}px">
+    <div class="hd"><div class="a" style="background:${GRAD[i % 6]}">${esc(initials(c.name))}</div><div style="min-width:0"><div class="nm">${esc(c.name)}</div><div class="mb">👤 ${fmtN(c.members)}</div></div></div>
+    <div class="ph"><img src="${D.states.channel.photo}"></div><div class="ok">✓</div></div>`).join("");
+  $("#flies").innerHTML = D.channels.map(() => `<div class="fly"><img src="${D.states.channel.photo}"></div>`).join("");
+}
+function drawDrop(t) {
+  const d = $("#drop"); const on = seg(t, T.drop - .02, T.drop + .1) * (1 - seg(t, T.s4 - .3, T.s4));
+  d.style.opacity = on; const flies = [...$("#flies").children];
+  if (on <= 0) { flies.forEach((f) => { f.style.opacity = 0; }); return; }
+  const slam = seg(t, T.drop, T.drop + .42);
+  $("#droptitle").style.transform = `scale(${lerp(2.3, 1, outC(slam)) * (1 + .03 * env("low", t))})`; $("#droptitle").style.opacity = clamp(slam * 3);
+  const sp = seg(t, T.drop + .8, T.drop + 1.2); $("#dropsub").style.opacity = sp * (1 - seg(t, T.dropTail - .2, T.dropTail));
+  const phone = $("#phone").getBoundingClientRect(), stage = $("#stage").getBoundingClientRect();
+  const sx = phone.left - stage.left + phone.width / 2, sy = phone.top - stage.top + phone.height * .52;
+  const tiles = [...document.querySelectorAll("#tilesin .tile")]; let done = 0, people = 0;
+  tiles.forEach((tile, i) => {
+    const at = TILE_AT(i), appear = seg(t, T.drop + .15 + i * .07, T.drop + .5 + i * .07), got = seg(t, at, at + .4);
+    const wave = seg(t, 34.5, T.s4) > 0 ? .05 * env("flux", t) * (.5 + .5 * Math.sin(t * 20 + i)) : 0;
+    tile.style.opacity = appear; tile.style.transform = `translateZ(${(1 - outC(appear)) * -260 + 46 * Math.sin(Math.PI * clamp(got))}px) scale(${1 + .08 * decay(t, at, 5) + wave})`;
+    tile.style.borderColor = got > 0 ? "rgba(53,196,106,.9)" : "rgba(255,255,255,.12)";
+    tile.style.boxShadow = `0 18px 40px rgba(0,0,0,.5), 0 0 ${got > 0 ? 34 * (1 - .6 * seg(t, at, at + 1.2)) : 0}px rgba(53,196,106,.8)`;
+    $(".ph img", tile).style.opacity = got; $(".ok", tile).style.transform = `scale(${got > 0 ? back(got) : 0})`;
+    if (t >= at) { done++; people += D.channels[i].members; }
+    const f = flies[i], fp = seg(t, at - .42, at);  // the copy leaves the phone and lands on the beat
+    if (fp > 0 && fp < 1) { const r = tile.getBoundingClientRect(), ex = r.left - stage.left + r.width / 2, ey = r.top - stage.top + r.height * .62, e = ease(fp);
+      f.style.opacity = 1; f.style.left = lerp(sx, ex, e) + "px"; f.style.top = (lerp(sy, ey, e) - 150 * Math.sin(Math.PI * e)) + "px";
+      f.style.transform = `scale(${lerp(.5, 1.5, Math.sin(Math.PI * e))}) rotate(${lerp(-24, 8, e)}deg)`; } else f.style.opacity = 0;
+  });
+  const cp = seg(t, T.drop + .5, T.drop + .8);
+  $("#dropcount").style.opacity = cp; $("#dropcount").innerHTML = `<em>${done} / ${tiles.length}</em> ${TXT.dropCount[0]} · <em>${fmtN(people)}</em> ${TXT.dropCount[1]}`;
+  const tp = seg(t, T.dropTail, T.dropTail + .4), tail = $("#droptail");
+  tail.style.opacity = clamp(tp * 3); tail.style.transform = `scale(${lerp(1.7, 1, outC(tp)) * (1 + .04 * env("flux", t) * seg(t, 34.5, T.s4))})`;
+}
+
+// ------------------------------------------------------------------ the hook: something moves and says why from the first frame
+const PASTE = (i) => (i ? .36 + (i - 1) * .4 : -.5);  // the same message again, one channel per beat (the first is there on frame 0)
+const HNODE = [[160, 500], [920, 500], [160, 700], [920, 700], [160, 900], [920, 900]];
+const HNODE_AT = (i) => HK.c + .5 + i * .18;
+const HPOST = [540, 692];
+function buildHook() {
+  const st = D.states.channel, lines = st.text.split("\n").filter(Boolean);
+  $("#hookbg").style.backgroundImage = `url(${st.photo})`;
+  $("#hgridin").innerHTML = D.channels.map((c, i) => `<div class="hc" style="left:${(i % 3) * 314}px;top:${Math.floor(i / 3) * 326}px">
+    <div class="hd"><div class="a" style="background:${GRAD[i % 6]}">${esc(initials(c.name))}</div><div style="min-width:0"><div class="nm">${esc(c.name)}</div><div class="mb">👤 ${fmtN(c.members)}</div></div></div>
+    <div class="ghost" style="background-image:linear-gradient(rgba(42,34,56,.8),rgba(42,34,56,.8)),url(${st.photo})"></div><div class="fill"><img src="${st.photo}"><div class="ln"></div>
+      <div class="bt"><i style="background:#3b8cf1"></i><i style="background:#2fb34c"></i><i style="background:rgba(120,104,150,.85)"></i></div></div></div>`).join("")
+    + `<div id="hfinger"></div><div id="hbadge"></div>`;
+  $("#hpostw").innerHTML = `<div class="post"><img src="${st.photo}"><div class="tx">${lines[0]}${lines[1] ? "<br>" + lines[1].slice(0, 62) + "…" : ""}</div>
+    <div class="bt"><i style="background:#3b8cf1">▶️ Ver tráiler</i><i style="background:#2fb34c">🎟 -20 %</i><i style="background:rgba(92,78,120,.7)">⭐ Opiniones</i></div></div>
+    <div id="hone">✅ ×1</div><div id="hava"><img src="assets/avatar.jpg"></div>`;
+  $("#hnodes").innerHTML = D.channels.map((c, i) => `<div class="hn" style="left:${HNODE[i][0]}px;top:${HNODE[i][1]}px">
+    <div class="a" style="background:${GRAD[i % 6]}">${esc(initials(c.name))}<i>✓</i></div><b>${esc(c.name)}</b><span>👤 ${fmtN(c.members)}</span></div>`).join("");
+  $("#hflies").innerHTML = D.channels.map(() => `<div class="fly"><img src="${st.photo}"></div>`).join("");
+}
+function drawHook(t) {
+  const h = $("#hook"), bg = $("#hookbg");
+  if (t >= T.logo) { h.style.opacity = 0; bg.style.opacity = 0; return; }
+  bg.style.opacity = 1 - seg(t, HK.b - .04, HK.b + .3); bg.style.transform = `scale(${1.06 + .03 * t})`;
+  const suck = Math.pow(seg(t, HK.out, T.logo), 2);  // before the first hit everything falls into the centre, where the logo lands
+  h.style.opacity = 1 - seg(t, T.logo - .2, T.logo - .02); h.style.transform = `scale(${lerp(1, .05, suck)}) rotate(${-12 * suck}deg)`;
+  // the caption: a line, and the words that matter stamped under it one beat later
+  const k = t < HK.b ? 0 : t < HK.c ? 1 : 2, at = [0, HK.b, HK.c][k], cap = $("#hcap"), l1 = $(".l1", cap), l2 = $(".l2", cap);
+  if (cap.dataset.k !== String(k)) { cap.dataset.k = String(k); l1.textContent = TXT.hook[k][0]; l2.textContent = TXT.hook[k][1]; l2.className = "l2 " + (k ? "green" : "red"); }
+  const p1 = seg(t, at, at + .26), p2 = k ? seg(t, at + .4, at + .68) : 1;
+  let shake = 0, n = 0; for (let i = 0; i < 6; i++) if (t >= PASTE(i)) { n = i + 1; shake += decay(t, PASTE(i), 10); }
+  if (t >= HK.b) shake = 0;
+  l1.style.opacity = k ? clamp(p1 * 4) : 1; l1.style.transform = `scale(${lerp(k ? 1.4 : 1.07, 1, outC(p1))})`;
+  l2.style.opacity = p2 > 0 ? 1 : 0;
+  l2.style.transform = `rotate(${-2.5 + 3 * shake * Math.sin(t * 40)}deg) scale(${k ? lerp(1.9, 1, back(p2)) : lerp(1.12, 1, outC(seg(t, 0, .3))) + .06 * shake})`;
+  cap.style.opacity = 1 - seg(t, HK.out, HK.out + .22);
+  // 1. the pain: the same message, pasted channel by channel
+  const grid = $("#hgrid"), merge = ease(seg(t, HK.b, HK.b + .3));
+  grid.style.display = t < HK.b + .32 ? "" : "none";
+  if (t < HK.b + .32) {
+    $("#hgridin").style.transform = `rotateX(${9 - 4 * merge}deg) rotateY(${lerp(-9, 5, clamp(t / HK.b))}deg) translate(${9 * shake * Math.sin(t * 70)}px, ${6 * shake * Math.cos(t * 55)}px)`;
+    const centre = (i) => [(i % 3) * 314 + 145, Math.floor(i / 3) * 326 + 176];
+    document.querySelectorAll("#hgridin .hc").forEach((c, i) => {
+      const pa = PASTE(i), p = seg(t, pa, pa + .16), hot = decay(t, pa, 3.2), [cx, cy] = centre(i);
+      const fill = $(".fill", c); fill.style.opacity = p > 0 ? 1 : 0; fill.style.transform = `scale(${p > 0 ? lerp(1.3, 1, outC(p)) : 1})`;
+      c.style.borderColor = p > 0 ? `rgba(255,${Math.round(lerp(255, 70, hot))},${Math.round(lerp(255, 105, hot))},${lerp(.14, .95, hot)})` : "rgba(255,255,255,.14)";
+      c.style.boxShadow = `0 24px 54px rgba(0,0,0,.55), 0 0 ${46 * hot}px rgba(255,45,85,${.85 * hot})`;
+      c.style.opacity = 1 - seg(t, HK.b + .1, HK.b + .3);
+      c.style.transform = `translate(${(459 - cx) * merge}px, ${(HPOST[1] - 378 - cy) * merge}px) scale(${(1 + .07 * decay(t, pa, 8)) * lerp(1, .4, merge)})`;
+    });
+    let j = 0; for (let i = 1; i < 6; i++) if (t >= PASTE(i) - .26) j = i;
+    const from = centre(Math.max(0, j - 1)), to = centre(j), mv = j ? ease(seg(t, PASTE(j) - .26, PASTE(j) - .04)) : 1, f = $("#hfinger");
+    f.style.left = lerp(from[0], to[0], mv) + "px"; f.style.top = lerp(from[1], to[1], mv) + "px";
+    f.style.opacity = 1 - seg(t, HK.b - .1, HK.b); f.style.transform = `scale(${t >= PASTE(j) && t < PASTE(j) + .13 ? .76 : 1})`;
+    const bd = $("#hbadge"), last = n === 6;
+    if (n) { const [bx, by] = centre(n - 1), bp = seg(t, PASTE(n - 1), PASTE(n - 1) + .26);
+      bd.textContent = `${last ? "😩" : "📋"} ×${n}`; bd.style.left = (bx + 14) + "px"; bd.style.top = (by - 128) + "px";
+      bd.style.opacity = 1 - seg(t, HK.b - .02, HK.b + .1);
+      bd.style.transform = `scale(${back(bp) * (last ? 1.18 : 1)}) rotate(${last ? 7 * Math.sin(t * 38) : 4}deg)`; } else bd.style.opacity = 0;
+  }
+  // 2. written once: one message
+  const pw = $("#hpostw"), pb = seg(t, HK.b + .06, HK.b + .42), small = ease(seg(t, HK.c, HK.c + .32));
+  pw.style.opacity = pb > 0 ? 1 : 0;
+  pw.style.transform = `translateY(${6 * Math.sin(t * 2.6)}px) rotate(${lerp(-6, 0, outC(pb)) + 1.1 * Math.sin(t * 2.2)}deg) scale(${(pb > 0 ? back(pb) : 0)
+    * lerp(1.2, .62, small) * (1 + .05 * decay(t, HK.b + .66, 7)) * (1 - .07 * decay(t, HK.c, 9))})`;
+  const one = $("#hone"), op = seg(t, HK.b + .66, HK.b + .92);
+  one.style.opacity = (op > 0 ? 1 : 0) * (1 - seg(t, HK.c - .12, HK.c)); one.style.transform = `rotate(5deg) scale(${op > 0 ? back(op) : 0})`;
+  // 3. eMesh sends it: one touch and it lands in every channel
+  const av = $("#hava"), ap = seg(t, HK.c + .04, HK.c + .4); av.style.opacity = ap > 0 ? 1 : 0; av.style.transform = `scale(${ap > 0 ? back(ap) * 1.5 : 0})`;
+  const ring = $("#hring"), rp = seg(t, HK.c, HK.c + .6); setRing(ring, HPOST[0], HPOST[1], 90 + 470 * outC(rp), rp > 0 ? 1 - rp : 0);
+  const flies = [...$("#hflies").children]; let svg = "";
+  document.querySelectorAll("#hnodes .hn").forEach((node, i) => {
+    const [x, y] = HNODE[i], at2 = HNODE_AT(i), inP = seg(t, HK.c + .08 + i * .05, HK.c + .4 + i * .05), got = seg(t, at2, at2 + .3), fp = seg(t, at2 - .34, at2);
+    node.style.opacity = clamp(inP * 3) * (got > 0 ? 1 : .6); node.style.transform = `scale(${(inP > 0 ? back(inP) : 0) * (1 + .14 * decay(t, at2, 6))})`;
+    $(".a", node).style.boxShadow = got > 0 ? "0 0 0 5px rgba(53,196,106,.95), 0 0 36px rgba(53,196,106,.7)" : "0 0 0 3px rgba(255,255,255,.16)";
+    $(".a i", node).style.transform = `scale(${got > 0 ? back(got) : 0})`;
+    if (fp > 0) svg += line(null, HPOST[0], HPOST[1], x, y, outC(fp), "rgba(166,232,106,.85)");
+    const f = flies[i];
+    if (fp > 0 && fp < 1) { const e = ease(fp); f.style.opacity = 1; f.style.left = lerp(HPOST[0], x, e) + "px"; f.style.top = (lerp(HPOST[1], y, e) - 70 * Math.sin(Math.PI * e)) + "px";
+      f.style.transform = `scale(${lerp(.7, 1.3, Math.sin(Math.PI * e))}) rotate(${lerp(-18, 6, e)}deg)`; } else f.style.opacity = 0;
+  });
+  $("#hlines").innerHTML = svg;
+}
+
+// ------------------------------------------------------------------ the logo, the outro and the flashes on the hits
+function drawCovers(t) {
+  // the logo: lands on the first hit, then goes to its corner while the phone comes in; it comes back to close
+  const card = $("#logocard"), inA = seg(t, T.logo, T.logo + .5), toCorner = ease(seg(t, T.logoMove, T.logoMove + .9)), outroIn = seg(t, T.outro, T.outro + .5);
+  const showA = inA > 0 && t < T.outro - .5;
+  if (showA) { const s = lerp(back(inA), .25, toCorner), x = lerp(0, -350, toCorner), y = lerp(-70, -458, toCorner);
+    card.style.opacity = 1 - seg(t, T.logoMove + .7, T.logoMove + .9); card.style.transform = `translate(${x}px, ${y - 100}px) scale(${s})`;
+    card.style.setProperty("--sweep", `${lerp(-60, 130, seg(t, T.logo + .25, T.logo + 1.15))}%`); }
+  else if (outroIn > 0) { card.style.opacity = 1; card.style.transform = `translate(0px, ${-250 - 100}px) scale(${back(outroIn) * .92})`;
+    card.style.setProperty("--sweep", `${t < T.music ? lerp(-60, 130, seg(t, T.outro + .25, T.outro + 1.1)) : lerp(-60, 130, seg(t, T.music + .3, T.music + 1.3))}%`); }
+  else card.style.opacity = 0;
+  $("#corner").style.opacity = seg(t, T.logoMove + .7, T.logoMove + .95) * (1 - seg(t, T.outro - .3, T.outro))
+    * (1 - seg(t, T.drop - .15, T.drop) + seg(t, T.s4 - .1, T.s4 + .2));
+  const tg = $("#tagline"), p1 = seg(t, 7.16, 7.6) * (1 - seg(t, T.logoMove - .1, T.logoMove + .2));
+  tg.style.top = "610px"; tg.style.opacity = p1; tg.style.transform = `translateY(${(1 - outC(seg(t, 7.16, 7.6))) * 24}px)`;
+  const tg2 = $("#tagline2"), p2 = seg(t, 8.76, 9.2) * (1 - seg(t, T.logoMove - .1, T.logoMove + .2));
+  tg2.style.top = "676px"; tg2.style.opacity = p2; tg2.style.transform = `translateY(${(1 - outC(seg(t, 8.76, 9.2))) * 20}px)`;
+  const o = $("#outro"); o.style.opacity = seg(t, T.outro, T.outro + .2);
+  const h = $("h1", o), hp = seg(t, T.outro + .4, T.outro + .8); h.style.opacity = hp; h.style.transform = `translateY(${(1 - outC(hp)) * 30}px)`;
+  const c = $(".cta", o), cp = seg(t, T.outro + 1.2, T.outro + 1.6); c.style.opacity = cp;
+  c.style.transform = `translateX(-50%) scale(${(cp > 0 ? back(cp) : 0) * (1 + .03 * Math.sin(t * 7))})`;
+  const by = $(".by", o), bp = seg(t, T.outro + 1.6, T.outro + 2.0); by.style.opacity = bp; by.style.transform = `translateY(${(1 - outC(bp)) * 16}px)`;
+  $("#flash").style.opacity = clamp(FLASH.reduce((s, [at, amp]) => s + amp * decay(t, at, 7.5), 0), 0, .92);
+  $("#black").style.opacity = ease(seg(t, T.end - .95, T.end - .05));
+  // a ring of light leaves the centre on the three big hits, and the whole picture gives a small push on every hit
+  const sh = $("#shock"); let sp = 0, big = 0; for (const at of [T.logo, T.drop, T.outro]) if (t >= at && t < at + .9) { sp = (t - at) / .9; big = at === T.drop ? 1 : .7; }
+  sh.style.opacity = sp > 0 ? (1 - sp) * big : 0; sh.style.transform = `scale(${.4 + 5.5 * outC(sp)})`;
+  const punch = FLASH.reduce((s, [at, amp]) => s + amp * decay(t, at, 9), 0);
+  $("#stage").style.transform = `scale(${1 + .035 * punch + .006 * env("low", t)})`;
+}
+
+function draw(t) { drawMesh(t); drawPhone(t); drawPose(t); drawSide(t); drawDrop(t); drawHook(t); drawCovers(t); return t >= T.end; }
+window.__load = (data, music) => {
+  D = data; UI = data.ui; M = music; TXT = TEXTS[data.lang] || TEXTS.es;
+  $("#tagline").textContent = TXT.tagline; $("#tagline2").textContent = TXT.tagline2;
+  $("#outro h1").textContent = TXT.outro; $("#outro .cta").textContent = TXT.cta; $("#outro .by em").textContent = TXT.by;
+  views = VIEWS(); buildViz(); buildDrop(); buildHook(); draw(0);
+  return T.end;
+};
+window.__frame = (t) => draw(t);
+</script>
+</body>
+</html>

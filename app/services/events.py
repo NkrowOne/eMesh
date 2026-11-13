@@ -46,7 +46,7 @@ ICONS = {
     EventKind.CHAT_REJECTED: "❌", EventKind.CHAT_BANNED: "🚫", EventKind.CHAT_PAUSED: "⏸",
     EventKind.CHAT_RESUMED: "▶️", EventKind.CHAT_LEFT: "🚪", EventKind.CHAT_REMOVED: "🗑",
     EventKind.CHAT_RIGHTS: "⚠️", EventKind.CHAT_RIGHTS_OK: "✅", EventKind.BOT_PAUSED: "⏸",
-    EventKind.BOT_RESUMED: "▶️",
+    EventKind.BOT_RESUMED: "▶️", EventKind.POST_MISSED: "⚠️",
 }
 
 
@@ -70,6 +70,13 @@ def _until_text(data: dict[str, Any], lang: str, tz: str) -> str:
     return t("ev.until.date", lang, date=dt(when, tz))
 
 
+def _due_text(data: dict[str, Any], tz: str) -> str:
+    try:
+        return dt(datetime.fromisoformat(str(data.get("due"))), tz)
+    except ValueError:
+        return "—"
+
+
 def render(kind: str, lang: str, tz: str, *, chat_title: str, actor: str, data: dict[str, Any] | None) -> str:
     """The sentence of an event (HTML): used both for alerts and for the activity list."""
     data = data or {}
@@ -78,9 +85,12 @@ def render(kind: str, lang: str, tz: str, *, chat_title: str, actor: str, data: 
     key = f"ev.{kind}"
     if kind in (EventKind.CHAT_PAUSED, EventKind.CHAT_RESUMED, EventKind.CHAT_REMOVED, EventKind.CHAT_JOINED) and by:
         key = f"ev.{kind}.{by}"
+    if kind == EventKind.POST_MISSED:
+        key = f"ev.{kind}.{'late' if data.get('reason') == 'late' else 'no_chats'}"
     missing = ", ".join(t(f"rights.{r}", lang) for r in str(data.get("missing") or "").split(",") if r)
     return t(key, lang, chat=title, actor=actor or t("ev.someone", lang), until=_until_text(data, lang, tz),
-             missing=esc(missing), reason=esc(data.get("reason") or ""))
+             missing=esc(missing), reason=esc(data.get("reason") or ""), post=esc(data.get("post") or "?"),
+             due=_due_text(data, tz))
 
 
 async def describe(session: AsyncSession, ev: Event, lang: str, tz: str) -> str:
@@ -130,6 +140,10 @@ async def emit(
 
 
 def _default_markup(ev: Event, lang: str) -> InlineKeyboardMarkup | None:
+    if ev.kind == EventKind.POST_MISSED:
+        post_id = int((ev.data or {}).get("post_id") or 0)
+        return kb([btn(t("ev.btn.post", lang), MenuCB(screen="post", arg=post_id)),
+                   btn(t("ev.btn.activity", lang), MenuCB(screen="activity"))])
     if ev.chat_pk is None or ev.kind in (EventKind.CHAT_LEFT, EventKind.CHAT_REMOVED):
         return kb([btn(t("ev.btn.activity", lang), MenuCB(screen="activity"))])
     return kb([btn(t("ev.btn.chat", lang), MenuCB(screen="chat", arg=ev.chat_pk)),

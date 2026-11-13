@@ -116,6 +116,89 @@ async def test_late_posts_are_skipped_not_sent_late(app: App, quiet: None) -> No
     assert (p.status, p.next_send_at, p.runs_count) == (PostStatus.DONE, None, 0)
 
 
+async def test_a_late_post_is_told_to_the_admins_once(app: App, quiet: None) -> None:
+    await start_user(app, SUPER_ID)
+    await make_chats(app)
+    late = utcnow() - timedelta(hours=2)
+    own = await make_post(app, name="Propio <1>", mode=SchedMode.OWN, freq=dict(HOURLY), next_send_at=late)
+    await app.scheduler.tick()
+    [ev] = await events_of(app, EventKind.POST_MISSED)
+    assert ev.data == {"reason": "late", "post": "Propio <1>", "post_id": own, "due": late.isoformat()}
+    [dm] = [c for c in app.fake.calls_of("sendMessage", chat_id=SUPER_ID)]
+    text = str(dm.params["text"])
+    assert text.startswith("⚠️ <b>Propio &lt;1&gt;</b> no se ha enviado. Estaba programado para el ")
+    assert "puedes enviarlo ahora desde el mensaje" in text
+    assert [b["text"] for row in dm.params["reply_markup"]["inline_keyboard"] for b in row] == [
+        "📝 Ver mensaje", "📜 Actividad"]
+    await post_due(app, own, minutes=90)  # late again an hour later: not told again so soon
+    await app.scheduler.tick()
+    assert len(await events_of(app, EventKind.POST_MISSED)) == 1
+    assert len(app.fake.calls_of("sendMessage", chat_id=SUPER_ID)) == 1
+
+
+async def test_a_due_post_no_chat_can_receive_is_told_to_the_admins(app: App, quiet: None) -> None:
+    await start_user(app, SUPER_ID)
+    [pk] = await make_chats(app)
+    async with app.db() as s:
+        (await s.get(Chat, pk)).admin_paused = True
+    due = utcnow() - timedelta(minutes=1)
+    own = await make_post(app, name="Propio", mode=SchedMode.OWN, freq=dict(HOURLY), next_send_at=due)
+    await app.scheduler.tick()
+    assert await all_runs(app) == []
+    assert (await get(app, Post, own)).next_send_at > utcnow()
+    [ev] = await events_of(app, EventKind.POST_MISSED)
+    assert (ev.data["reason"], ev.data["post_id"]) == ("no_chats", own)
+    [text] = dm_texts(app, SUPER_ID)
+    assert "<b>Propio</b> no se ha enviado" in text and "ningún chat de su destino puede recibirlo ahora" in text
+
+
+async def test_due_posts_waiting_for_their_turn_survive_a_stop(app: App, quiet: None,
+                                                               monkeypatch: pytest.MonkeyPatch) -> None:
+    """Several posts due at the same time go out one after another: when the process stops during the first, the
+    others stay due and go out at the next start (they used to be claimed all at once, and lost)."""
+    await make_chats(app, 2)
+    due = utcnow() - timedelta(minutes=1)
+    first = await make_post(app, name="Uno", mode=SchedMode.OWN, freq=dict(HOURLY), next_send_at=due)
+    second = await make_post(app, name="Dos", mode=SchedMode.OWN, freq=dict(HOURLY), next_send_at=due)
+    once = await make_post(app, name="Tres", mode=SchedMode.ONCE, send_at=due, next_send_at=due)
+    real_run = app.publisher.run
+
+    async def run_then_stop(post_id: int, *args: Any, **kw: Any) -> int | None:
+        run_id = await real_run(post_id, *args, **kw)
+        app.scheduler._stopping = True  # noqa: SLF001 - the deploy arrives while the first post goes out
+        app.publisher.stop_sending()
+        return run_id
+
+    monkeypatch.setattr(app.publisher, "run", run_then_stop)
+    await app.scheduler.tick()
+    assert [r.post_id for r in await all_runs(app)] == [first]
+    assert (await get(app, Post, second)).next_send_at == due
+    p = await get(app, Post, once)
+    assert (p.status, p.next_send_at) == (PostStatus.ACTIVE, due)
+
+    monkeypatch.setattr(app.publisher, "run", real_run)
+    app.scheduler._stopping = False  # noqa: SLF001 - the next start
+    app.publisher.allow_sending()
+    await app.scheduler.tick()
+    assert [r.post_id for r in await all_runs(app)] == [first, second, once]
+    assert (await get(app, Post, once)).status == PostStatus.DONE
+    assert await events_of(app, EventKind.POST_MISSED) == []
+
+
+async def test_a_missed_send_reads_well_in_the_activity(app: App) -> None:
+    from app.services import events
+
+    due = "2026-11-12T11:00:00+00:00"
+    for lang, late, no_chats in (("es", "no se ha enviado. Estaba programado para el 12/11/2026 12:00 PM",
+                                  "no se ha enviado (12/11/2026 12:00 PM): ningún chat"),
+                                 ("en", "was not sent. It was scheduled for 12/11/2026 12:00 PM",
+                                  "was not sent (12/11/2026 12:00 PM): no chat")):
+        for reason, expected in (("late", late), ("no_chats", no_chats)):
+            text = events.render(EventKind.POST_MISSED, lang, TZ, chat_title="", actor="",
+                                 data={"reason": reason, "post": "Promo", "post_id": 1, "due": due})
+            assert text.startswith(f"<b>Promo</b> {expected}"), text
+
+
 async def test_own_frequency_post_goes_to_its_audience_and_is_rescheduled(app: App, quiet: None) -> None:
     pks = await make_chats(app, 2)
     own = await make_post(app, name="Propio", mode=SchedMode.OWN, freq={**HOURLY, "every": 120},

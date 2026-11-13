@@ -73,6 +73,15 @@ STRINGS = {
         "To bring it back, connect it again with the new token in «🤖 Create my bot» › «🔑 Use token»: its data is "
         "kept."
     ),
+    "cl.conflict_dm": (
+        "⚠️ <b>Token in use somewhere else</b>\n\n"
+        "🤖 @{bot} (<code>{bot_id}</code>)\n"
+        "👤 Owner: {owner} (<code>{owner_id}</code>)\n\n"
+        "Another program is using the token of this bot. Meanwhile, the bot gets nothing of what its users write "
+        "or press.\n\n"
+        "A token only works in one place: remove it from the other program or use a different bot."
+    ),
+    "cl.btn.conflict_bot": "🤖 View bot",
     "cl.new_admin": (
         "🤖 <b>New clone</b>\n\n"
         "🤖 @{bot} (<code>{bot_id}</code>)\n"

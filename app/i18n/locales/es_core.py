@@ -49,6 +49,15 @@ STRINGS = {
     "ev.chat_rights_ok": "<b>{chat}</b> vuelve a tener los permisos y recibe mensajes.",
     "ev.bot_paused": "Distribución de toda la red pausada ({actor}).",
     "ev.bot_resumed": "Distribución de toda la red reanudada ({actor}).",
+    "ev.post_missed.late": (
+        "<b>{post}</b> no se ha enviado. Estaba programado para el {due} y el bot no estaba disponible a esa hora. "
+        "Los envíos no se hacen con retraso: puedes enviarlo ahora desde el mensaje."
+    ),
+    "ev.post_missed.no_chats": (
+        "<b>{post}</b> no se ha enviado ({due}): ningún chat de su destino puede recibirlo ahora. "
+        "Revisa si están pausados, sin permisos o si el destino está vacío."
+    ),
+    "ev.btn.post": "📝 Ver mensaje",
     "ev.btn.chat": "📣 Ver chat",
     "ev.btn.activity": "📜 Actividad",
     # --- frequencies (services/freq.py) ---

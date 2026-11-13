@@ -1,0 +1,1536 @@
+{
+ "video": "emesh_promo",
+ "lang": "es",
+ "header": {
+  "name": "eMesh"
+ },
+ "ui": {
+  "brand.tagline": "Tu red de distribución en Telegram",
+  "intro.title": "Publica en todos tus canales a la vez",
+  "intro.sub": "Escribes el mensaje una vez. eMesh lo lleva a toda tu red, a su hora.",
+  "outro.title": "Crea tu red en un minuto",
+  "outro.sub": "Tu propio bot, tus canales y tus reglas.",
+  "outro.cta": "Búscalo en Telegram: eMesh",
+  "picker.title": "Elegir un canal",
+  "picker.cancel": "Cancelar",
+  "picker.search": "Buscar",
+  "picker.subs": "{n} suscriptores",
+  "rights.title": "Permisos de administrador",
+  "rights.header": "¿Qué puede hacer este administrador?",
+  "rights.list": [
+   [
+    "Cambiar información del canal",
+    false
+   ],
+   [
+    "Publicar mensajes",
+    true
+   ],
+   [
+    "Editar mensajes de otros",
+    true
+   ],
+   [
+    "Eliminar mensajes de otros",
+    true
+   ],
+   [
+    "Invitar usuarios con enlace",
+    true
+   ],
+   [
+    "Añadir administradores",
+    false
+   ]
+  ],
+  "rights.button": "Añadir bot como administrador",
+  "rights.alert": "¿Añadir a {bot} como administrador de «{chat}»?",
+  "rights.ok": "Añadir",
+  "cancel": "Cancelar",
+  "channel.subs": "{n} suscriptores",
+  "channel.mute": "Silenciar",
+  "chat.bot": "bot",
+  "chats": "Chats",
+  "message": "Mensaje",
+  "views": "1,2 K",
+  "today": "Hoy",
+  "menu": "Menú",
+  "edited": "editado",
+  "back": "Atrás",
+  "channel.old": "🎞 Esta noche, sesión doble de cine clásico."
+ },
+ "scenes": 6,
+ "events": [
+  {
+   "t": "intro",
+   "title": "Publica en todos tus canales a la vez",
+   "sub": "Escribes el mensaje una vez. eMesh lo lleva a toda tu red, a su hora."
+  },
+  {
+   "t": "scene",
+   "n": 1,
+   "title": "Toda tu red, de un vistazo",
+   "sub": "Canales, miembros, mensajes activos y el próximo envío."
+  },
+  {
+   "t": "caption",
+   "text": "Abre el bot y pulsa /start"
+  },
+  {
+   "t": "user",
+   "text": "/start",
+   "id": 10003
+  },
+  {
+   "t": "msg",
+   "id": 1001,
+   "rich": "<img src=\"tg://photo?id=panel\"/><table bordered><tr><th>🕸 <b>Tu red de distribución</b></th></tr><tr><td>📣 Canales y grupos: <b>5</b> (👤 51,300)<br>   └ 🏠 Propios: 3 · 🤝 Externos: 2<br>📊 Estado: ✅ 4 reciben · ⏸ 1 pausado · ⚠️ 0 sin permisos · ⏳ 0 pendientes<br>📝 Mensajes activos: <b>3</b><br>📅 Próximo envío: <b>13/11/2026 12:00 PM</b><br>⏸ Pausados por su asociado: <b>1</b></td></tr></table>",
+   "photo": "assets/logo_banner.jpg",
+   "kb": [
+    [
+     {
+      "text": "➕ Añadir canal o grupo",
+      "style": "success",
+      "url": false,
+      "disabled": false
+     }
+    ],
+    [
+     {
+      "text": "📝 Mensajes",
+      "style": null,
+      "url": false,
+      "disabled": false
+     },
+     {
+      "text": "⏰ Horarios",
+      "style": null,
+      "url": false,
+      "disabled": false
+     }
+    ],
+    [
+     {
+      "text": "📣 Canales y grupos",
+      "style": null,
+      "url": false,
+      "disabled": false
+     }
+    ],
+    [
+     {
+      "text": "🗂 Grupos de canales",
+      "style": null,
+      "url": false,
+      "disabled": false
+     }
+    ],
+    [
+     {
+      "text": "⏸ Pausados (1)",
+      "style": null,
+      "url": false,
+      "disabled": false
+     }
+    ],
+    [
+     {
+      "text": "📊 Estadísticas",
+      "style": null,
+      "url": false,
+      "disabled": false
+     },
+     {
+      "text": "📜 Actividad",
+      "style": null,
+      "url": false,
+      "disabled": false
+     }
+    ],
+    [
+     {
+      "text": "⚙️ Ajustes",
+      "style": null,
+      "url": false,
+      "disabled": false
+     },
+     {
+      "text": "📖 Guía",
+      "style": null,
+      "url": false,
+      "disabled": false
+     }
+    ],
+    [
+     {
+      "text": "⏸ Pausar todo",
+      "style": null,
+      "url": false,
+      "disabled": false
+     }
+    ],
+    [
+     {
+      "text": "🤖 Crear mi bot",
+      "style": null,
+      "url": false,
+      "disabled": false
+     }
+    ],
+    [
+     {
+      "text": "👑 Panel",
+      "style": null,
+      "url": false,
+      "disabled": false
+     }
+    ]
+   ]
+  },
+  {
+   "t": "wait",
+   "s": 1.4
+  },
+  {
+   "t": "scene",
+   "n": 2,
+   "title": "Añade canales en dos toques",
+   "sub": "El bot entra como administrador y el canal queda en la red."
+  },
+  {
+   "t": "caption",
+   "text": "➕ Añadir canal o grupo"
+  },
+  {
+   "t": "tap",
+   "text": "➕ Añadir canal o grupo",
+   "id": 1001
+  },
+  {
+   "t": "edit",
+   "id": 1001,
+   "rich": "<table bordered><tr><th>➕ <b>Añadir canal o grupo</b></th></tr></table><ol><li>Pulsa ➕ <b>Añadir canal</b> o ➕ <b>Añadir grupo</b> y elige el tuyo.</li><li>Deja marcados los permisos que se proponen: el bot los necesita para publicar.</li><li>Listo: entra en la red al momento y se te avisa por aquí.</li></ol>",
+   "kb": [
+    [
+     {
+      "text": "➕ Añadir canal",
+      "style": null,
+      "url": true,
+      "disabled": false
+     },
+     {
+      "text": "➕ Añadir grupo",
+      "style": null,
+      "url": true,
+      "disabled": false
+     }
+    ],
+    [
+     {
+      "text": "📣 Ver canales y grupos",
+      "style": null,
+      "url": false,
+      "disabled": false
+     }
+    ],
+    [
+     {
+      "text": "🔙 Regresar",
+      "style": null,
+      "url": false,
+      "disabled": false
+     }
+    ]
+   ]
+  },
+  {
+   "t": "wait",
+   "s": 0.9
+  },
+  {
+   "t": "tap",
+   "text": "➕ Añadir canal",
+   "id": 1001
+  },
+  {
+   "t": "caption",
+   "text": "Elige tu canal"
+  },
+  {
+   "t": "ui",
+   "screen": "picker",
+   "pick": 0,
+   "channels": [
+    {
+     "name": "Estrenos de Cine",
+     "subs": "7.815 suscriptores"
+    },
+    {
+     "name": "Cine de Verano",
+     "subs": "2.104 suscriptores"
+    },
+    {
+     "name": "Making of",
+     "subs": "936 suscriptores"
+    },
+    {
+     "name": "Bandas Sonoras",
+     "subs": "5.480 suscriptores"
+    }
+   ]
+  },
+  {
+   "t": "caption",
+   "text": "Deja los permisos marcados"
+  },
+  {
+   "t": "ui",
+   "screen": "rights",
+   "chat": "Estrenos de Cine",
+   "bot": "eMesh"
+  },
+  {
+   "t": "msg",
+   "id": 1002,
+   "text": "✅ El canal <b>Estrenos de Cine</b> se ha añadido a la red. Recibirá los mensajes para 🌐 Todos y 🏠 Propios.",
+   "kb": [
+    [
+     {
+      "text": "🗂 Añadir a grupos de canales",
+      "style": null,
+      "url": false,
+      "disabled": false
+     }
+    ]
+   ]
+  },
+  {
+   "t": "caption",
+   "text": "✅ Ya está en la red"
+  },
+  {
+   "t": "wait",
+   "s": 2.2
+  },
+  {
+   "t": "clear"
+  },
+  {
+   "t": "scene",
+   "n": 3,
+   "title": "Escribe una vez, publica en todos",
+   "sub": "Texto, fotos o vídeo, con botones de colores. Un toque y sale en toda la red."
+  },
+  {
+   "t": "caption",
+   "text": "📝 Tus mensajes"
+  },
+  {
+   "t": "msg",
+   "id": 1003,
+   "rich": "<img src=\"tg://photo?id=panel\"/><table bordered><tr><th>🕸 <b>Tu red de distribución</b></th></tr><tr><td>📣 Canales y grupos: <b>6</b> (👤 59,115)<br>   └ 🏠 Propios: 4 · 🤝 Externos: 2<br>📊 Estado: ✅ 5 reciben · ⏸ 1 pausado · ⚠️ 0 sin permisos · ⏳ 0 pendientes<br>📝 Mensajes activos: <b>3</b><br>📅 Próximo envío: <b>13/11/2026 12:00 PM</b><br>⏸ Pausados por su asociado: <b>1</b></td></tr></table>",
+   "photo": "assets/logo_banner.jpg",
+   "kb": [
+    [
+     {
+      "text": "➕ Añadir canal o grupo",
+      "style": "success",
+      "url": false,
+      "disabled": false
+     }
+    ],
+    [
+     {
+      "text": "📝 Mensajes",
+      "style": null,
+      "url": false,
+      "disabled": false
+     },
+     {
+      "text": "⏰ Horarios",
+      "style": null,
+      "url": false,
+      "disabled": false
+     }
+    ],
+    [
+     {
+      "text": "📣 Canales y grupos",
+      "style": null,
+      "url": false,
+      "disabled": false
+     }
+    ],
+    [
+     {
+      "text": "🗂 Grupos de canales",
+      "style": null,
+      "url": false,
+      "disabled": false
+     }
+    ],
+    [
+     {
+      "text": "⏸ Pausados (1)",
+      "style": null,
+      "url": false,
+      "disabled": false
+     }
+    ],
+    [
+     {
+      "text": "📊 Estadísticas",
+      "style": null,
+      "url": false,
+      "disabled": false
+     },
+     {
+      "text": "📜 Actividad",
+      "style": null,
+      "url": false,
+      "disabled": false
+     }
+    ],
+    [
+     {
+      "text": "⚙️ Ajustes",
+      "style": null,
+      "url": false,
+      "disabled": false
+     },
+     {
+      "text": "📖 Guía",
+      "style": null,
+      "url": false,
+      "disabled": false
+     }
+    ],
+    [
+     {
+      "text": "⏸ Pausar todo",
+      "style": null,
+      "url": false,
+      "disabled": false
+     }
+    ],
+    [
+     {
+      "text": "🤖 Crear mi bot",
+      "style": null,
+      "url": false,
+      "disabled": false
+     }
+    ],
+    [
+     {
+      "text": "👑 Panel",
+      "style": null,
+      "url": false,
+      "disabled": false
+     }
+    ]
+   ],
+   "quick": true
+  },
+  {
+   "t": "tap",
+   "text": "📝 Mensajes",
+   "id": 1003
+  },
+  {
+   "t": "edit",
+   "id": 1003,
+   "rich": "<table bordered><tr><th>📝 <b>Mensajes</b></th></tr><tr><td>⏰ con horario · 📢 puntual · ✋ manual</td></tr></table><ol><li>▶️ ⏰ <b>Estreno de la semana</b> · 🖼<br>└🎯 Todos · 📅 13/11/2026 12:00 PM</li><li>▶️ ⏰ <b>Sorteo: 2 entradas dobles</b> · 🖼<br>└🎯 Todos · 📅 13/11/2026 12:00 PM</li><li>▶️ ⏰ <b>Noche de cine</b> · 🖼<br>└🎯 Todos · 📅 13/11/2026 12:00 PM</li></ol>",
+   "kb": [
+    [
+     {
+      "text": "#1 Estreno de la semana",
+      "style": null,
+      "url": false,
+      "disabled": false
+     },
+     {
+      "text": "#2 Sorteo: 2 entradas dobles",
+      "style": null,
+      "url": false,
+      "disabled": false
+     }
+    ],
+    [
+     {
+      "text": "#3 Noche de cine",
+      "style": null,
+      "url": false,
+      "disabled": false
+     }
+    ],
+    [
+     {
+      "text": "➕ Nuevo mensaje",
+      "style": "success",
+      "url": false,
+      "disabled": false
+     }
+    ],
+    [
+     {
+      "text": "⚙️ Opciones por defecto",
+      "style": null,
+      "url": false,
+      "disabled": false
+     }
+    ],
+    [
+     {
+      "text": "🔙 Regresar",
+      "style": null,
+      "url": false,
+      "disabled": false
+     }
+    ]
+   ]
+  },
+  {
+   "t": "wait",
+   "s": 1.0
+  },
+  {
+   "t": "tap",
+   "text": "#1 Estreno de la semana",
+   "id": 1003
+  },
+  {
+   "t": "edit",
+   "id": 1003,
+   "rich": "<table bordered><tr><th>📝 <b>Estreno de la semana</b></th></tr><tr><td>📌 Estado: ▶️ Activo<br>🧩 Tipo: 🖼 Foto · 🔘 3 botones<br>🎯 Destino: 🌐 Todos → 5 chats (👤 52,575)<br>⏰ Envío: ⏰ Horario propio · a las 12:00<br>   └ A cada hora de su horario se envía a todos sus chats.<br>📅 Próximo envío: <b>13/11/2026 12:00 PM</b><br>📤 Todavía no se ha enviado.<br><blockquote expandable>⚙️ <b>Opciones</b><br>📌 Fijar: ✖️<br>🔕 Sin sonido: ✖️<br>🛡 Proteger contenido: ✖️<br>🔼 Texto encima del multimedia: ✖️<br>🫣 Spoiler: ✖️<br>♻️ Borrar su envío anterior: ✅<br>🗑 Borrado automático: ✖️ nunca</blockquote></td></tr></table>",
+   "kb": [
+    [
+     {
+      "text": "👁 Vista previa",
+      "style": null,
+      "url": false,
+      "disabled": false
+     },
+     {
+      "text": "🚀 Enviar ahora",
+      "style": null,
+      "url": false,
+      "disabled": false
+     }
+    ],
+    [
+     {
+      "text": "✏️ Contenido",
+      "style": null,
+      "url": false,
+      "disabled": false
+     },
+     {
+      "text": "🔘 Botones",
+      "style": null,
+      "url": false,
+      "disabled": false
+     }
+    ],
+    [
+     {
+      "text": "🎯 Destino",
+      "style": null,
+      "url": false,
+      "disabled": false
+     },
+     {
+      "text": "⏰ Programación",
+      "style": null,
+      "url": false,
+      "disabled": false
+     }
+    ],
+    [
+     {
+      "text": "⚙️ Opciones",
+      "style": null,
+      "url": false,
+      "disabled": false
+     },
+     {
+      "text": "🧬 Duplicar",
+      "style": null,
+      "url": false,
+      "disabled": false
+     }
+    ],
+    [
+     {
+      "text": "⏸ Pausar",
+      "style": null,
+      "url": false,
+      "disabled": false
+     },
+     {
+      "text": "🗑 Eliminar",
+      "style": "danger",
+      "url": false,
+      "disabled": false
+     }
+    ],
+    [
+     {
+      "text": "🔙 Regresar",
+      "style": null,
+      "url": false,
+      "disabled": false
+     }
+    ]
+   ]
+  },
+  {
+   "t": "wait",
+   "s": 0.6
+  },
+  {
+   "t": "caption",
+   "text": "🚀 Enviar ahora"
+  },
+  {
+   "t": "tap",
+   "text": "🚀 Enviar ahora",
+   "id": 1003
+  },
+  {
+   "t": "edit",
+   "id": 1003,
+   "rich": "<table bordered><tr><th>🚀 <b>Estreno de la semana</b></th></tr><tr><td>Se enviará ahora a <b>5 chats</b> (👤 52,575).<br>   └ Se respetan los límites del 🛡 anti-spam de la red.</td></tr></table>",
+   "kb": [
+    [
+     {
+      "text": "✅ Enviar",
+      "style": "success",
+      "url": false,
+      "disabled": false
+     },
+     {
+      "text": "❌ No",
+      "style": null,
+      "url": false,
+      "disabled": false
+     }
+    ]
+   ]
+  },
+  {
+   "t": "wait",
+   "s": 0.8
+  },
+  {
+   "t": "tap",
+   "text": "✅ Enviar",
+   "id": 1003
+  },
+  {
+   "t": "toast",
+   "text": "🚀 Enviando…"
+  },
+  {
+   "t": "edit",
+   "id": 1003,
+   "rich": "<table bordered><tr><th>📝 <b>Estreno de la semana</b></th></tr><tr><td>📌 Estado: ▶️ Activo<br>🧩 Tipo: 🖼 Foto · 🔘 3 botones<br>🎯 Destino: 🌐 Todos → 5 chats (👤 52,575)<br>⏰ Envío: ⏰ Horario propio · a las 12:00<br>   └ A cada hora de su horario se envía a todos sus chats.<br>📅 Próximo envío: <b>13/11/2026 12:00 PM</b><br>📤 Todavía no se ha enviado.<br><blockquote expandable>⚙️ <b>Opciones</b><br>📌 Fijar: ✖️<br>🔕 Sin sonido: ✖️<br>🛡 Proteger contenido: ✖️<br>🔼 Texto encima del multimedia: ✖️<br>🫣 Spoiler: ✖️<br>♻️ Borrar su envío anterior: ✅<br>🗑 Borrado automático: ✖️ nunca</blockquote></td></tr></table>",
+   "kb": [
+    [
+     {
+      "text": "👁 Vista previa",
+      "style": null,
+      "url": false,
+      "disabled": false
+     },
+     {
+      "text": "🚀 Enviar ahora",
+      "style": null,
+      "url": false,
+      "disabled": false
+     }
+    ],
+    [
+     {
+      "text": "✏️ Contenido",
+      "style": null,
+      "url": false,
+      "disabled": false
+     },
+     {
+      "text": "🔘 Botones",
+      "style": null,
+      "url": false,
+      "disabled": false
+     }
+    ],
+    [
+     {
+      "text": "🎯 Destino",
+      "style": null,
+      "url": false,
+      "disabled": false
+     },
+     {
+      "text": "⏰ Programación",
+      "style": null,
+      "url": false,
+      "disabled": false
+     }
+    ],
+    [
+     {
+      "text": "⚙️ Opciones",
+      "style": null,
+      "url": false,
+      "disabled": false
+     },
+     {
+      "text": "🧬 Duplicar",
+      "style": null,
+      "url": false,
+      "disabled": false
+     }
+    ],
+    [
+     {
+      "text": "⏸ Pausar",
+      "style": null,
+      "url": false,
+      "disabled": false
+     },
+     {
+      "text": "🗑 Eliminar",
+      "style": "danger",
+      "url": false,
+      "disabled": false
+     }
+    ],
+    [
+     {
+      "text": "🔙 Regresar",
+      "style": null,
+      "url": false,
+      "disabled": false
+     }
+    ]
+   ]
+  },
+  {
+   "t": "caption",
+   "text": "Publicado en tus canales"
+  },
+  {
+   "t": "channel",
+   "title": "Cine Clásico",
+   "subs": "18.450 suscriptores",
+   "old": "🎞 Esta noche, sesión doble de cine clásico.",
+   "post": {
+    "text": "🎬 <b>Estreno de la semana</b>\n\nLa película de la que todos hablan llega este viernes. Tráiler, horarios y entradas con <b>-20 %</b> solo hoy.\n\n🍿 ¿Te la vas a perder?",
+    "kb": [
+     [
+      {
+       "text": "▶️ Ver tráiler",
+       "style": "primary",
+       "url": true,
+       "disabled": false
+      }
+     ],
+     [
+      {
+       "text": "🎟 Entradas -20 %",
+       "style": "success",
+       "url": true,
+       "disabled": false
+      },
+      {
+       "text": "⭐ Opiniones",
+       "style": null,
+       "url": true,
+       "disabled": false
+      }
+     ]
+    ],
+    "photo": "assets/post_estreno.jpg"
+   }
+  },
+  {
+   "t": "wait",
+   "s": 3.0
+  },
+  {
+   "t": "back"
+  },
+  {
+   "t": "clear"
+  },
+  {
+   "t": "scene",
+   "n": 4,
+   "title": "Cada mensaje, a su hora",
+   "sub": "Horario propio por mensaje y anti-spam para no saturar ningún chat."
+  },
+  {
+   "t": "caption",
+   "text": "⏰ A sus horas, sin que hagas nada"
+  },
+  {
+   "t": "msg",
+   "id": 1004,
+   "rich": "<img src=\"tg://photo?id=panel\"/><table bordered><tr><th>🕸 <b>Tu red de distribución</b></th></tr><tr><td>📣 Canales y grupos: <b>6</b> (👤 59,115)<br>   └ 🏠 Propios: 4 · 🤝 Externos: 2<br>📊 Estado: ✅ 5 reciben · ⏸ 1 pausado · ⚠️ 0 sin permisos · ⏳ 0 pendientes<br>📝 Mensajes activos: <b>3</b><br>📅 Próximo envío: <b>13/11/2026 12:00 PM</b><br>⏸ Pausados por su asociado: <b>1</b></td></tr></table>",
+   "photo": "assets/logo_banner.jpg",
+   "kb": [
+    [
+     {
+      "text": "➕ Añadir canal o grupo",
+      "style": "success",
+      "url": false,
+      "disabled": false
+     }
+    ],
+    [
+     {
+      "text": "📝 Mensajes",
+      "style": null,
+      "url": false,
+      "disabled": false
+     },
+     {
+      "text": "⏰ Horarios",
+      "style": null,
+      "url": false,
+      "disabled": false
+     }
+    ],
+    [
+     {
+      "text": "📣 Canales y grupos",
+      "style": null,
+      "url": false,
+      "disabled": false
+     }
+    ],
+    [
+     {
+      "text": "🗂 Grupos de canales",
+      "style": null,
+      "url": false,
+      "disabled": false
+     }
+    ],
+    [
+     {
+      "text": "⏸ Pausados (1)",
+      "style": null,
+      "url": false,
+      "disabled": false
+     }
+    ],
+    [
+     {
+      "text": "📊 Estadísticas",
+      "style": null,
+      "url": false,
+      "disabled": false
+     },
+     {
+      "text": "📜 Actividad",
+      "style": null,
+      "url": false,
+      "disabled": false
+     }
+    ],
+    [
+     {
+      "text": "⚙️ Ajustes",
+      "style": null,
+      "url": false,
+      "disabled": false
+     },
+     {
+      "text": "📖 Guía",
+      "style": null,
+      "url": false,
+      "disabled": false
+     }
+    ],
+    [
+     {
+      "text": "⏸ Pausar todo",
+      "style": null,
+      "url": false,
+      "disabled": false
+     }
+    ],
+    [
+     {
+      "text": "🤖 Crear mi bot",
+      "style": null,
+      "url": false,
+      "disabled": false
+     }
+    ],
+    [
+     {
+      "text": "👑 Panel",
+      "style": null,
+      "url": false,
+      "disabled": false
+     }
+    ]
+   ],
+   "quick": true
+  },
+  {
+   "t": "tap",
+   "text": "⏰ Horarios",
+   "id": 1004
+  },
+  {
+   "t": "edit",
+   "id": 1004,
+   "rich": "<table bordered><tr><th>⏰ <b>Horarios</b></th></tr><tr><td>Cada mensaje se envía a sus propias horas (📝 Mensajes › ⏰ Programación).</td></tr></table><p>🕐 Horario por defecto: <b>a las 12:00</b><br>   └ Cada mensaje nuevo empieza con este horario; luego se cambia en el suyo.<br>⏰ Mensajes programados: <b>3</b><br>🛡 Anti-spam: sin máximo diario · sin separación mínima · 🧹 uno a la vez ✖️</p>",
+   "kb": [
+    [
+     {
+      "text": "🕐 Horario por defecto: a las 12:00",
+      "style": null,
+      "url": false,
+      "disabled": false
+     }
+    ],
+    [
+     {
+      "text": "🛡 Anti-spam",
+      "style": null,
+      "url": false,
+      "disabled": false
+     }
+    ],
+    [
+     {
+      "text": "🔙 Regresar",
+      "style": null,
+      "url": false,
+      "disabled": false
+     }
+    ]
+   ]
+  },
+  {
+   "t": "wait",
+   "s": 1.8
+  },
+  {
+   "t": "tap",
+   "text": "🛡 Anti-spam",
+   "id": 1004
+  },
+  {
+   "t": "edit",
+   "id": 1004,
+   "rich": "<table bordered><tr><th>🛡 <b>Anti-spam</b></th></tr><tr><td>Límites para que ningún chat reciba demasiados mensajes. Valen para todos los envíos, también para 🚀 Enviar ahora: un chat que supera un límite se salta ese envío.</td></tr></table><p>📊 Máximo al día por chat: <b>sin límite</b><br>   └ Cuenta los mensajes recibidos desde las 00:00 (zona horaria de la red).<br>⏱ Separación mínima: <b>ninguna</b><br>   └ Tiempo mínimo entre dos mensajes en un mismo chat.<br>🧹 Uno a la vez: ✖️<br>   └ Antes de enviar uno nuevo, se borra el anterior de la red en ese chat.</p>",
+   "kb": [
+    [
+     {
+      "text": "✅ Sin límite",
+      "style": null,
+      "url": false,
+      "disabled": false
+     },
+     {
+      "text": "⚪ 2 al día",
+      "style": null,
+      "url": false,
+      "disabled": false
+     }
+    ],
+    [
+     {
+      "text": "⚪ 4 al día",
+      "style": null,
+      "url": false,
+      "disabled": false
+     },
+     {
+      "text": "⚪ 6 al día",
+      "style": null,
+      "url": false,
+      "disabled": false
+     }
+    ],
+    [
+     {
+      "text": "⚪ 8 al día",
+      "style": null,
+      "url": false,
+      "disabled": false
+     },
+     {
+      "text": "⚪ 12 al día",
+      "style": null,
+      "url": false,
+      "disabled": false
+     }
+    ],
+    [
+     {
+      "text": "✏️ Otro máximo",
+      "style": null,
+      "url": false,
+      "disabled": false
+     }
+    ],
+    [
+     {
+      "text": "✅ Ninguna",
+      "style": null,
+      "url": false,
+      "disabled": false
+     },
+     {
+      "text": "⚪ 15 min",
+      "style": null,
+      "url": false,
+      "disabled": false
+     },
+     {
+      "text": "⚪ 30 min",
+      "style": null,
+      "url": false,
+      "disabled": false
+     }
+    ],
+    [
+     {
+      "text": "⚪ 1 h",
+      "style": null,
+      "url": false,
+      "disabled": false
+     },
+     {
+      "text": "⚪ 2 h",
+      "style": null,
+      "url": false,
+      "disabled": false
+     },
+     {
+      "text": "✏️ Otra",
+      "style": null,
+      "url": false,
+      "disabled": false
+     }
+    ],
+    [
+     {
+      "text": "✖️ Uno a la vez",
+      "style": null,
+      "url": false,
+      "disabled": false
+     }
+    ],
+    [
+     {
+      "text": "🔙 Regresar",
+      "style": null,
+      "url": false,
+      "disabled": false
+     }
+    ]
+   ]
+  },
+  {
+   "t": "wait",
+   "s": 1.0
+  },
+  {
+   "t": "clear"
+  },
+  {
+   "t": "scene",
+   "n": 5,
+   "title": "Tus asociados suman sus canales",
+   "sub": "Piden unirse, tú decides. Pueden pausar sus envíos y siempre te enteras."
+  },
+  {
+   "t": "caption",
+   "text": "📨 Llega una solicitud"
+  },
+  {
+   "t": "msg",
+   "id": 1005,
+   "text": "📨 <b>Solicitud para unirse a la red</b>\n👤 @laura_cine\n📣 <b>Series en Casa</b> · 👤 3,460\n🆔 <code>-1001987654321</code>",
+   "kb": [
+    [
+     {
+      "text": "✅ Aceptar",
+      "style": "success",
+      "url": false,
+      "disabled": false
+     },
+     {
+      "text": "❌ Rechazar",
+      "style": "danger",
+      "url": false,
+      "disabled": false
+     }
+    ]
+   ]
+  },
+  {
+   "t": "wait",
+   "s": 1.8
+  },
+  {
+   "t": "tap",
+   "text": "✅ Aceptar",
+   "id": 1005
+  },
+  {
+   "t": "edit",
+   "id": 1005,
+   "kb": [
+    [
+     {
+      "text": "✅ Aceptada · @tu_usuario",
+      "style": null,
+      "url": false,
+      "disabled": true
+     }
+    ]
+   ]
+  },
+  {
+   "t": "toast",
+   "text": "✅ Solicitud aceptada"
+  },
+  {
+   "t": "caption",
+   "text": "✅ Aceptado"
+  },
+  {
+   "t": "wait",
+   "s": 1.4
+  },
+  {
+   "t": "clear"
+  },
+  {
+   "t": "caption",
+   "text": "📣 Toda la red, con su estado"
+  },
+  {
+   "t": "msg",
+   "id": 1006,
+   "rich": "<img src=\"tg://photo?id=panel\"/><table bordered><tr><th>🕸 <b>Tu red de distribución</b></th></tr><tr><td>📣 Canales y grupos: <b>7</b> (👤 62,575)<br>   └ 🏠 Propios: 4 · 🤝 Externos: 3<br>📊 Estado: ✅ 6 reciben · ⏸ 1 pausado · ⚠️ 0 sin permisos · ⏳ 0 pendientes<br>📝 Mensajes activos: <b>3</b><br>📅 Próximo envío: <b>13/11/2026 12:00 PM</b><br>⏸ Pausados por su asociado: <b>1</b></td></tr></table>",
+   "photo": "assets/logo_banner.jpg",
+   "kb": [
+    [
+     {
+      "text": "➕ Añadir canal o grupo",
+      "style": "success",
+      "url": false,
+      "disabled": false
+     }
+    ],
+    [
+     {
+      "text": "📝 Mensajes",
+      "style": null,
+      "url": false,
+      "disabled": false
+     },
+     {
+      "text": "⏰ Horarios",
+      "style": null,
+      "url": false,
+      "disabled": false
+     }
+    ],
+    [
+     {
+      "text": "📣 Canales y grupos",
+      "style": null,
+      "url": false,
+      "disabled": false
+     }
+    ],
+    [
+     {
+      "text": "🗂 Grupos de canales",
+      "style": null,
+      "url": false,
+      "disabled": false
+     }
+    ],
+    [
+     {
+      "text": "⏸ Pausados (1)",
+      "style": null,
+      "url": false,
+      "disabled": false
+     }
+    ],
+    [
+     {
+      "text": "📊 Estadísticas",
+      "style": null,
+      "url": false,
+      "disabled": false
+     },
+     {
+      "text": "📜 Actividad",
+      "style": null,
+      "url": false,
+      "disabled": false
+     }
+    ],
+    [
+     {
+      "text": "⚙️ Ajustes",
+      "style": null,
+      "url": false,
+      "disabled": false
+     },
+     {
+      "text": "📖 Guía",
+      "style": null,
+      "url": false,
+      "disabled": false
+     }
+    ],
+    [
+     {
+      "text": "⏸ Pausar todo",
+      "style": null,
+      "url": false,
+      "disabled": false
+     }
+    ],
+    [
+     {
+      "text": "🤖 Crear mi bot",
+      "style": null,
+      "url": false,
+      "disabled": false
+     }
+    ],
+    [
+     {
+      "text": "👑 Panel",
+      "style": null,
+      "url": false,
+      "disabled": false
+     }
+    ]
+   ],
+   "quick": true
+  },
+  {
+   "t": "tap",
+   "text": "📣 Canales y grupos",
+   "id": 1006
+  },
+  {
+   "t": "edit",
+   "id": 1006,
+   "rich": "<table bordered><tr><th>📣 <b>Canales y grupos</b></th></tr><tr><td>📣 Canales: 7 · 👥 Grupos: 0 · 👤 62,575<br>🏠 Propios: 4 · 🤝 Externos: 3</td></tr></table><ol><li>📣 Cine Clásico ✅<br>└👤 18,450 · 🏠</li><li>📣 Cine en Familia ✅<br>└👤 12,780 · 🤝 @marcos_tv</li><li>📣 Cortos de Autor ✅<br>└👤 4,210 · 🏠</li><li>📣 Documentales HD ✅<br>└👤 9,320 · 🏠</li><li>📣 <a href=\"https://t.me/+Xq3mZ9vK2Lw0\">Estrenos de Cine</a> ✅<br>└👤 7,815 · 🏠</li><li>📣 <a href=\"https://t.me/+Xq3mZ9vK2Lw0\">Series en Casa</a> ✅<br>└👤 3,460 · 🤝 @laura_cine</li><li>📣 Terror Nocturno ⏸<br>└👤 6,540 · 🤝 @marcos_tv · hasta 13/11/2026 04:45 AM</li></ol><footer>✅ recibe mensajes · ⏸ pausado · ⏳ pendiente · ⚠️ faltan permisos</footer>",
+   "kb": [
+    [
+     {
+      "text": "#1 📣 Cine Clásico",
+      "style": null,
+      "url": false,
+      "disabled": false
+     },
+     {
+      "text": "#2 📣 Cine en Familia",
+      "style": null,
+      "url": false,
+      "disabled": false
+     }
+    ],
+    [
+     {
+      "text": "#3 📣 Cortos de Autor",
+      "style": null,
+      "url": false,
+      "disabled": false
+     },
+     {
+      "text": "#4 📣 Documentales HD",
+      "style": null,
+      "url": false,
+      "disabled": false
+     }
+    ],
+    [
+     {
+      "text": "#5 📣 Estrenos de Cine",
+      "style": null,
+      "url": false,
+      "disabled": false
+     },
+     {
+      "text": "#6 📣 Series en Casa",
+      "style": null,
+      "url": false,
+      "disabled": false
+     }
+    ],
+    [
+     {
+      "text": "#7 📣 Terror Nocturno",
+      "style": null,
+      "url": false,
+      "disabled": false
+     }
+    ],
+    [
+     {
+      "text": "Todos",
+      "style": "primary",
+      "url": false,
+      "disabled": false
+     },
+     {
+      "text": "🏠",
+      "style": null,
+      "url": false,
+      "disabled": false
+     },
+     {
+      "text": "🤝",
+      "style": null,
+      "url": false,
+      "disabled": false
+     },
+     {
+      "text": "⏸",
+      "style": null,
+      "url": false,
+      "disabled": false
+     },
+     {
+      "text": "⚠️",
+      "style": null,
+      "url": false,
+      "disabled": false
+     }
+    ],
+    [
+     {
+      "text": "➕ Añadir canal",
+      "style": null,
+      "url": true,
+      "disabled": false
+     },
+     {
+      "text": "➕ Añadir grupo",
+      "style": null,
+      "url": true,
+      "disabled": false
+     }
+    ],
+    [
+     {
+      "text": "📢 Avisar a los dueños",
+      "style": null,
+      "url": false,
+      "disabled": false
+     }
+    ],
+    [
+     {
+      "text": "🔙 Regresar",
+      "style": null,
+      "url": false,
+      "disabled": false
+     }
+    ]
+   ]
+  },
+  {
+   "t": "wait",
+   "s": 1.2
+  },
+  {
+   "t": "clear"
+  },
+  {
+   "t": "scene",
+   "n": 6,
+   "title": "Mide cada envío",
+   "sub": "Entregados, fallos y alcance real de tu red."
+  },
+  {
+   "t": "caption",
+   "text": "📊 Resultados del día"
+  },
+  {
+   "t": "msg",
+   "id": 1007,
+   "rich": "<img src=\"tg://photo?id=panel\"/><table bordered><tr><th>🕸 <b>Tu red de distribución</b></th></tr><tr><td>📣 Canales y grupos: <b>7</b> (👤 62,575)<br>   └ 🏠 Propios: 4 · 🤝 Externos: 3<br>📊 Estado: ✅ 6 reciben · ⏸ 1 pausado · ⚠️ 0 sin permisos · ⏳ 0 pendientes<br>📝 Mensajes activos: <b>3</b><br>📅 Próximo envío: <b>13/11/2026 12:00 PM</b><br>⏸ Pausados por su asociado: <b>1</b></td></tr></table>",
+   "photo": "assets/logo_banner.jpg",
+   "kb": [
+    [
+     {
+      "text": "➕ Añadir canal o grupo",
+      "style": "success",
+      "url": false,
+      "disabled": false
+     }
+    ],
+    [
+     {
+      "text": "📝 Mensajes",
+      "style": null,
+      "url": false,
+      "disabled": false
+     },
+     {
+      "text": "⏰ Horarios",
+      "style": null,
+      "url": false,
+      "disabled": false
+     }
+    ],
+    [
+     {
+      "text": "📣 Canales y grupos",
+      "style": null,
+      "url": false,
+      "disabled": false
+     }
+    ],
+    [
+     {
+      "text": "🗂 Grupos de canales",
+      "style": null,
+      "url": false,
+      "disabled": false
+     }
+    ],
+    [
+     {
+      "text": "⏸ Pausados (1)",
+      "style": null,
+      "url": false,
+      "disabled": false
+     }
+    ],
+    [
+     {
+      "text": "📊 Estadísticas",
+      "style": null,
+      "url": false,
+      "disabled": false
+     },
+     {
+      "text": "📜 Actividad",
+      "style": null,
+      "url": false,
+      "disabled": false
+     }
+    ],
+    [
+     {
+      "text": "⚙️ Ajustes",
+      "style": null,
+      "url": false,
+      "disabled": false
+     },
+     {
+      "text": "📖 Guía",
+      "style": null,
+      "url": false,
+      "disabled": false
+     }
+    ],
+    [
+     {
+      "text": "⏸ Pausar todo",
+      "style": null,
+      "url": false,
+      "disabled": false
+     }
+    ],
+    [
+     {
+      "text": "🤖 Crear mi bot",
+      "style": null,
+      "url": false,
+      "disabled": false
+     }
+    ],
+    [
+     {
+      "text": "👑 Panel",
+      "style": null,
+      "url": false,
+      "disabled": false
+     }
+    ]
+   ],
+   "quick": true
+  },
+  {
+   "t": "tap",
+   "text": "📊 Estadísticas",
+   "id": 1007
+  },
+  {
+   "t": "edit",
+   "id": 1007,
+   "rich": "<table bordered><tr><th>📊 <b>Estadísticas</b> · últimas 24 h</th></tr><tr><td>📤 Envíos: <b>4</b><br>✅ Entregados: <b>19</b><br>❌ Fallidos: <b>1</b><br>🛡 Omitidos por anti-spam: <b>0</b><br>👁 Alcance: <b>199,935</b><br>   └ Miembros de los chats que recibieron los mensajes.</td></tr></table><p>📣 Chats: 7 (🏠 4 · 🤝 3) · 👤 62,575<br>⏸ Pausados: 1</p><p>🏆 <b>Mensajes más enviados</b><br>1. Estreno de la semana — 19</p>",
+   "kb": [
+    [
+     {
+      "text": "✅ 24 h",
+      "style": null,
+      "url": false,
+      "disabled": false
+     },
+     {
+      "text": "⚪ 7 días",
+      "style": null,
+      "url": false,
+      "disabled": false
+     },
+     {
+      "text": "⚪ 30 días",
+      "style": null,
+      "url": false,
+      "disabled": false
+     }
+    ],
+    [
+     {
+      "text": "📜 Actividad",
+      "style": null,
+      "url": false,
+      "disabled": false
+     }
+    ],
+    [
+     {
+      "text": "🔙 Regresar",
+      "style": null,
+      "url": false,
+      "disabled": false
+     }
+    ]
+   ]
+  },
+  {
+   "t": "wait",
+   "s": 3.0
+  },
+  {
+   "t": "outro",
+   "title": "Crea tu red en un minuto",
+   "sub": "Tu propio bot, tus canales y tus reglas.",
+   "cta": "Búscalo en Telegram: eMesh"
+  }
+ ]
+}
