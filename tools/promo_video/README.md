@@ -5,7 +5,7 @@ el Telegram falso de los tests), no están dibujadas a mano.
 
 | Vídeo | Qué es | Comando | Sale en |
 |---|---|---|---|
-| **Spot** | 50 s, montado sobre la música: pantalla en 3D, una animación por función y fotos reales en los mensajes | `node render_spot.js es` | `out/emesh_spot_es.mp4` |
+| **Spot** | 53 s, montado sobre la música: pantalla en 3D, una animación por función y fotos reales en los mensajes | `node render_spot.js es` | `out/emesh_spot_es.mp4` |
 | **Paseo** | Unos 70 s, sin música: el bot paso a paso, con el titular de cada escena | `node render.js es` | `out/emesh_promo_es.mp4` |
 
 ## Renderizarlos en tu PC
@@ -32,7 +32,7 @@ Opciones (variables de entorno; en PowerShell: `$env:SCALE="2"; node render_spot
 
 El texto usa la fuente Inter si está instalada (si no, la del sistema).
 
-## El spot (50 s, sobre la música)
+## El spot (53 s, sobre la música)
 
 La música (`assets/music.mp3`) va a 150 pulsos por minuto. Cada escena empieza en uno de sus golpes, las palabras del
 titular entran al ritmo y el brillo del fondo sigue el volumen (`assets/music.json`).
@@ -53,10 +53,12 @@ titular entran al ritmo y el brillo del fondo sigue el volumen (`assets/music.js
 | 40,4 – 43,6 | | **Tus asociados suman canales**: llega una solicitud y se acepta |
 | 43,6 – 46,8 | | **Mide cada envío**: entregados y alcance |
 | 46,8 – 50 | Golpe final | Logo, «Crea tu red en un minuto» y eSoft |
+| 50 – 53,4 | La música se apaga | El cierre se queda en pantalla; los últimos pulsos suenan como eco y funde a negro |
 
 Cambiar los textos del spot: `TEXTS` en `spot.html` (`hook` son las frases del gancho). Cambiar los tiempos: `T` (los golpes), `HK` (el gancho), `VIEWS` (qué pantalla
 se ve), `TAPS` (los toques del dedo) y `POSE` (la posición 3D del teléfono), también en `spot.html`.
-Con otra música hay que volver a medir sus golpes y cambiar esos tiempos.
+Con otra música hay que volver a medir sus golpes y cambiar esos tiempos. La cola del final se alarga o acorta con
+`T.end` (`T.music` es donde acaba la música).
 
 ## El paseo (unos 70 s, sin música)
 

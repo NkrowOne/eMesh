@@ -30,8 +30,16 @@ async function render(browser, lang) {
   fs.mkdirSync(OUT, { recursive: true });
   const target = path.join(OUT, `emesh_spot_${lang}${partial ? `_${from}-${to}` : ""}.mp4`);
   const audio = partial ? [] : ["-i", path.join(HERE, "assets", "music.mp3")];
-  const mix = partial ? ["-an"] : ["-map", "0:v", "-map", "1:a", "-c:a", "aac", "-b:a", "192k",
-    "-af", `afade=t=in:st=0:d=0.12,afade=t=out:st=${(duration - 0.6).toFixed(2)}:d=0.6`, "-t", String(duration)];
+  // The picture lasts a few seconds more than the music: the track is faded at its end and its last beats ring on
+  // as an echo on the beat (0.4 s at 150 bpm), so the spot doesn't end on a cut.
+  const md = music.duration, tail = Math.max(0, duration - md);
+  const mix = partial ? ["-an"] : ["-filter_complex",
+    `[1:a]asplit=2[m][e];[m]afade=t=in:st=0:d=0.12,afade=t=out:st=${(md - 0.35).toFixed(2)}:d=0.35,apad=whole_dur=${duration}[main];`
+    + `[e]atrim=start=${(md - 1.6).toFixed(2)},asetpts=PTS-STARTPTS,afade=t=out:st=1.5:d=0.1,apad=pad_dur=${(tail + 0.1).toFixed(2)},`
+    + `aecho=1:1:400|800|1200|1600|2000:0.5|0.3|0.18|0.1|0.06,atrim=start=1.6,asetpts=PTS-STARTPTS,`
+    + `afade=t=out:st=${Math.max(0, tail - 0.9).toFixed(2)}:d=0.8,adelay=${Math.round(md * 1000)}:all=1[tail];`
+    + `[main][tail]amix=inputs=2:normalize=0:duration=longest[a]`,
+    "-map", "0:v", "-map", "[a]", "-c:a", "aac", "-b:a", "192k", "-t", String(duration)];
   const ff = spawn(process.env.FFMPEG || "ffmpeg", ["-y", "-loglevel", "error", "-f", "image2pipe", "-framerate", String(FPS), "-i", "-", ...audio,
     "-vf", `scale=${SIZE}:${SIZE}:flags=lanczos`, "-c:v", "libx264", "-preset", "slow", "-crf", "17", "-pix_fmt", "yuv420p",
     "-profile:v", "high", "-movflags", "+faststart", ...mix, target], { stdio: ["pipe", "inherit", "inherit"] });
