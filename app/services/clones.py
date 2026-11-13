@@ -20,7 +20,7 @@ from aiogram.types import InlineKeyboardMarkup
 from sqlalchemy import func, or_, select
 
 from app.db.models import Bot as BotRecord
-from app.db.models import BotStatus
+from app.db.models import BotStatus, User
 from app.db.session import session_scope
 from app.i18n import t
 from app.services import limits
@@ -226,10 +226,45 @@ class _InvalidTokenNotice:
             await send_dm(main, s, rec.owner_id, t("cl.invalid_dm", lang, username=esc(rec.username)), markup)
 
 
+class _TokenConflictNotice:
+    """``manager.on_token_conflict`` callback: tells the super admins, through the main bot, which bot has its
+    token in use by another program (it gets no updates meanwhile, so what its people press is lost)."""
+
+    def __init__(self, manager: BotManager, sm: SessionMaker, settings: Settings) -> None:
+        self.manager = manager
+        self.sm = sm
+        self.settings = settings
+
+    async def __call__(self, bot_id: int) -> None:
+        await asyncio.create_task(self._notify(bot_id))
+
+    async def _notify(self, bot_id: int) -> None:
+        set_low_priority()
+        main = self.manager.main_bot
+        if main is None:
+            return
+        async with session_scope(self.sm) as s:
+            rec = await s.get(BotRecord, bot_id)
+            if rec is None:
+                return
+            user = await s.get(User, rec.owner_id)
+            owner = user_link(rec.owner_id, user.full_name if user else None, user.username if user else None)
+            for admin_id in sorted(self.settings.super_admin_ids):
+                lang = await get_lang(s, main.id, admin_id, self.settings.DEFAULT_LANG)
+                text = t("cl.conflict_dm", lang, bot=esc(rec.username), bot_id=rec.id, owner=owner,
+                         owner_id=rec.owner_id)
+                markup = None if rec.is_main else kb(
+                    [btn(t("cl.btn.conflict_bot", lang), MenuCB(screen="panel_bot", arg=rec.id))])
+                await send_dm(main, s, admin_id, text, markup)
+
+
 def install(manager: BotManager, sm: SessionMaker, settings: Settings) -> None:
-    """Registers (once) the DM to the owner of a clone whose token stopped working."""
+    """Registers (once) the DM to the owner of a clone whose token stopped working, and the one to the super admins
+    about a bot whose token is being used somewhere else."""
     if not any(isinstance(cb, _InvalidTokenNotice) for cb in manager.on_bot_invalid):
         manager.on_bot_invalid.append(_InvalidTokenNotice(manager, sm, settings))
+    if not any(isinstance(cb, _TokenConflictNotice) for cb in manager.on_token_conflict):
+        manager.on_token_conflict.append(_TokenConflictNotice(manager, sm, settings))
 
 
 # ------------------------------------------------------------------ Managed Bots

@@ -623,6 +623,9 @@ Managed bot update (`managed_bot`, main bot): `getManagedBotToken` → `connect_
 `mybots`: status (✅ activo / ⏳ pendiente / ⏸ pausado / 🔒 desactivado por la administración / ❌ token no válido),
 `[⏸ / ▶️][🗑 Desconectar]` per bot (`manager.disable_bot(reason=REASON_OWNER / REASON_REMOVED)`).
 `manager.on_bot_invalid`: DM the owner through the main bot (register the callback once).
+`manager.on_token_conflict` (polling: another program keeps answering getUpdates with the token of a bot for a
+minute, `CONFLICT_TRIES` tries; the bot gets no updates meanwhile): DM every super admin through the main bot with
+the bot, its owner and `[🤖 Ver bot]` (`panel_bot`); not again for the same bot before `CONFLICT_AGAIN` (6 h).
 `panel` (super admins, main bots):
 ```
 👑 <b>Panel de la plataforma</b>

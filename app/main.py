@@ -99,7 +99,7 @@ async def amain() -> None:
     publisher = Publisher(manager, sm, settings)
     scheduler = Scheduler(manager, sm, settings, publisher)
     dp.workflow_data.update(settings=settings, sm=sm, manager=manager, publisher=publisher, scheduler=scheduler)
-    clones.install(manager, sm, settings)  # a clone whose token stops working: its owner gets a DM
+    clones.install(manager, sm, settings)  # a token that stops working (DM to its owner) or is used elsewhere (to us)
 
     stop = asyncio.Event()
     loop = asyncio.get_running_loop()

@@ -494,3 +494,52 @@ async def test_invalid_token_dm_through_the_main_bot(app: App) -> None:
     await app.press(USER_ID, MenuCB(screen="mybots").pack())
     text = app.last_text(USER_ID)
     assert "❌ Token no válido" in text and "conéctalo de nuevo con «🔑 Usar token»" in text
+
+
+# ---------------------------------------------------------------- token in use somewhere else
+async def test_a_token_used_somewhere_else_is_told_to_the_super_admins(app: App,
+                                                                       monkeypatch: pytest.MonkeyPatch) -> None:
+    from aiogram.exceptions import TelegramConflictError
+    from aiogram.methods import GetUpdates
+
+    from app.telegram import manager as manager_mod
+
+    clones.install(app.manager, app.sm, app.settings)
+    clones.install(app.manager, app.sm, app.settings)  # registered once
+    assert sum(isinstance(cb, clones._TokenConflictNotice) for cb in app.manager.on_token_conflict) == 1
+    await app.manager.add_bot(app.fake.add_bot(CLONE_ID, CLONE_USERNAME), USER_ID)
+    await app.send(SUPER_ID, "/start")
+    bot = app.manager.get(CLONE_ID)
+    monkeypatch.setattr(manager_mod, "CONFLICT_WAIT", 0)
+
+    async def poll(tries: int) -> None:
+        """The polling loop of the clone while another program answers ``tries`` times with a conflict."""
+        left = tries
+
+        async def conflict(*_: object) -> None:
+            nonlocal left
+            left -= 1
+            if left <= 0:
+                app.manager._stopping = True  # noqa: SLF001 - ends the loop after this try
+            raise TelegramConflictError(method=GetUpdates(), message="Conflict: terminated by other getUpdates")
+
+        monkeypatch.setattr(app.manager, "_get_updates", conflict)
+        try:
+            await app.manager._poll(bot)  # noqa: SLF001
+        finally:
+            app.manager._stopping = False  # noqa: SLF001
+
+    def notices() -> list[str]:
+        return [t for t in dms(app, SUPER_ID) if "Token en uso en otro sitio" in t]
+
+    await poll(manager_mod.CONFLICT_TRIES - 1)  # the overlap of a restart: nothing is told
+    assert notices() == []
+    await poll(manager_mod.CONFLICT_TRIES + 3)
+    await app.wait_for(lambda: len(notices()) == 1)
+    [text] = notices()
+    assert f"@{CLONE_USERNAME} (<code>{CLONE_ID}</code>)" in text and f"(<code>{USER_ID}</code>)" in text
+    assert "no recibe lo que escriben o pulsan" in text
+    assert app.find_button(SUPER_ID, "Ver bot")[0]["callback_data"] == MenuCB(screen="panel_bot", arg=CLONE_ID).pack()
+    assert dms(app, USER_ID) == [] or not any("Token en uso" in t for t in dms(app, USER_ID))  # only the platform
+    await poll(manager_mod.CONFLICT_TRIES + 3)  # still in conflict: not told again so soon
+    assert len(notices()) == 1
