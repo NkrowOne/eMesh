@@ -49,6 +49,15 @@ STRINGS = {
     "ev.chat_rights_ok": "<b>{chat}</b> has its rights back and receives posts.",
     "ev.bot_paused": "Distribution of the whole network paused ({actor}).",
     "ev.bot_resumed": "Distribution of the whole network resumed ({actor}).",
+    "ev.post_missed.late": (
+        "<b>{post}</b> was not sent. It was scheduled for {due} and the bot was not available at that time. "
+        "Sends are never made late: you can send it now from the post."
+    ),
+    "ev.post_missed.no_chats": (
+        "<b>{post}</b> was not sent ({due}): no chat of its audience can receive it now. "
+        "Check whether they are paused, missing rights, or the audience is empty."
+    ),
+    "ev.btn.post": "📝 View post",
     "ev.btn.chat": "📣 View chat",
     "ev.btn.activity": "📜 Activity",
     # --- frequencies (services/freq.py) ---

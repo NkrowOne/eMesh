@@ -718,9 +718,14 @@ default), `[💬 Escribir al dueño]` (prompt → DM via the main bot), `[📜 A
      closed when too old). Nothing is sent per slot of a global or group frequency.
   2. Posts: ⏰ campaigns past `ends_on` → `done`; active own / once posts without `next_send_at` get it
      (`freq.refresh_post`); those with `next_send_at <= now` (more than `LATE_SKIP_MINUTES` late → skipped and
-     refreshed; being sent right now → next tick) are claimed first (next time stored, a once post becomes `done`) and
-     then `run(kind=schedule|once)` to `audience.audience(post)` one after another (their audiences overlap and the
-     anti-spam sees each run before the next).
+     refreshed; being sent right now → next tick) go out one after another (their audiences overlap and the
+     anti-spam sees each run before the next): each is claimed right before its run (next time stored, a once post
+     becomes `done`), then `run(kind=schedule|once)` to `audience.audience(post)`. So a restart while several posts
+     of the same time go out loses none: the ones still waiting stay due. A scheduled send that doesn't go out
+     (skipped for being late, or no chat of its audience can receive it) → `events.emit(POST_MISSED,
+     data={"reason": "late"|"no_chats", "post", "post_id", "due"}, notify=True)`: stored in 📜 Actividad and told
+     to the admins with 🔔 alerts on (`[📝 Ver mensaje] [📜 Actividad]`), once per post and reason every 12 h
+     (KV `missed:<post_id>:<reason>`).
   3. `publisher.delete_due()` (also for paused bots: announced deletions always happen).
   4. Owner pauses that expired → clear them, `events.emit(CHAT_RESUMED, data={"by": "auto"})` and DM the partner
      «▶️ La pausa de tu canal X ha terminado: vuelve a recibir los mensajes de la red.».

@@ -10,10 +10,12 @@ every running bot as background jobs, each bot in its own tasks so a slow or flo
 
 Plus, once a day, the cleanup of old runs and activity. Everything is in the database, so after a restart the ticks
 simply pick up what is due; a post found more than ``LATE_SKIP_MINUTES`` late is skipped, not sent late. A post is
-claimed (its next time stored) before it is sent, so a crash never sends it twice.
+claimed (its next time stored) right before it is sent, so a crash never sends it twice and the due posts still
+waiting for their turn go out after the restart. A scheduled send that doesn't go out (found too late, or no chat can
+receive it) is stored in the activity and told to the admins.
 
-Bookkeeping in the KV table: ``maint:<bot id>`` / ``maint:cleanup`` (last run, ISO time) and
-``summary:<bot id>:<local date>`` (sent once).
+Bookkeeping in the KV table: ``maint:<bot id>`` / ``maint:cleanup`` (last run, ISO time),
+``summary:<bot id>:<local date>`` (sent once) and ``missed:<post id>:<reason>`` (last alert of a missed send).
 """
 from __future__ import annotations
 
@@ -58,6 +60,7 @@ STOP_TIMEOUT = 30.0
 DELETE_CHUNK = 500
 CLEANUP_EVERY = timedelta(days=1)
 ORPHANS_EVERY = 300.0  # seconds between two looks for runs whose task died
+MISSED_EVERY = timedelta(hours=12)  # a post missed again for the same reason isn't told more often than this
 
 JobKey = tuple[str, int]
 
@@ -228,9 +231,10 @@ class Scheduler:
         await self._guard(self._posts(bot_id, utcnow()), f"scheduled posts of bot {bot_id}")
 
     async def _posts(self, bot_id: int, now: datetime) -> None:
-        """Campaigns that are over become done; due own-frequency and one-time posts go to their whole audience
-        (claimed first: the next time is stored, a one-time post is done)."""
-        todo: list[tuple[int, str]] = []
+        """Campaigns that are over become done; due own-frequency and one-time posts go to their whole audience, one
+        after another. A post found too late is skipped (and told to the admins)."""
+        todo: list[int] = []
+        missed: list[tuple[int, str, datetime]] = []
         async with session_scope(self.sm) as s:
             ws = await s.get(BotRecord, bot_id)
             if ws is None or ws.paused or not self.manager.is_running(bot_id):
@@ -249,30 +253,63 @@ class Scheduler:
                                                       Post.next_send_at <= now)
                                    .order_by(Post.next_send_at, Post.id))).scalars().all()
             for post in due:
-                once = post.mode == SchedMode.ONCE
                 assert post.next_send_at is not None
                 if now - post.next_send_at > self._late:
                     log.warning("Post %s was due at %s (%s late, downtime?): skipped", post.id,
                                 post.next_send_at.isoformat(), now - post.next_send_at)
-                elif self.publisher.is_busy(post.id):
-                    continue  # it is being sent right now: next tick
-                else:
-                    todo.append((post.id, RunKind.ONCE if once else RunKind.SCHEDULE))
-                if once:
-                    post.status = PostStatus.DONE
-                freq.refresh_post(post, tz, now)
-        for post_id, kind in todo:
-            if not self.manager.is_running(bot_id):
-                return
+                    missed.append((post.id, post.name, post.next_send_at))
+                    if post.mode == SchedMode.ONCE:
+                        post.status = PostStatus.DONE
+                    freq.refresh_post(post, tz, now)
+                elif not self.publisher.is_busy(post.id):  # (being sent right now: next tick)
+                    todo.append(post.id)
+        for post_id, name, due_at in missed:
+            await self._guard(self._missed(bot_id, post_id, name, "late", due_at), f"missed post {post_id}")
+        for post_id in todo:
+            if self._stopping or not self.manager.is_running(bot_id):
+                return  # the ones left are still due: they go out at the next start
+            # One after another: their audiences overlap, and the anti-spam sees each run before the next.
+            await self._guard(self._send_due(bot_id, post_id), f"run of post {post_id}")
+
+    async def _send_due(self, bot_id: int, post_id: int) -> None:
+        """Claims a due post (its next time is stored, a one-time post is done) and sends it to its audience."""
+        now = utcnow()
+        async with session_scope(self.sm) as s:
+            post = await s.get(Post, post_id)
+            ws = await s.get(BotRecord, bot_id)
+            if (post is None or ws is None or ws.paused or post.status != PostStatus.ACTIVE
+                    or post.mode not in (SchedMode.OWN, SchedMode.ONCE) or post.next_send_at is None
+                    or post.next_send_at > now or self.publisher.is_busy(post_id)):
+                return  # changed, paused or sent by hand while the posts before it went out
+            due_at, once, name = post.next_send_at, post.mode == SchedMode.ONCE, post.name
+            chats = [c.id for c in await audience.audience(s, post, now=now)]
+            if once:
+                post.status = PostStatus.DONE
+            freq.refresh_post(post, self._tz(ws), now)
+        if not chats:
+            log.info("Post %s is due but no chat can receive it now", post_id)
+            await self._missed(bot_id, post_id, name, "no_chats", due_at)
+            return
+        run_id = await self.publisher.run(post_id, chats, kind=RunKind.ONCE if once else RunKind.SCHEDULE, wait=True)
+        if run_id is None and self._stopping:
+            # Stopped between the claim and the run: the post is due again, for the next start.
             async with session_scope(self.sm) as s:
                 post = await s.get(Post, post_id)
-                chats = await audience.audience(s, post) if post is not None else []
-            if not chats:
-                log.info("Post %s is due but no chat can receive it now", post_id)
-                continue
-            # One after another: their audiences overlap, and the anti-spam sees each run before the next.
-            await self._guard(self.publisher.run(post_id, [c.id for c in chats], kind=kind, wait=True),
-                              f"run of post {post_id}")
+                if post is not None and post.status == (PostStatus.DONE if once else PostStatus.ACTIVE):
+                    post.status = PostStatus.ACTIVE
+                    post.next_send_at = due_at
+
+    async def _missed(self, bot_id: int, post_id: int, name: str, reason: str, due_at: datetime) -> None:
+        """A scheduled send that didn't go out: stored in the activity and told to the admins. Once per post and
+        reason every ``MISSED_EVERY`` (an hourly post whose chats are all paused doesn't alert every hour)."""
+        if not await self._claim_interval(f"missed:{post_id}:{reason}", utcnow(), MISSED_EVERY):
+            return
+        async with session_scope(self.sm) as s:
+            ws = await s.get(BotRecord, bot_id)
+            if ws is None:
+                return
+            await events.emit(self.manager.get(bot_id), s, ws, EventKind.POST_MISSED, notify=True,
+                              data={"reason": reason, "post": name, "post_id": post_id, "due": due_at.isoformat()})
 
     # ----------------------------------------------------------- maintenance
     async def _maintenance(self, bot_id: int) -> None:
@@ -409,7 +446,7 @@ class Scheduler:
         async with session_scope(self.sm) as s:
             gone = await s.execute(delete(Event).where(Event.created_at < cutoff)
                                    .execution_options(synchronize_session=False))
-            await s.execute(delete(KV).where(KV.key.like("summary:%"), KV.updated_at < cutoff)
+            await s.execute(delete(KV).where(KV.key.like("summary:%") | KV.key.like("missed:%"), KV.updated_at < cutoff)
                             .execution_options(synchronize_session=False))
         log.info("Cleanup: %d old runs and %d old events deleted", len(ids), gone.rowcount or 0)
 
